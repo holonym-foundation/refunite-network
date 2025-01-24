@@ -28,8 +28,8 @@ const Header = () => {
               <Image
                 src="/img/logo.svg"
                 alt="Refunite Network logo"
-                width={56}
-                height={56}
+                width={100}
+                height={32}
                 priority
               />
             </Link>

@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 
+import { generateSvgAvatar } from "@/lib/avatars";
 import { ATLANTIS_HAT_ID, HATS_CONTRACT_ADDRESS } from "@/lib/constants";
 import { abi as HatsAbi } from "@/lib/hatsAbi";
 
@@ -107,17 +108,24 @@ export default function AccountPage() {
           <h1 className="text-2xl font-semibold">Account</h1>
         </header>
 
-        <section className="flex items-center space-x-4">
-          <Avatar className="h-16 w-16">
-            <AvatarImage src={`https://robohash.org/${address}`} alt="User avatar" />
-            <AvatarFallback>0x</AvatarFallback>
-          </Avatar>
+        <section className="flex items-center justify-between">
           <div>
             <h2 className="text-lg font-semibold">Community Leader</h2>
             <p className="text-sm font-mono font-semibold text-indigo-600">
               {address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "Unknown"}
             </p>
           </div>
+          <Avatar className="h-16 w-16">
+            {address ? (
+              <div
+                dangerouslySetInnerHTML={{
+                  __html: generateSvgAvatar(address.toLowerCase()).outerHTML,
+                }}
+              />
+            ) : (
+              <AvatarFallback>CL</AvatarFallback>
+            )}
+          </Avatar>
         </section>
 
         <section>

@@ -21,7 +21,7 @@ const Header = () => {
 
   return (
     <>
-      <header className="sticky top-0 z-50 w-full bg-slate-50/90 backdrop-blur-sm border-b">
+      <header className="sticky top-0 z-50 w-full bg-white/90 backdrop-blur-sm border-b">
         <div className="mx-auto max-w-2xl">
           <nav className="px-4 lg:px-6 py-4" aria-label="Main Navigation">
             <div className="flex flex-col lg:flex-col justify-between items-center gap-4">

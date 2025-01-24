@@ -15,21 +15,13 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className="text-foreground">
+      <body className="text-foreground bg-slate-200">
         <ContextProvider>
           <Header />
-          <Toaster />
-          {children}
-          <footer className="border-t bg-indigo-100 p-6">
-            <a
-              className="flex items-center gap-2 transition-colors justify-center tracking-widest font-semibol text-foreground"
-              href="http://example.org"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <span>Refunite Network</span>
-            </a>
-          </footer>
+          <main className="mx-auto lg:max-w-3xl px-0 lg:px-6 min-h-screen">
+            <Toaster />
+            {children}
+          </main>
         </ContextProvider>
       </body>
     </html>

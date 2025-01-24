@@ -21,90 +21,97 @@ const Header = () => {
 
   return (
     <>
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-sm border-b">
-        <nav className="px-4 lg:px-6 py-4" aria-label="Main Navigation">
-          <div className="flex justify-between items-center mx-auto max-w-screen-xl">
-            <Link href="/" className="flex items-center">
-              <Image
-                src="/img/logo.svg"
-                alt="Refunite Network logo"
-                width={120}
-                height={48}
-                priority
-                className="h-14 w-auto"
-              />
-            </Link>
+      <header className="sticky top-0 z-50 w-full bg-slate-50/90 backdrop-blur-sm border-b">
+        <div className="mx-auto max-w-2xl">
+          <nav className="px-4 lg:px-6 py-4" aria-label="Main Navigation">
+            <div className="flex flex-col lg:flex-col justify-between items-center gap-4">
+              <div className="flex w-full justify-between items-center">
+                <Link href="/" className="flex items-center">
+                  <Image
+                    src="/img/logo.svg"
+                    alt="Refunite Network logo"
+                    width={120}
+                    height={48}
+                    priority
+                    className="h-14 w-auto"
+                  />
+                </Link>
 
-            {/* Desktop Navigation */}
-            <ul className="hidden lg:flex items-center space-x-8">
-              {navItems.map((item) => (
-                <li key={item.name} className="group">
-                  <Link
-                    href={item.href}
-                    className="text-base text-muted-foreground hover:text-primary lg:hover:text-primary-700 font-medium"
+                <div className="flex items-center gap-2">
+                  <div className="hidden lg:flex items-center">
+                    <ConnectButton />
+                  </div>
+
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="lg:hidden"
+                    onClick={() => setIsOpen(!isOpen)}
+                    aria-expanded={isOpen}
+                    aria-controls="mobile-menu"
                   >
-                    {item.name}
-                  </Link>
-                </li>
-              ))}
-              <li className="group">
-                <a
-                  href="https://app.hatsprotocol.xyz/trees/11155111/639"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-base text-muted-foreground hover:text-primary lg:hover:text-primary-700 font-medium"
-                >
-                  Hats tree
-                </a>
-              </li>
-            </ul>
-
-            <div className="flex items-center gap-2">
-              <div className="hidden lg:flex items-center">
-                <ConnectButton />
+                    <span className="sr-only">{isOpen ? "Close menu" : "Open menu"}</span>
+                    {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+                  </Button>
+                </div>
               </div>
 
-              <Button
-                variant="ghost"
-                size="icon"
-                className="lg:hidden"
-                onClick={() => setIsOpen(!isOpen)}
-                aria-expanded={isOpen}
-                aria-controls="mobile-menu"
-              >
-                <span className="sr-only">{isOpen ? "Close menu" : "Open menu"}</span>
-                {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-              </Button>
-            </div>
-          </div>
-
-          {/* Mobile Navigation */}
-          <div className={`${isOpen ? "block" : "hidden"} lg:hidden w-full mt-4`} id="mobile-menu">
-            <ul className="flex flex-col">
-              {navItems.map((item) => (
-                <li key={item.name} className="group">
-                  <Link
-                    href={item.href}
-                    className="block py-2 text-base text-muted-foreground hover:text-primary font-medium"
-                    onClick={() => setIsOpen(false)}
+              {/* Desktop Navigation */}
+              <ul className="hidden lg:flex items-center space-x-8">
+                {navItems.map((item) => (
+                  <li key={item.name} className="group">
+                    <Link
+                      href={item.href}
+                      className="text-base text-muted-foreground hover:text-primary lg:hover:text-primary-700 font-medium"
+                    >
+                      {item.name}
+                    </Link>
+                  </li>
+                ))}
+                <li className="group">
+                  <a
+                    href="https://app.hatsprotocol.xyz/trees/11155111/639"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-base text-muted-foreground hover:text-primary lg:hover:text-primary-700 font-medium"
                   >
-                    {item.name}
-                  </Link>
+                    Hats tree
+                  </a>
                 </li>
-              ))}
-              <li className="group">
-                <a
-                  href="https://app.hatsprotocol.xyz/trees/11155111/639"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block py-2 text-base text-muted-foreground hover:text-primary font-medium"
-                >
-                  Hats tree
-                </a>
-              </li>
-            </ul>
-          </div>
-        </nav>
+              </ul>
+            </div>
+
+            {/* Mobile Navigation */}
+            <div
+              className={`${isOpen ? "block" : "hidden"} lg:hidden w-full mt-4`}
+              id="mobile-menu"
+            >
+              <ul className="flex flex-col">
+                {navItems.map((item) => (
+                  <li key={item.name} className="group">
+                    <Link
+                      href={item.href}
+                      className="block py-2 text-base text-muted-foreground hover:text-primary font-medium"
+                      onClick={() => setIsOpen(false)}
+                    >
+                      {item.name}
+                    </Link>
+                  </li>
+                ))}
+                <li className="group">
+                  <a
+                    href="https://app.hatsprotocol.xyz/trees/11155111/639"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block py-2 text-base text-muted-foreground hover:text-primary font-medium"
+                  >
+                    Hats tree
+                  </a>
+                </li>
+              </ul>
+            </div>
+          </nav>
+        </div>
       </header>
 
       {/* Floating wallet button for mobile with enhanced shadow */}

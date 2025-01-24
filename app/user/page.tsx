@@ -91,102 +91,122 @@ export default function AccountPage() {
 
   if (!isConnected) {
     return (
-      <div className="flex items-center justify-center min-h-screen p-4 bg-background">
-        <div className="text-center">
-          <h1 className="text-2xl font-semibold mb-4">Account</h1>
-          <p className="text-base mb-6">Please connect your wallet to view your account details.</p>
-          <Button>Connect Wallet</Button>
+      <div className="min-h-screen py-0 sm:py-8 px-0 sm:px-6 md:px-8">
+        <div className="max-w-3xl mx-0 sm:mx-auto">
+          <div className="bg-white p-4 pb-16 sm:p-8 sm:rounded-xl sm:border sm:border-slate-300">
+            <div className="text-center">
+              <h1 className="text-2xl font-semibold mb-4">Account</h1>
+              <p className="text-base">Please connect your wallet to view your account details.</p>
+            </div>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background p-4 sm:p-6 md:p-8">
-      <div className="max-w-3xl mx-auto space-y-8">
-        <header className="flex items-center justify-between">
-          <h1 className="text-2xl font-semibold">Account</h1>
-        </header>
-
-        <section className="flex items-center justify-between">
+    <div className="min-h-screen py-0 sm:py-8 px-0 sm:px-6 md:px-8">
+      <div className="max-w-3xl mx-0 sm:mx-auto">
+        <div className="bg-white p-4 pb-16 sm:p-8 sm:rounded-xl sm:border sm:border-slate-300">
           <div>
-            <h2 className="text-lg font-semibold">Community Leader</h2>
-            <p className="text-sm font-mono font-semibold text-indigo-600">
-              {address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "Unknown"}
-            </p>
-          </div>
-          <Avatar className="h-16 w-16">
-            {address ? (
-              <div
-                dangerouslySetInnerHTML={{
-                  __html: generateSvgAvatar(address.toLowerCase()).outerHTML,
-                }}
-              />
-            ) : (
-              <AvatarFallback>CL</AvatarFallback>
-            )}
-          </Avatar>
-        </section>
-
-        <section>
-          <div className="space-y-2">
-            <h3 className="text-lg font-semibold">Hat Status</h3>
-            {isHatLoading ? (
-              <div className="space-y-2">
-                <Skeleton className="h-8 w-full" />
-                <Skeleton className="h-4 w-3/4" />
-                <Skeleton className="h-4 w-1/2" />
-              </div>
-            ) : isHatError ? (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Error</AlertTitle>
-                <AlertDescription>
-                  Failed to load Hat data. Please try again later.
-                </AlertDescription>
-              </Alert>
-            ) : hatData ? (
-              <div className="space-y-2">
-                <Badge variant="default" className="text-lg py-1 px-2 bg-green-500">
-                  Active Hat
-                </Badge>
-                {isMetadataLoading ? (
-                  <Skeleton className="h-4 w-full" />
-                ) : metadataError ? (
-                  <Alert variant="destructive">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertTitle>Error</AlertTitle>
-                    <AlertDescription>
-                      Failed to load Hat metadata. Please try again later.
-                    </AlertDescription>
-                  </Alert>
-                ) : (
-                  <p className="text-sm text-muted-foreground">{hatMetadata?.description}</p>
-                )}
-                <div className="grid grid-cols-2 gap-2 text-sm">
-                  <div>Max Supply: {hatData.maxSupply.toString()}</div>
-                  <div>Current Supply: {hatData.supply.toString()}</div>
-                  <div>Children: {hatData.numChildren.toString()}</div>
-                  <div>Mutable: {hatData.mutable ? "Yes" : "No"}</div>
+            {/* Profile Section */}
+            <div className="py-4 border-b border-slate-300">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-semibold">Community Leader</h2>
+                  <p className="text-sm font-mono font-semibold text-secondary">
+                    {address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "Unknown"}
+                  </p>
                 </div>
+                <Avatar className="h-20 w-20">
+                  {address ? (
+                    <div
+                      dangerouslySetInnerHTML={{
+                        __html: generateSvgAvatar(address.toLowerCase()).outerHTML,
+                      }}
+                    />
+                  ) : (
+                    <AvatarFallback>CL</AvatarFallback>
+                  )}
+                </Avatar>
               </div>
-            ) : (
-              <Badge variant="secondary">No Hat assigned</Badge>
-            )}
-          </div>
-        </section>
+            </div>
 
-        <section>
-          <h2 className="text-md text-indigo-600 font-semibold tracking-tight mb-3">Actions</h2>
-          <div className="flex gap-4">
-            <Link href="/assign-hat" passHref>
-              <Button>Assign Role</Button>
-            </Link>
-            <Link href="/recover-role" passHref>
-              <Button>Recover Role</Button>
-            </Link>
+            {/* Hat Status Section */}
+            <div className="py-4 border-b border-slate-300">
+              <h3 className="text-lg font-semibold mb-4">Hat Status</h3>
+              {isHatLoading ? (
+                <div className="space-y-2">
+                  <Skeleton className="h-8 w-full" />
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-4 w-1/2" />
+                </div>
+              ) : isHatError ? (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Error</AlertTitle>
+                  <AlertDescription>
+                    Failed to load Hat data. Please try again later.
+                  </AlertDescription>
+                </Alert>
+              ) : hatData ? (
+                <div className="space-y-4">
+                  <Badge variant="default" className="text-lg py-1 px-2 bg-green-500">
+                    Active Hat
+                  </Badge>
+                  {isMetadataLoading ? (
+                    <Skeleton className="h-4 w-full" />
+                  ) : metadataError ? (
+                    <Alert variant="destructive">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertTitle>Error</AlertTitle>
+                      <AlertDescription>
+                        Failed to load Hat metadata. Please try again later.
+                      </AlertDescription>
+                    </Alert>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">{hatMetadata?.description}</p>
+                  )}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="p-3 bg-gray-50 rounded-lg">
+                      <div className="text-sm font-medium">Max Supply</div>
+                      <div className="text-lg">{hatData.maxSupply.toString()}</div>
+                    </div>
+                    <div className="p-3 bg-gray-50 rounded-lg">
+                      <div className="text-sm font-medium">Current Supply</div>
+                      <div className="text-lg">{hatData.supply.toString()}</div>
+                    </div>
+                    <div className="p-3 bg-gray-50 rounded-lg">
+                      <div className="text-sm font-medium">Children</div>
+                      <div className="text-lg">{hatData.numChildren.toString()}</div>
+                    </div>
+                    <div className="p-3 bg-gray-50 rounded-lg">
+                      <div className="text-sm font-medium">Mutable</div>
+                      <div className="text-lg">{hatData.mutable ? "Yes" : "No"}</div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <Badge variant="secondary">No Hat assigned</Badge>
+              )}
+            </div>
+
+            {/* Actions Section */}
+            <div className="mt-8">
+              <h2 className="text-md text-muted-foreground font-semibold tracking-tight mb-4">
+                Actions
+              </h2>
+              <div className="flex gap-4">
+                <Link href="/assign-hat" passHref>
+                  <Button>Assign Role</Button>
+                </Link>
+                <Link href="/recover-role" passHref>
+                  <Button>Recover Role</Button>
+                </Link>
+              </div>
+            </div>
           </div>
-        </section>
+        </div>
       </div>
     </div>
   );

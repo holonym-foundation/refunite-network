@@ -13,18 +13,18 @@
     --popover: 0 0% 100%;
     --popover-foreground: 234 89% 27%;
 
-    --primary-start: 287 100% 63%;
-    --primary-end: 286 54% 50%;
-    --primary: 286 77% 56%;
+    --primary-start: 199 82% 53%; /* #2BC1F3 */
+    --primary-end: 204 71% 45%; /* #1C86C8 */
+    --primary: 201 77% 49%; /* mix of start and end */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 234 45% 40%;
+    --secondary: 287 54% 51%; /* #af3bcd */
     --secondary-foreground: 0 0% 100%;
 
     --muted: 230 20% 92%;
     --muted-foreground: 234 89% 27%;
 
-    --accent: 287 100% 63%;
+    --accent: 199 82% 53%; /* #2BC1F3 */
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 90% 65%;
@@ -47,18 +47,18 @@
     --popover: 222.2 84% 4.9%;
     --popover-foreground: 234 89% 27%;
 
-    --primary-start: 287 100% 63%;
-    --primary-end: 286 54% 50%;
-    --primary: 286 77% 56%;
+    --primary-start: 199 82% 53%; /* #2BC1F3 */
+    --primary-end: 204 71% 45%; /* #1C86C8 */
+    --primary: 201 77% 49%; /* mix of start and end */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 167 85% 45%;
+    --secondary: 287 54% 51%; /* #af3bcd */
     --secondary-foreground: 0 0% 100%;
 
     --muted: 245 25% 20%;
     --muted-foreground: 234 89% 27%;
 
-    --accent: 287 100% 63%;
+    --accent: 199 82% 53%; /* #2BC1F3 */
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 90% 60%;
@@ -81,14 +81,14 @@
 
 @layer components {
   .gradient-btn {
-    @apply relative inline-flex items-center justify-center overflow-hidden bg-gradient-to-r from-[#DC42FF] to-[#A73AC4] text-white transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50;
+    @apply relative inline-flex items-center justify-center overflow-hidden bg-gradient-to-r from-[#2BC1F3] to-[#1C86C8] text-white transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50;
   }
 
   .gradient-card {
-    @apply relative overflow-hidden bg-gradient-to-br from-[#DC42FF]/10 to-[#A73AC4]/10 backdrop-blur-sm;
+    @apply relative overflow-hidden bg-gradient-to-br from-[#2BC1F3]/10 to-[#1C86C8]/10 backdrop-blur-sm;
   }
 
   .gradient-border {
-    @apply relative before:absolute before:inset-0 before:p-[1px] before:bg-gradient-to-r before:from-[#DC42FF] before:to-[#A73AC4] before:rounded-[inherit] before:-z-[1];
+    @apply relative before:absolute before:inset-0 before:p-[1px] before:bg-gradient-to-r before:from-[#2BC1F3] before:to-[#1C86C8] before:rounded-[inherit] before:-z-[1];
   }
 }

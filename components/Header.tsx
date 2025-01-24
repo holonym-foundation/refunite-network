@@ -1,7 +1,7 @@
 "use client";
 import React, { useState } from "react";
 
-import { Menu, X } from "lucide-react";
+import { Menu, X, ExternalLink } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useAccount } from "wagmi";
@@ -75,9 +75,10 @@ const Header = () => {
                     href="https://app.hatsprotocol.xyz/trees/11155111/639"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-base text-muted-foreground hover:text-primary lg:hover:text-primary-700 font-medium"
+                    className="text-base text-muted-foreground hover:text-primary lg:hover:text-primary-700 font-medium inline-flex items-center gap-1"
                   >
                     Hats tree
+                    <ExternalLink className="h-4 w-4 -mt-[2px]" />
                   </a>
                 </li>
               </ul>
@@ -105,9 +106,10 @@ const Header = () => {
                     href="https://app.hatsprotocol.xyz/trees/11155111/639"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="block py-2 text-base text-muted-foreground hover:text-primary font-medium"
+                    className="block py-2 text-base text-muted-foreground hover:text-primary font-medium inline-flex items-center gap-1"
                   >
                     Hats tree
+                    <ExternalLink className="h-4 w-4 -mt-[2px]" />
                   </a>
                 </li>
               </ul>

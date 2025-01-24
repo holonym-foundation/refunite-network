@@ -41,7 +41,7 @@ const Header = () => {
                 <li key={item.name} className="group">
                   <Link
                     href={item.href}
-                    className="text-base text-gray-700 hover:text-primary lg:hover:text-primary-700 font-medium"
+                    className="text-base text-muted-foreground hover:text-primary lg:hover:text-primary-700 font-medium"
                   >
                     {item.name}
                   </Link>
@@ -52,7 +52,7 @@ const Header = () => {
                   href="https://app.hatsprotocol.xyz/trees/11155111/639"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-base text-gray-700 hover:text-primary lg:hover:text-primary-700 font-medium"
+                  className="text-base text-muted-foreground hover:text-primary lg:hover:text-primary-700 font-medium"
                 >
                   Hats tree
                 </a>
@@ -85,7 +85,7 @@ const Header = () => {
                 <li key={item.name} className="group">
                   <Link
                     href={item.href}
-                    className="block py-2 text-base text-gray-700 hover:text-primary font-medium"
+                    className="block py-2 text-base text-muted-foreground hover:text-primary font-medium"
                     onClick={() => setIsOpen(false)}
                   >
                     {item.name}
@@ -97,7 +97,7 @@ const Header = () => {
                   href="https://app.hatsprotocol.xyz/trees/11155111/639"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="block py-2 text-base text-gray-700 hover:text-primary font-medium"
+                  className="block py-2 text-base text-muted-foreground hover:text-primary font-medium"
                 >
                   Hats tree
                 </a>

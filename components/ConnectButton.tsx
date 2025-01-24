@@ -51,7 +51,7 @@ export default function ConnectPanel() {
               <TooltipTrigger asChild>
                 <Button
                   variant="ghost"
-                  className="font-mono"
+                  className="font-mono text-muted-foreground text-sm sm:text-xs"
                   onClick={() => copyAddress(account.address!)}
                 >
                   {formatAddress(account.address)}

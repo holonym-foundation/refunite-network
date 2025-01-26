@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 
 import { AlertCircle } from "lucide-react";
 import Link from "next/link";
+import QRCode from "react-qr-code";
 import { useAccount, useReadContract } from "wagmi";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -33,7 +34,7 @@ type HatMetadata = {
 };
 
 export default function AccountPage() {
-  const { address, isConnected } = useAccount();
+  const { address, isConnected, chainId } = useAccount();
   const [hatData, setHatData] = useState<HatData | null>(null);
   const [hatMetadata, setHatMetadata] = useState<HatMetadata | null>(null);
   const [isMetadataLoading, setIsMetadataLoading] = useState(false);
@@ -113,7 +114,7 @@ export default function AccountPage() {
             <div className="py-4 border-b border-slate-300">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-lg font-semibold">Community Leader</h2>
+                  <h2 className="text-lg font-semibold">Account</h2>
                   <p className="text-sm font-mono font-semibold text-secondary">
                     {address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "Unknown"}
                   </p>
@@ -129,6 +130,30 @@ export default function AccountPage() {
                     <AvatarFallback>CL</AvatarFallback>
                   )}
                 </Avatar>
+              </div>
+            </div>
+
+            {/* QR Code Section */}
+            <div className="py-4 border-b border-slate-300">
+              <h3 className="text-lg font-semibold mb-4">Share Address</h3>
+              <div className="flex flex-col items-center space-y-4">
+                <div className="p-4 bg-white border border-slate-200 rounded-xl">
+                  {address && chainId ? (
+                    <QRCode
+                      value={`${chainId}:${address}`}
+                      size={200}
+                      style={{ height: "auto", maxWidth: "100%", width: "100%" }}
+                      viewBox={`0 0 256 256`}
+                    />
+                  ) : (
+                    <div className="w-[200px] h-[200px] bg-slate-100 rounded-lg flex items-center justify-center">
+                      <p className="text-sm text-slate-400">Connect wallet to view QR code</p>
+                    </div>
+                  )}
+                </div>
+                <p className="text-sm text-muted-foreground text-center">
+                  Scan this QR code to share your wallet address
+                </p>
               </div>
             </div>
 

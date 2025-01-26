@@ -54,50 +54,59 @@ export default function RecoverRolePage() {
 
   if (!isConnected) {
     return (
-      <div className="flex items-center justify-center min-h-screen p-4 bg-background">
-        <div className="text-center">
-          <h1 className="text-2xl font-semibold mb-4">Recover Role</h1>
-          <p className="text-base mb-6">Please connect your wallet to recover your role.</p>
-          <Button>Connect Wallet</Button>
+      <div className="min-h-screen py-0 sm:py-8 px-0 sm:px-6 md:px-8">
+        <div className="max-w-3xl mx-0 sm:mx-auto">
+          <div className="bg-white p-4 pb-16 sm:p-8 sm:rounded-xl sm:border sm:border-slate-300">
+            <div className="text-center">
+              <h1 className="text-2xl font-semibold mb-4">Recover Role</h1>
+              <p className="text-base">Please connect your wallet to recover your role.</p>
+            </div>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background p-4 sm:p-6 md:p-8">
-      <div className="max-w-3xl mx-auto space-y-8">
-        <header>
-          <h1 className="text-2xl font-semibold">Recover Role</h1>
-        </header>
+    <div className="min-h-screen py-0 sm:py-8 px-0 sm:px-6 md:px-8">
+      <div className="max-w-3xl mx-0 sm:mx-auto">
+        <div className="bg-white p-4 pb-16 sm:p-8 sm:rounded-xl sm:border sm:border-slate-300">
+          <header>
+            <h1 className="text-2xl font-semibold">Recover Role</h1>
+          </header>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="space-y-2">
-            <Label htmlFor="peerAddress">Peer Wallet Address</Label>
-            <Input
-              id="peerAddress"
-              placeholder="0x..."
-              value={peerAddress}
-              onChange={(e) => setPeerAddress(e.target.value)}
-              required
-            />
-          </div>
-          <Button type="submit" disabled={isLoading || !isConnected}>
-            {isLoading ? "Recovering..." : "Recover Role"}
-          </Button>
-        </form>
+          <form onSubmit={handleSubmit} className="space-y-6 mt-6">
+            <div className="space-y-2">
+              <Label htmlFor="peerAddress">Peer Wallet Address</Label>
+              <Input
+                id="peerAddress"
+                placeholder="0x..."
+                value={peerAddress}
+                onChange={(e) => setPeerAddress(e.target.value)}
+                required
+              />
+            </div>
+            <Button type="submit" disabled={isLoading || !isConnected}>
+              {isLoading ? "Recovering..." : "Recover Role"}
+            </Button>
+          </form>
 
-        {(isSuccess || isError) && (
-          <Alert variant={isSuccess ? "default" : "destructive"}>
-            {isSuccess ? <CheckCircle2 className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
-            <AlertTitle>{isSuccess ? "Success" : "Error"}</AlertTitle>
-            <AlertDescription>
-              {isSuccess
-                ? "Your role has been successfully recovered."
-                : "An error occurred while recovering your role. Please try again."}
-            </AlertDescription>
-          </Alert>
-        )}
+          {(isSuccess || isError) && (
+            <Alert variant={isSuccess ? "default" : "destructive"}>
+              {isSuccess ? (
+                <CheckCircle2 className="h-4 w-4" />
+              ) : (
+                <AlertCircle className="h-4 w-4" />
+              )}
+              <AlertTitle>{isSuccess ? "Success" : "Error"}</AlertTitle>
+              <AlertDescription>
+                {isSuccess
+                  ? "Your role has been successfully recovered."
+                  : "An error occurred while recovering your role. Please try again."}
+              </AlertDescription>
+            </Alert>
+          )}
+        </div>
       </div>
     </div>
   );

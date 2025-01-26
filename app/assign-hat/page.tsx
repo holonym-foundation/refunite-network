@@ -61,71 +61,75 @@ export default function AssignHatPage() {
 
   if (!isConnected) {
     return (
-      <div className="flex items-center justify-center min-h-screen p-4 bg-background">
-        <div className="text-center">
-          <h1 className="text-2xl font-semibold mb-4">Assign Hat</h1>
-          <p className="text-base mb-6">Please connect your wallet to assign a hat.</p>
-          <Button>Connect Wallet</Button>
+      <div className="min-h-screen py-0 sm:py-8 px-0 sm:px-6 md:px-8">
+        <div className="max-w-3xl mx-0 sm:mx-auto">
+          <div className="bg-white p-4 pb-16 sm:p-8 sm:rounded-xl sm:border sm:border-slate-300">
+            <div className="text-center">
+              <h1 className="text-2xl font-semibold mb-4">Assign Hat</h1>
+              <p className="text-base">Please connect your wallet to assign a hat.</p>
+            </div>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background p-4 sm:p-6 md:p-8">
-      <div className="max-w-3xl mx-auto space-y-8">
-        <header>
-          <h1 className="text-2xl font-semibold">Assign Hat to Community Leader</h1>
-        </header>
+    <div className="min-h-screen py-0 sm:py-8 px-0 sm:px-6 md:px-8">
+      <div className="max-w-3xl mx-0 sm:mx-auto">
+        <div className="bg-white p-4 pb-16 sm:p-8 sm:rounded-xl sm:border sm:border-slate-300">
+          <header className="py-2">
+            <h1 className="text-lg font-semibold">Assign Hat to Community Leader</h1>
+          </header>
 
-        {account && (
-          <section>
-            <h2 className="text-md text-indigo-600 font-semibold tracking-tight mb-3">
-              Authorization Status
-            </h2>
-            <p className="text-sm">
-              {isSafeLoading ? (
-                "Checking permissions..."
-              ) : isMultisigOwner ? (
-                <span className="text-green-600 font-medium">
-                  You can create and assign new hats as a Safe owner
-                </span>
-              ) : (
-                <span className="text-red-600 font-medium">
-                  You don&apos;t have permission to create new hats
-                </span>
-              )}
-            </p>
-          </section>
-        )}
+          {account && (
+            <section className="py-4 border-b border-slate-300">
+              <p className="text-sm">
+                {isSafeLoading ? (
+                  <span className="text-muted-foreground font-medium">Checking permissions...</span>
+                ) : isMultisigOwner ? (
+                  <span className="text-green-600 font-medium">
+                    You can create and assign new hats as a Safe owner
+                  </span>
+                ) : (
+                  <span className="text-red-600 font-medium">
+                    You don&apos;t have permission to create new hats
+                  </span>
+                )}
+              </p>
+            </section>
+          )}
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="space-y-2">
-            <Label htmlFor="address">Wallet Address</Label>
-            <Input
-              id="address"
-              type="text"
-              placeholder="0x..."
-              value={recipient}
-              onChange={(e) => setRecipient(e.target.value)}
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="name">Leader Name</Label>
-            <Input
-              id="name"
-              type="text"
-              placeholder="John Doe"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-            />
-          </div>
-          <Button type="submit" disabled={isLoading}>
-            {isLoading ? "Assigning..." : "Assign Hat"}
-          </Button>
-        </form>
+          <form onSubmit={handleSubmit} className="py-4">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="address">Wallet Address</Label>
+                <Input
+                  id="address"
+                  type="text"
+                  placeholder="0x..."
+                  value={recipient}
+                  onChange={(e) => setRecipient(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="name">Leader Name</Label>
+                <Input
+                  id="name"
+                  type="text"
+                  placeholder="John Doe"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                />
+              </div>
+              <Button type="submit" disabled={isLoading} className="mt-4">
+                {isLoading ? "Assigning..." : "Assign Hat"}
+              </Button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );

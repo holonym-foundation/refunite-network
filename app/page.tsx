@@ -6,10 +6,10 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-background">
       <main>
-        <section className="py-20 bg-gradient-to-br from-indigo-100 to-indigo-200 text-indigo-800">
+        <section className="py-12 md:py-20 bg-gradient-to-br from-indigo-100 to-indigo-200">
           <div className="container mx-auto px-4 text-center">
-            <h1 className="text-5xl font-bold mb-6">Welcome to Refunite</h1>
-            <p className="text-xl mb-8 max-w-2xl mx-auto text-indigo-700">
+            <h1 className="text-3xl md:text-5xl font-bold mb-4 md:mb-6">Welcome to Refunite</h1>
+            <p className="text-lg md:text-xl mb-6 md:mb-8 max-w-2xl mx-auto px-4">
               Empowering refugee communities through decentralized trust networks
             </p>
             <Button size="lg" variant="secondary">
@@ -19,12 +19,14 @@ export default function LandingPage() {
           </div>
         </section>
 
-        <section id="about" className="py-20">
+        <section id="about" className="py-12 md:py-20">
           <div className="container mx-auto px-4">
-            <h2 className="text-3xl font-bold mb-12 text-center text-indigo-800">About Refunite</h2>
-            <div className="grid md:grid-cols-2 gap-12">
+            <h2 className="text-2xl md:text-3xl font-bold mb-8 md:mb-12 text-center">
+              About Refunite
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-12">
               <div className="bg-white p-8 rounded-lg shadow-md">
-                <h3 className="text-2xl font-semibold mb-4 text-indigo-800">Our Mission</h3>
+                <h3 className="text-2xl font-semibold mb-4">Our Mission</h3>
                 <p>
                   Refunite is the world&apos;s largest missing persons platform for refugees and
                   displaced populations. We aim to empower our network of 100,000 community leaders
@@ -33,7 +35,7 @@ export default function LandingPage() {
                 </p>
               </div>
               <div className="bg-white p-8 rounded-lg shadow-md">
-                <h3 className="text-2xl font-semibold mb-4 text-indigo-800">Our Goal</h3>
+                <h3 className="text-2xl font-semibold mb-4">Our Goal</h3>
                 <p>
                   Our goal is to facilitate a trust network within community leaders using
                   decentralized technology. This network will enable efficient management and
@@ -47,11 +49,13 @@ export default function LandingPage() {
 
         <section
           id="features"
-          className="py-20 bg-gradient-to-br from-indigo-100 to-indigo-200 text-indigo-800"
+          className="py-12 md:py-20 bg-gradient-to-br from-indigo-100 to-indigo-200"
         >
           <div className="container mx-auto px-4">
-            <h2 className="text-3xl font-bold mb-12 text-center">Key Features</h2>
-            <div className="grid md:grid-cols-3 gap-8">
+            <h2 className="text-2xl md:text-3xl font-bold mb-8 md:mb-12 text-center">
+              Key Features
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 md:gap-8">
               <div className="bg-white p-6 rounded-lg shadow-md">
                 <Users className="h-12 w-12 text-primary mb-4" />
                 <h3 className="text-xl font-semibold mb-2">Decentralized Network</h3>
@@ -80,10 +84,10 @@ export default function LandingPage() {
           </div>
         </section>
 
-        <section id="contact" className="py-20">
+        <section id="contact" className="py-12 md:py-20">
           <div className="container mx-auto px-4 text-center">
-            <h2 className="text-3xl font-bold mb-8 text-indigo-800">Get Involved</h2>
-            <p className="mb-8 max-w-2xl mx-auto text-indigo-700">
+            <h2 className="text-2xl md:text-3xl font-bold mb-6 md:mb-8">Get Involved</h2>
+            <p className="mb-6 md:mb-8 max-w-2xl mx-auto px-4">
               Join us in our mission to empower refugee communities. Whether you&apos;re a community
               leader or want to support our cause, we&apos;d love to hear from you.
             </p>

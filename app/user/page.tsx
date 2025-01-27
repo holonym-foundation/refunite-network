@@ -119,7 +119,7 @@ export default function AccountPage() {
                     {address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "Unknown"}
                   </p>
                 </div>
-                <Avatar className="h-20 w-20">
+                <Avatar className="h-14 w-14">
                   {address ? (
                     <div
                       dangerouslySetInnerHTML={{

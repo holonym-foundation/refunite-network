@@ -217,7 +217,7 @@ export default function AccountPage() {
             </div>
 
             {/* Actions Section */}
-            <div className="mt-8">
+            <div className="mt-8 pb-16">
               <h2 className="text-md text-muted-foreground font-semibold tracking-tight mb-4">
                 Actions
               </h2>

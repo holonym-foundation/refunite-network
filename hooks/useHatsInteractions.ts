@@ -3,7 +3,7 @@ import { MultiCallResult } from "@hatsprotocol/sdk-v1-core";
 import { HatsClient } from "@hatsprotocol/sdk-v1-core";
 import Safe from "@safe-global/protocol-kit";
 import { Eip1193Provider } from "@safe-global/protocol-kit/dist/src/types/safeProvider";
-import { TransactionResult } from "@safe-global/types-kit";
+import { OperationType, TransactionResult } from "@safe-global/types-kit";
 import { getAddress, Hex } from "viem";
 import { useAccount, useWalletClient } from "wagmi";
 
@@ -101,8 +101,18 @@ export const useHatsInteractions = () => {
           };
         }
 
+        const addOwnerTx = await safe.createAddOwnerTx({ ownerAddress: recipient });
+
+        // Extract transaction data
+        const addOwnerTxData = {
+          to: addOwnerTx.data.to,
+          value: addOwnerTx.data.value,
+          data: addOwnerTx.data.data,
+          operation: OperationType.Call,
+        };
+
         const tx = await safe.createTransaction({
-          transactions: mapToSafeTx(HATS_CONTRACT_ADDRESS, data),
+          transactions: [...mapToSafeTx(HATS_CONTRACT_ADDRESS, data), addOwnerTxData],
         });
         // const txHash = await safe.getTransactionHash(tx)
         // const signature = await safe.signHash(txHash)

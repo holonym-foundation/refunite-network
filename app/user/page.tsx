@@ -119,9 +119,10 @@ export default function AccountPage() {
                     {address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "Unknown"}
                   </p>
                 </div>
-                <Avatar className="h-14 w-14">
+                <Avatar className="h-12 w-12">
                   {address ? (
                     <div
+                      className="w-full h-full"
                       dangerouslySetInnerHTML={{
                         __html: generateSvgAvatar(address.toLowerCase()).outerHTML,
                       }}

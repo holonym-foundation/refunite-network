@@ -1,9 +1,13 @@
 "use client";
 import { useState } from "react";
 
+import { Scanner, type IDetectedBarcode } from "@yudiel/react-qr-scanner";
+import { QrCode } from "lucide-react";
+import { isAddress } from "viem";
 import { useAccount } from "wagmi";
 
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
@@ -19,6 +23,7 @@ export default function AssignHatPage() {
   const { toast } = useToast();
   const { isMultisigOwner, isLoading: isSafeLoading } = useSafeOwner();
   const { hatsInteractions, isConnected: isHatsConnected } = useHatsInteractions();
+  const [showScanner, setShowScanner] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,6 +61,44 @@ export default function AssignHatPage() {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleScan = (results: IDetectedBarcode[]) => {
+    const qrCode = results[0];
+    if (!qrCode) return;
+
+    // QR codes from our user page are in format "chainId:address"
+    const { rawValue } = qrCode;
+    const address = rawValue.split(":")[1];
+    if (!isAddress(address)) {
+      toast({
+        variant: "destructive",
+        title: "Error in QR code",
+        description: `Invalid address: ${address}`,
+      });
+      return;
+    }
+
+    setRecipient(address);
+    setShowScanner(false);
+  };
+
+  const handleScanError = (error: unknown) => {
+    if (error instanceof Error) {
+      console.error(error);
+      toast({
+        variant: "destructive",
+        title: "Error while scanning",
+        description: error.message,
+      });
+    } else {
+      console.error(error);
+      toast({
+        variant: "destructive",
+        title: "Error while scanning",
+        description: "An unknown error occurred",
+      });
     }
   };
 
@@ -104,14 +147,28 @@ export default function AssignHatPage() {
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="address">Wallet Address</Label>
-                <Input
-                  id="address"
-                  type="text"
-                  placeholder="0x..."
-                  value={recipient}
-                  onChange={(e) => setRecipient(e.target.value)}
-                  required
-                />
+                <div className="flex gap-2">
+                  <Input
+                    id="address"
+                    type="text"
+                    placeholder="0x..."
+                    value={recipient}
+                    onChange={(e) => setRecipient(e.target.value)}
+                    required
+                  />
+                  <Dialog open={showScanner} onOpenChange={setShowScanner}>
+                    <DialogTrigger asChild>
+                      <Button type="button" variant="outline" size="icon" className="shrink-0">
+                        <QrCode className="h-4 w-4" />
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <div className="pt-4">
+                        <Scanner onScan={handleScan} onError={handleScanError} />
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="name">Leader Name</Label>

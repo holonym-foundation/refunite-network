@@ -9,7 +9,11 @@ import { useAccount, useWalletClient } from "wagmi";
 
 import { useHatsClient } from "./useHatsClient";
 
-import { ATLANTIS_HAT_ID, ATLANTIS_SAFE_ADDRESS, HATS_CONTRACT_ADDRESS } from "@/lib/constants";
+import {
+  NETWORK_STEWARD_HAT_ID,
+  NETWORK_STEWARD_SAFE_ADDRESS,
+  HATS_CONTRACT_ADDRESS,
+} from "@/lib/constants";
 
 type Result<T, E = Error> = { success: true; data: T } | { success: false; error: E };
 
@@ -86,7 +90,7 @@ export const useHatsInteractions = () => {
       try {
         const safe = await Safe.init({
           provider: walletClient as Eip1193Provider,
-          safeAddress: ATLANTIS_SAFE_ADDRESS,
+          safeAddress: NETWORK_STEWARD_SAFE_ADDRESS,
         });
 
         const data = await buildHatData(hatsClient, recipient, name);
@@ -141,18 +145,18 @@ async function buildHatData(
 
   try {
     const createHatCalldata = hatsClient.createHatCallData({
-      admin: BigInt(ATLANTIS_HAT_ID),
+      admin: BigInt(NETWORK_STEWARD_HAT_ID),
       details: name,
       maxSupply: 1,
-      eligibility: ATLANTIS_SAFE_ADDRESS,
-      toggle: ATLANTIS_SAFE_ADDRESS,
+      eligibility: NETWORK_STEWARD_SAFE_ADDRESS,
+      toggle: NETWORK_STEWARD_SAFE_ADDRESS,
       mutable: true,
     });
 
-    const children = await hatsClient.getChildrenHats(BigInt(ATLANTIS_HAT_ID));
+    const children = await hatsClient.getChildrenHats(BigInt(NETWORK_STEWARD_HAT_ID));
     const nextHatId = (
       await hatsClient.predictNextChildrenHatIDs({
-        admin: BigInt(ATLANTIS_HAT_ID),
+        admin: BigInt(NETWORK_STEWARD_HAT_ID),
         numChildren: children.length,
       })
     )[0];

@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/button";
 
 import ConnectButton from "./ConnectButton";
 
+import { CHAIN_ID, HATS_TREE_ID } from "@/lib/constants";
+
 const navItems = [
   { name: "Home", href: "/" },
   { name: "Account", href: "/user" },
@@ -72,7 +74,7 @@ const Header = () => {
                 ))}
                 <li className="group">
                   <a
-                    href="https://app.hatsprotocol.xyz/trees/11155111/639"
+                    href={`https://app.hatsprotocol.xyz/trees/${CHAIN_ID}/${HATS_TREE_ID}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-base text-muted-foreground hover:text-primary lg:hover:text-primary-700 font-medium inline-flex items-center gap-1"

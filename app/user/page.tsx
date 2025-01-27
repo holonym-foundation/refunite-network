@@ -7,13 +7,13 @@ import QRCode from "react-qr-code";
 import { useAccount, useReadContract } from "wagmi";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 
 import { generateSvgAvatar } from "@/lib/avatars";
-import { ATLANTIS_HAT_ID, HATS_CONTRACT_ADDRESS } from "@/lib/constants";
+import { NETWORK_STEWARD_HAT_ID, HATS_CONTRACT_ADDRESS } from "@/lib/constants";
 import { abi as HatsAbi } from "@/lib/hatsAbi";
 
 type HatData = {
@@ -41,7 +41,7 @@ export default function AccountPage() {
   const [metadataError, setMetadataError] = useState<Error | null>(null);
 
   const hatsContractAddress = HATS_CONTRACT_ADDRESS;
-  const hatsId = BigInt(ATLANTIS_HAT_ID);
+  const hatsId = BigInt(NETWORK_STEWARD_HAT_ID);
   const {
     data: rawHatData,
     isError: isHatError,

@@ -27,7 +27,7 @@ export function Header() {
                 <Link href="/" className="flex items-center">
                   <Image
                     src="/logo.svg"
-                    alt="Refunite Network logo"
+                    alt="Refunite Relay ID logo"
                     width={120}
                     height={48}
                     priority

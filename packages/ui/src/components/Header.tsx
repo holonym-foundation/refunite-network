@@ -12,7 +12,7 @@ import { CHAIN_ID, HATS_TREE_ID } from "@refunite/web3";
 const navItems = [
   { name: "Account", href: "/" },
   { name: "Assign Hat", href: "/assign-hat" },
-  { name: "Recover role", href: "/recover-role" },
+  { name: "Recover Leader", href: "/recover" },
 ];
 
 export function Header() {

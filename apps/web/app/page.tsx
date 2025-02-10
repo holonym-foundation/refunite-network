@@ -223,7 +223,7 @@ export default function AccountPage() {
                 <Link href="/assign-hat" passHref>
                   <Button>Assign Role</Button>
                 </Link>
-                <Link href="/recover-role" passHref>
+                <Link href="/recover" passHref>
                   <Button>Recover Role</Button>
                 </Link>
               </div>

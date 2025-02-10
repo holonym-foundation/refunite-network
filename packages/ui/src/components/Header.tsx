@@ -10,7 +10,7 @@ import { ConnectButton } from "./ConnectButton";
 import { CHAIN_ID, HATS_TREE_ID } from "@refunite/web3";
 
 const navItems = [
-  { name: "Account", href: "/" },
+  { name: "My Account", href: "/" },
   { name: "Add Leader", href: "/add" },
   { name: "Recover Leader", href: "/recover" },
 ];

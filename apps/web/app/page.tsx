@@ -7,7 +7,7 @@ import { Button } from "@refunite/ui";
 import { Skeleton } from "@refunite/ui";
 import { NETWORK_STEWARD_HAT_ID, HATS_CONTRACT_ADDRESS } from "@refunite/web3";
 import { abi as HatsAbi } from "@refunite/web3";
-import { AlertCircle, Copy } from "lucide-react";
+import { AlertCircle, Copy, ChevronDown } from "lucide-react";
 import Link from "next/link";
 import QRCode from "react-qr-code";
 import { useAccount, useReadContract } from "wagmi";
@@ -36,6 +36,7 @@ export default function AccountPage() {
   const [isMetadataLoading, setIsMetadataLoading] = useState(false);
   const [metadataError, setMetadataError] = useState<Error | null>(null);
   const [showCopied, setShowCopied] = useState(false);
+  const [isQrExpanded, setIsQrExpanded] = useState(false);
 
   const hatsContractAddress = HATS_CONTRACT_ADDRESS;
   const hatsId = BigInt(NETWORK_STEWARD_HAT_ID);
@@ -141,26 +142,38 @@ export default function AccountPage() {
 
             {/* QR Code Section */}
             <div className="py-4 border-b border-slate-300">
-              <h3 className="text-lg font-semibold mb-4">Share your address</h3>
-              <div className="flex flex-col items-center space-y-4">
-                <div className="p-4 bg-white border border-slate-200 rounded-xl">
-                  {address && chainId ? (
-                    <QRCode
-                      value={`${chainId}:${address}`}
-                      size={200}
-                      style={{ height: "auto", maxWidth: "100%", width: "100%" }}
-                      viewBox={`0 0 256 256`}
-                    />
-                  ) : (
-                    <div className="w-[200px] h-[200px] bg-slate-100 rounded-lg flex items-center justify-center">
-                        <p className="text-sm text-slate-400">Log in to view QR code</p>
-                    </div>
-                  )}
-                </div>
-                <p className="text-sm text-muted-foreground text-center">
-                  Scan this QR code to share your account address
-                </p>
+              <div
+                className="flex items-center justify-between cursor-pointer"
+                onClick={() => setIsQrExpanded(!isQrExpanded)}
+              >
+                <h3 className="text-lg font-semibold">Show QR code</h3>
+                <ChevronDown
+                  className={`h-6 w-6 mr-2 transition-transform ${
+                    isQrExpanded ? "transform rotate-180" : ""
+                  }`}
+                />
               </div>
+              {isQrExpanded && (
+                <div className="flex flex-col items-center space-y-4 mt-4">
+                  <div className="p-4 bg-white border border-slate-200 rounded-xl">
+                    {address && chainId ? (
+                      <QRCode
+                        value={`${chainId}:${address}`}
+                        size={200}
+                        style={{ height: "auto", maxWidth: "100%", width: "100%" }}
+                        viewBox={`0 0 256 256`}
+                      />
+                    ) : (
+                      <div className="w-[200px] h-[200px] bg-slate-100 rounded-lg flex items-center justify-center">
+                        <p className="text-sm text-slate-400">Log in to view QR code</p>
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-sm text-muted-foreground text-center">
+                    Scan this QR code to share your account address
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Hat Status Section */}

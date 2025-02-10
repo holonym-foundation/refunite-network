@@ -220,7 +220,7 @@ export default function AccountPage() {
                 Actions
               </h2>
               <div className="flex gap-4">
-                <Link href="/assign-hat" passHref>
+                <Link href="/add" passHref>
                   <Button>Assign Role</Button>
                 </Link>
                 <Link href="/recover" passHref>

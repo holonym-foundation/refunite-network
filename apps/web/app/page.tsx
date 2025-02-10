@@ -1,40 +1,19 @@
 "use client";
 import { useState, useEffect } from "react";
 
-import { Alert, AlertDescription, AlertTitle } from "@refunite/ui";
 import { Badge } from "@refunite/ui";
 import { Button } from "@refunite/ui";
 import { Skeleton } from "@refunite/ui";
 import { NETWORK_STEWARD_HAT_ID, HATS_CONTRACT_ADDRESS } from "@refunite/web3";
 import { abi as HatsAbi } from "@refunite/web3";
-import { AlertCircle, Copy, ChevronDown } from "lucide-react";
+import { Copy, ChevronDown } from "lucide-react";
 import Link from "next/link";
 import QRCode from "react-qr-code";
 import { useAccount, useReadContract } from "wagmi";
 
-type HatData = {
-  details: string;
-  maxSupply: bigint;
-  supply: bigint;
-  eligibility: string;
-  toggle: string;
-  imageUri: string;
-  numChildren: bigint;
-  mutable: boolean;
-  active: boolean;
-};
-
-type HatMetadata = {
-  name: string;
-  description: string;
-};
-
 export default function AccountPage() {
   const { address, isConnected, chainId } = useAccount();
-  const [hatData, setHatData] = useState<HatData | null>(null);
-  const [hatMetadata, setHatMetadata] = useState<HatMetadata | null>(null);
-  const [isMetadataLoading, setIsMetadataLoading] = useState(false);
-  const [metadataError, setMetadataError] = useState<Error | null>(null);
+  const [hasHat, setHasHat] = useState<boolean | null>(null);
   const [showCopied, setShowCopied] = useState(false);
   const [isQrExpanded, setIsQrExpanded] = useState(false);
 
@@ -53,40 +32,9 @@ export default function AccountPage() {
 
   useEffect(() => {
     if (rawHatData) {
-      const typedHatData: HatData = {
-        details: rawHatData[0],
-        maxSupply: BigInt(rawHatData[1]),
-        supply: BigInt(rawHatData[2]),
-        eligibility: rawHatData[3],
-        toggle: rawHatData[4],
-        imageUri: rawHatData[5],
-        numChildren: BigInt(rawHatData[6]),
-        mutable: rawHatData[7],
-        active: rawHatData[8],
-      };
-
-      setHatData(typedHatData);
-      fetchHatMetadata(typedHatData.details);
+      setHasHat(rawHatData[8]); // active flag of hat
     }
   }, [rawHatData]);
-
-  const fetchHatMetadata = async (detailsUrl: string) => {
-    setIsMetadataLoading(true);
-    setMetadataError(null);
-    try {
-      const response = await fetch(detailsUrl.replace("ipfs://", "https://ipfs.io/ipfs/"));
-      if (!response.ok) {
-        throw new Error("Failed to fetch metadata");
-      }
-      const data = await response.json();
-      setHatMetadata(data.data);
-    } catch (error) {
-      console.error("Error fetching hat metadata:", error);
-      setMetadataError(error instanceof Error ? error : new Error("Unknown error occurred"));
-    } finally {
-      setIsMetadataLoading(false);
-    }
-  };
 
   if (!isConnected) {
     return (
@@ -176,63 +124,58 @@ export default function AccountPage() {
               )}
             </div>
 
-            {/* Hat Status Section */}
+            {/* Status Section */}
             <div className="py-4 border-b border-slate-300">
-              <h3 className="text-lg font-semibold mb-4">Hat Status</h3>
-              {isHatLoading ? (
-                <div className="space-y-2">
-                  <Skeleton className="h-8 w-full" />
-                  <Skeleton className="h-4 w-3/4" />
-                  <Skeleton className="h-4 w-1/2" />
-                </div>
-              ) : isHatError ? (
-                <Alert variant="destructive">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertTitle>Error</AlertTitle>
-                  <AlertDescription>
-                    Failed to load Hat data. Please try again later.
-                  </AlertDescription>
-                </Alert>
-              ) : hatData ? (
-                <div className="space-y-4">
-                  <Badge variant="default" className="text-lg py-1 px-2 bg-green-500">
-                    Active Hat
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold">Status</h3>
+                {isHatLoading ? (
+                  <Skeleton className="h-8 w-24" />
+                ) : isHatError ? (
+                  <Badge variant="destructive">Error</Badge>
+                ) : hasHat ? (
+                  <Badge
+                    variant="default"
+                    className="bg-green-200 text-green-700 gap-1 px-3 py-2 shadow-sm font-semibold tracking-wide"
+                  >
+                    <svg
+                      className="w-4 h-4"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M20 6L9 17L4 12"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                    Added to network
                   </Badge>
-                  {isMetadataLoading ? (
-                    <Skeleton className="h-4 w-full" />
-                  ) : metadataError ? (
-                    <Alert variant="destructive">
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertTitle>Error</AlertTitle>
-                      <AlertDescription>
-                        Failed to load Hat metadata. Please try again later.
-                      </AlertDescription>
-                    </Alert>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">{hatMetadata?.description}</p>
-                  )}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="p-3 bg-gray-50 rounded-lg">
-                      <div className="text-sm font-medium">Max Supply</div>
-                      <div className="text-lg">{hatData.maxSupply.toString()}</div>
-                    </div>
-                    <div className="p-3 bg-gray-50 rounded-lg">
-                      <div className="text-sm font-medium">Current Supply</div>
-                      <div className="text-lg">{hatData.supply.toString()}</div>
-                    </div>
-                    <div className="p-3 bg-gray-50 rounded-lg">
-                      <div className="text-sm font-medium">Children</div>
-                      <div className="text-lg">{hatData.numChildren.toString()}</div>
-                    </div>
-                    <div className="p-3 bg-gray-50 rounded-lg">
-                      <div className="text-sm font-medium">Mutable</div>
-                      <div className="text-lg">{hatData.mutable ? "Yes" : "No"}</div>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <Badge variant="secondary">No Hat assigned</Badge>
-              )}
+                ) : (
+                  <Badge
+                    variant="destructive"
+                    className="bg-red-200 text-red-700 gap-1 px-3 py-2 shadow-sm font-semibold tracking-wide"
+                  >
+                    <svg
+                      className="w-4 h-4"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M18 6L6 18M6 6L18 18"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                    Not added to network
+                  </Badge>
+                )}
+              </div>
             </div>
 
             {/* Actions Section */}

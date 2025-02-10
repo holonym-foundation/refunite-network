@@ -2,14 +2,12 @@
 import { useState, useEffect } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@refunite/ui";
-import { Avatar, AvatarFallback } from "@refunite/ui";
 import { Badge } from "@refunite/ui";
 import { Button } from "@refunite/ui";
 import { Skeleton } from "@refunite/ui";
-import { generateSvgAvatar } from "@refunite/ui";
 import { NETWORK_STEWARD_HAT_ID, HATS_CONTRACT_ADDRESS } from "@refunite/web3";
 import { abi as HatsAbi } from "@refunite/web3";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Copy } from "lucide-react";
 import Link from "next/link";
 import QRCode from "react-qr-code";
 import { useAccount, useReadContract } from "wagmi";
@@ -37,6 +35,7 @@ export default function AccountPage() {
   const [hatMetadata, setHatMetadata] = useState<HatMetadata | null>(null);
   const [isMetadataLoading, setIsMetadataLoading] = useState(false);
   const [metadataError, setMetadataError] = useState<Error | null>(null);
+  const [showCopied, setShowCopied] = useState(false);
 
   const hatsContractAddress = HATS_CONTRACT_ADDRESS;
   const hatsId = BigInt(NETWORK_STEWARD_HAT_ID);
@@ -117,17 +116,26 @@ export default function AccountPage() {
                     {address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "Unknown"}
                   </p>
                 </div>
-                <Avatar className="h-14 w-14">
-                  {address ? (
-                    <div
-                      dangerouslySetInnerHTML={{
-                        __html: generateSvgAvatar(address.toLowerCase()).outerHTML,
-                      }}
-                    />
-                  ) : (
-                    <AvatarFallback>CL</AvatarFallback>
+                <div className="relative">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => {
+                      if (address) {
+                        navigator.clipboard.writeText(address);
+                        setShowCopied(true);
+                        setTimeout(() => setShowCopied(false), 2000);
+                      }
+                    }}
+                  >
+                    <Copy className="h-5 w-5" />
+                  </Button>
+                  {showCopied && (
+                    <div className="absolute right-full mr-2 top-1/2 transform -translate-y-1/2 bg-slate-800 text-white px-2 py-1 rounded text-xs whitespace-nowrap">
+                      Address copied to clipboard
+                    </div>
                   )}
-                </Avatar>
+                </div>
               </div>
             </div>
 

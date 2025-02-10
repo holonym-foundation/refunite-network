@@ -13,7 +13,6 @@ export * from './components/ui/dropdown-menu';
 export * from './components/ui/dialog';
 export * from './components/ui/tabs';
 export * from './components/ui/label';
-export * from './lib/avatars';
 
 // Export components individually to avoid conflicts
 export { Header } from './components/Header';

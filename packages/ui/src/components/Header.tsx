@@ -1,13 +1,12 @@
 "use client";
 import { useState } from "react";
 
-import { Menu, X, ExternalLink } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 
 import { Button } from "./ui/button";
 import { ConnectButton } from "./ConnectButton";
-import { CHAIN_ID, HATS_TREE_ID } from "@refunite/web3";
 
 const navItems = [
   { name: "My Account", href: "/" },
@@ -67,17 +66,6 @@ export function Header() {
                     </Link>
                   </li>
                 ))}
-                <li className="group">
-                  <a
-                    href={`https://app.hatsprotocol.xyz/trees/${CHAIN_ID}/${HATS_TREE_ID}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-base text-muted-foreground hover:text-primary lg:hover:text-primary-700 font-medium inline-flex items-center gap-1"
-                  >
-                    Hats tree
-                    <ExternalLink className="h-4 w-4 -mt-[2px]" />
-                  </a>
-                </li>
               </ul>
             </div>
 
@@ -98,17 +86,6 @@ export function Header() {
                     </Link>
                   </li>
                 ))}
-                <li className="group">
-                  <a
-                    href="https://app.hatsprotocol.xyz/trees/11155111/639"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block py-2 text-base text-muted-foreground hover:text-primary font-medium inline-flex items-center gap-1"
-                  >
-                    Hats tree
-                    <ExternalLink className="h-4 w-4 -mt-[2px]" />
-                  </a>
-                </li>
                 <li className="mt-4">
                   <ConnectButton />
                 </li>

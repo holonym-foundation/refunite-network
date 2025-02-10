@@ -1,18 +1,17 @@
 "use client";
 import { useState } from "react";
 
+import { Button } from "@refunite/ui";
+import { Dialog, DialogContent, DialogTrigger } from "@refunite/ui";
+import { Input } from "@refunite/ui";
+import { Label } from "@refunite/ui";
+import { useToast } from "@refunite/ui";
+import { useHatsInteractions } from "@refunite/web3";
+import { useSafeOwner } from "@refunite/web3";
 import { Scanner, type IDetectedBarcode } from "@yudiel/react-qr-scanner";
 import { QrCode } from "lucide-react";
 import { isAddress } from "viem";
 import { useAccount } from "wagmi";
-
-import { Button } from "@/packages/ui/src/components/ui/button";
-import { Dialog, DialogContent, DialogTrigger } from "@/packages/ui/src/components/ui/dialog";
-import { Input } from "@/packages/ui/src/components/ui/input";
-import { Label } from "@/packages/ui/src/components/ui/label";
-import { useToast } from "@/packages/ui/src/components/ui/use-toast";
-import { useHatsInteractions } from "@/packages/web3/src/hooks/useHatsInteractions";
-import { useSafeOwner } from "@/packages/web3/src/hooks/useSafeOwner";
 
 export default function AssignHatPage() {
   const { address: account, isConnected } = useAccount();

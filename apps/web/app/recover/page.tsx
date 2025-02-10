@@ -1,15 +1,14 @@
 "use client";
 import React, { useState } from "react";
 
+import { Alert, AlertDescription, AlertTitle } from "@refunite/ui";
+import { Button } from "@refunite/ui";
+import { Input } from "@refunite/ui";
+import { Label } from "@refunite/ui";
+import { abi as HatsAbi } from "@refunite/web3";
 import { AlertCircle, CheckCircle2 } from "lucide-react";
 import { getAddress, Hex } from "viem";
 import { useAccount, usePublicClient, useWaitForTransactionReceipt, useWalletClient } from "wagmi";
-
-import { Alert, AlertDescription, AlertTitle } from "@/packages/ui/src/components/ui/alert";
-import { Button } from "@/packages/ui/src/components/ui/button";
-import { Input } from "@/packages/ui/src/components/ui/input";
-import { Label } from "@/packages/ui/src/components/ui/label";
-import { abi as HatsAbi } from "@/packages/web3/src/lib/hatsAbi";
 
 export default function RecoverRolePage() {
   const publicClient = usePublicClient();

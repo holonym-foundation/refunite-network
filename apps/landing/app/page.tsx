@@ -1,7 +1,8 @@
-import { ArrowRight, Globe, Shield, Users } from "lucide-react";
 import { Button } from "@refunite/ui";
-import { Header } from "./Header";
+import { ArrowRight, Globe, Shield, Users } from "lucide-react";
 import Link from "next/link";
+
+import { Header } from "./Header";
 
 export default function LandingPage() {
   return (

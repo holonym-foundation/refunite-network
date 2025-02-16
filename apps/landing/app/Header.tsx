@@ -1,8 +1,9 @@
 "use client";
 import React from "react";
+
+import { Button } from "@refunite/ui";
 import Image from "next/image";
 import Link from "next/link";
-import { Button } from "@refunite/ui";
 
 export function Header() {
   return (
@@ -21,13 +22,8 @@ export function Header() {
               />
             </Link>
 
-            <Button
-              asChild
-              variant="default"
-            >
-              <Link href="https://app.refunite-network.vercel.app">
-                Launch App
-              </Link>
+            <Button asChild variant="default">
+              <Link href="https://app.refunite-network.vercel.app">Launch App</Link>
             </Button>
           </div>
         </nav>

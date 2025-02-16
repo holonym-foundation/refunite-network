@@ -6,6 +6,9 @@
     "packages/*"
   ],
   "scripts": {
+    "dev": "bun run dev:web",
+    "build": "bun run build:web",
+    "start": "bun run start:web",
     "dev:landing": "cd apps/landing && bun run dev",
     "dev:web": "cd apps/web && bun run dev",
     "build:landing": "cd apps/landing && bun run build",

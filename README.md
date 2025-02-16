@@ -60,13 +60,13 @@ leaders.
 2. Install dependencies:
 
    ```bash
-   bun install
+   pnpm install
    ```
 
 3. Run the application:
 
    ```bash
-   bun dev
+   pnpm dev
    ```
 
 4. Open in your browser at `http://localhost:3000`.

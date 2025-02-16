@@ -5,8 +5,9 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "check-types": "tsc --noEmit",
+    "start": "next start"
   },
   "dependencies": {
     "@refunite/ui": "workspace:*",

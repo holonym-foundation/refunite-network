@@ -1,19 +1,26 @@
 {
   "name": "refunite-network",
   "private": true,
+  "packageManager": "pnpm@8.15.0",
   "workspaces": [
     "apps/*",
     "packages/*"
   ],
   "scripts": {
-    "dev": "bun run dev:web",
-    "build": "bun run build:web",
-    "start": "bun run start:web",
-    "dev:landing": "cd apps/landing && bun run dev",
-    "dev:web": "cd apps/web && bun run dev",
-    "build:landing": "cd apps/landing && bun run build",
-    "build:web": "cd apps/web && bun run build",
-    "start:landing": "cd apps/landing && bun run start",
-    "start:web": "cd apps/web && bun run start"
+    "dev": "pnpm run dev:web",
+    "build": "turbo run build",
+    "check-types": "turbo run build check-types",
+    "start": "pnpm run start:web",
+    "dev:landing": "cd apps/landing && pnpm run dev",
+    "dev:web": "cd apps/web && pnpm run dev",
+    "build:landing": "cd apps/landing && pnpm run build",
+    "build:web": "turbo run build --filter=refunite-network-frontend...",
+    "start:landing": "cd apps/landing && pnpm run start",
+    "start:web": "cd apps/web && pnpm run start"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^19.5.0",
+    "@commitlint/config-conventional": "^19.5.0",
+    "lint-staged": "^15.2.10"
   }
 }

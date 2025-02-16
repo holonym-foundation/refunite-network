@@ -10,7 +10,8 @@
     "format": "prettier --write .",
     "clean": "rm -rf node_modules .next",
     "prepare": "husky",
-    "lint-staged": "lint-staged"
+    "lint-staged": "lint-staged",
+    "check-types": "tsc --noEmit"
   },
   "dependencies": {
     "@hatsprotocol/sdk-v1-core": "^0.10.0",
@@ -63,8 +64,6 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
-    "@commitlint/cli": "^19.5.0",
-    "@commitlint/config-conventional": "^19.5.0",
     "@types/react": "18.2.64",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-prettier": "^5.1.3",

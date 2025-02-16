@@ -179,7 +179,7 @@ export default function AddLeaderPage() {
           <form onSubmit={handleSubmit} className="py-4">
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="address">Account address</Label>
+                <Label htmlFor="address">Their address</Label>
                 <div className="flex gap-2">
                   <Input
                     id="address"
@@ -204,7 +204,7 @@ export default function AddLeaderPage() {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="name">Leader Name</Label>
+                <Label htmlFor="name">Their name</Label>
                 <Input
                   id="name"
                   type="text"

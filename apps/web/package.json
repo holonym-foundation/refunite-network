@@ -39,6 +39,7 @@
     "@wagmi/core": "^2.13.8",
     "@yudiel/react-qr-scanner": "^2.1.0",
     "@refunite/web3": "workspace:*",
+    "@refunite/ui": "workspace:*",
     "autoprefixer": "^10.4.20",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",

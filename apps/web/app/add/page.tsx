@@ -186,7 +186,9 @@ export default function AddLeaderPage() {
                     type="text"
                     placeholder="0x..."
                     value={recipient}
-                    onChange={(e) => setRecipient(e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      setRecipient(e.target.value)
+                    }
                     required
                   />
                   <Dialog open={showScanner} onOpenChange={setShowScanner}>
@@ -210,7 +212,7 @@ export default function AddLeaderPage() {
                   type="text"
                   placeholder="John Doe"
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setName(e.target.value)}
                   required
                 />
               </div>

@@ -10,7 +10,7 @@ import { AlertCircle, CheckCircle2 } from "lucide-react";
 import { getAddress, Hex } from "viem";
 import { useAccount, usePublicClient, useWaitForTransactionReceipt, useWalletClient } from "wagmi";
 
-export default function RecoverRolePage() {
+export default function RecoverLeaderPage() {
   const publicClient = usePublicClient();
   const { data: walletClient, isLoading } = useWalletClient();
   const { isConnected } = useAccount();
@@ -56,8 +56,8 @@ export default function RecoverRolePage() {
         <div className="max-w-3xl mx-0 sm:mx-auto">
           <div className="bg-white p-4 pb-16 sm:p-8 sm:rounded-xl sm:border sm:border-slate-300">
             <div className="text-center">
-              <h1 className="text-2xl font-semibold mb-4">Recover Role</h1>
-              <p className="text-base">Please connect your wallet to recover your role.</p>
+              <h1 className="text-2xl font-semibold mb-4">Recover leader</h1>
+              <p className="text-base">Please log in to recover another leader.</p>
             </div>
           </div>
         </div>
@@ -70,12 +70,12 @@ export default function RecoverRolePage() {
       <div className="max-w-3xl mx-0 sm:mx-auto">
         <div className="bg-white p-4 pb-16 sm:p-8 sm:rounded-xl sm:border sm:border-slate-300">
           <header>
-            <h1 className="text-2xl font-semibold">Recover Role</h1>
+            <h1 className="text-2xl font-semibold">Recover leader</h1>
           </header>
 
           <form onSubmit={handleSubmit} className="space-y-6 mt-6">
             <div className="space-y-2">
-              <Label htmlFor="peerAddress">Peer Wallet Address</Label>
+              <Label htmlFor="peerAddress">Their account address</Label>
               <Input
                 id="peerAddress"
                 placeholder="0x..."
@@ -85,7 +85,7 @@ export default function RecoverRolePage() {
               />
             </div>
             <Button type="submit" disabled={isLoading || !isConnected}>
-              {isLoading ? "Recovering..." : "Recover Role"}
+              {isLoading ? "Recovering..." : "Recover leader"}
             </Button>
           </form>
 
@@ -99,8 +99,8 @@ export default function RecoverRolePage() {
               <AlertTitle>{isSuccess ? "Success" : "Error"}</AlertTitle>
               <AlertDescription>
                 {isSuccess
-                  ? "Your role has been successfully recovered."
-                  : "An error occurred while recovering your role. Please try again."}
+                  ? "Their role has been successfully recovered."
+                  : "An error occurred while recovering their role. Please try again."}
               </AlertDescription>
             </Alert>
           )}

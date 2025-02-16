@@ -13,7 +13,7 @@ import { QrCode } from "lucide-react";
 import { isAddress } from "viem";
 import { useAccount } from "wagmi";
 
-export default function AssignHatPage() {
+export default function AddLeaderPage() {
   const { address: account, isConnected } = useAccount();
   const [recipient, setRecipient] = useState("");
   const [name, setName] = useState("");
@@ -47,7 +47,7 @@ export default function AssignHatPage() {
         variant: result.success ? "default" : "destructive",
         title: result.success ? "Success" : "Error",
         description: result.success
-          ? `Successfully proposed hat creation and minting for ${name} (${recipient})`
+          ? `Successfully added ${name} (${recipient})`
           : result.error.message,
       });
     } catch (error) {
@@ -106,8 +106,8 @@ export default function AssignHatPage() {
         <div className="max-w-3xl mx-0 sm:mx-auto">
           <div className="bg-white p-4 pb-16 sm:p-8 sm:rounded-xl sm:border sm:border-slate-300">
             <div className="text-center">
-              <h1 className="text-2xl font-semibold mb-4">Assign Hat</h1>
-              <p className="text-base">Please connect your wallet to assign a hat.</p>
+              <h1 className="text-2xl font-semibold mb-4">Add leader to the network</h1>
+              <p className="text-base">Please log in to add a leader.</p>
             </div>
           </div>
         </div>
@@ -120,7 +120,7 @@ export default function AssignHatPage() {
       <div className="max-w-3xl mx-0 sm:mx-auto">
         <div className="bg-white p-4 pb-16 sm:p-8 sm:rounded-xl sm:border sm:border-slate-300">
           <header className="py-2">
-            <h1 className="text-lg font-semibold">Assign Hat to Community Leader</h1>
+            <h1 className="text-lg font-semibold">Add leader to the network</h1>
           </header>
 
           {account && (
@@ -130,11 +130,11 @@ export default function AssignHatPage() {
                   <span className="text-muted-foreground font-medium">Checking permissions...</span>
                 ) : isMultisigOwner ? (
                   <span className="text-green-600 font-medium">
-                    You can create and assign new hats as a Safe owner
+                    You have permission to add leaders to the network
                   </span>
                 ) : (
                   <span className="text-red-600 font-medium">
-                    You don&apos;t have permission to create new hats
+                    You don&apos;t have permission to add leaders to the network
                   </span>
                 )}
               </p>
@@ -144,7 +144,7 @@ export default function AssignHatPage() {
           <form onSubmit={handleSubmit} className="py-4">
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="address">Wallet Address</Label>
+                <Label htmlFor="address">Account address</Label>
                 <div className="flex gap-2">
                   <Input
                     id="address"
@@ -179,8 +179,8 @@ export default function AssignHatPage() {
                   required
                 />
               </div>
-              <Button type="submit" disabled={isLoading} className="mt-4">
-                {isLoading ? "Assigning..." : "Assign Hat"}
+              <Button type="submit" disabled={isLoading || !isMultisigOwner} className="mt-4">
+                {isLoading ? "Adding..." : "Add leader"}
               </Button>
             </div>
           </form>

@@ -43,8 +43,8 @@ export default function LandingPage() {
                 <h3 className="text-2xl font-semibold mb-4">Our Goal</h3>
                 <p>
                   Our goal is to facilitate a trust network within community leaders using
-                  decentralized technology. This network will enable efficient management and
-                  recovery of leadership roles, enhancing the resilience of our community support
+                  decentralized technology. This network will enable efficient management
+                  of leadership roles, enhancing the resilience of our community support
                   system.
                 </p>
               </div>
@@ -67,14 +67,6 @@ export default function LandingPage() {
                 <p>
                   Empower community leaders with a decentralized trust network, reducing reliance on
                   central authorities.
-                </p>
-              </div>
-              <div className="bg-white p-6 rounded-lg shadow-md">
-                <Shield className="h-12 w-12 text-primary mb-4" />
-                <h3 className="text-xl font-semibold mb-2">Social Recovery</h3>
-                <p>
-                  Enable leaders to recover their roles through peer validation, ensuring continuity
-                  of community support.
                 </p>
               </div>
               <div className="bg-white p-6 rounded-lg shadow-md">

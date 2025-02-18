@@ -22,9 +22,6 @@ The primary goal is to create a decentralized network for community leaders with
 1. Onboarding of community leaders to acknowledge their role within the trust network.
 2. Secure role recovery via peer-to-peer social recovery mechanisms when access is lost.
 
-The first iteration is a pilot with leaders in Uganda, where leaders can recover their credentials from fellow Ugandan
-leaders.
-
 ## Features
 
 - **Role Management**: Community leaders receive on-chain credentials through
@@ -84,7 +81,13 @@ sequenceDiagram
     Existing Leader->>-New Leader: Issues leadership token
 ```
 
-### 2. Role Recovery
+### 2. Role Recovery (Outdated)
+
+This paragraph is kept around for historical reasons. We removed recovery flow
+for now as we're not going to have a need for it due to using face id to
+recover roles. The face, as a biometric feature, will give us the same wallet
+address, so recovery will happen at the wallet level and not at the application
+level any longer.
 
 ```mermaid
 sequenceDiagram

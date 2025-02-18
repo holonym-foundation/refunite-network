@@ -11,7 +11,6 @@ import { ConnectButton } from "./ConnectButton";
 const navItems = [
   { name: "My Account", href: "/" },
   { name: "Add Leader", href: "/add" },
-  { name: "Recover Leader", href: "/recover" },
 ];
 
 export function Header() {

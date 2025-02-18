@@ -184,9 +184,6 @@ export default function AccountPage() {
                 <Link href="/add" passHref>
                   <Button>Add Leader</Button>
                 </Link>
-                <Link href="/recover" passHref>
-                  <Button>Recover Leader</Button>
-                </Link>
               </div>
             </div>
           </div>

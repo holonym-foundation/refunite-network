@@ -44,11 +44,11 @@ export function ConnectButton() {
     <div className="flex items-center gap-2">
       {!account.address ? (
         <div className="flex items-center gap-2">
-          <Button onClick={handleConnect}>Connect</Button>
+          <Button onClick={handleConnect}>Login</Button>
         </div>
       ) : (
         <div className="flex items-center gap-2 flex-row lg:flex-row-reverse">
-          <Button onClick={() => disconnect()}>Disconnect</Button>
+          <Button onClick={() => disconnect()}>Logout</Button>
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>

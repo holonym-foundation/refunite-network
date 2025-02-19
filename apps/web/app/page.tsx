@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 
-import { Badge } from "@refunite/ui";
+import { Badge, ConnectButton } from "@refunite/ui";
 import { Button } from "@refunite/ui";
 import { Skeleton } from "@refunite/ui";
 import { NETWORK_STEWARD_HAT_ID, HATS_CONTRACT_ADDRESS } from "@refunite/web3";
@@ -44,6 +44,9 @@ export default function AccountPage() {
             <div className="text-center">
               <h1 className="text-2xl font-semibold mb-4">My Account</h1>
               <p className="text-base">Please log in to view your account details.</p>
+              <div className="flex justify-center mt-8">
+                <ConnectButton />
+              </div>
             </div>
           </div>
         </div>

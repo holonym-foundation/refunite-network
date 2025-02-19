@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 
-import { Button } from "@refunite/ui";
+import { Button, ConnectButton } from "@refunite/ui";
 import { Dialog, DialogContent, DialogTrigger } from "@refunite/ui";
 import { Input } from "@refunite/ui";
 import { Label } from "@refunite/ui";
@@ -108,6 +108,9 @@ export default function AddLeaderPage() {
             <div className="text-center">
               <h1 className="text-2xl font-semibold mb-4">Add leader to the network</h1>
               <p className="text-base">Please log in to add a leader.</p>
+              <div className="flex justify-center mt-8">
+                <ConnectButton />
+              </div>
             </div>
           </div>
         </div>

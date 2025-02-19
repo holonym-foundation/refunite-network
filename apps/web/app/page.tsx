@@ -125,7 +125,7 @@ export default function AccountPage() {
             </div>
 
             {/* Status Section */}
-            <div className="py-4 border-b border-slate-300">
+            <div className="py-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold">Status</h3>
                 {isHatLoading ? (

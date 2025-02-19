@@ -131,7 +131,12 @@ export default function AccountPage() {
                 {isHatLoading ? (
                   <Skeleton className="h-8 w-24" />
                 ) : isHatError ? (
-                  <Badge variant="destructive">Error</Badge>
+                  <Badge
+                    variant="destructive"
+                    className="bg-red-200 text-red-700 gap-1 px-3 py-2 shadow-sm font-semibold tracking-wide"
+                  >
+                    Error loading status
+                  </Badge>
                 ) : hasHat ? (
                   <Badge
                     variant="default"

@@ -216,10 +216,10 @@ export default function AddLeaderPage() {
                   required
                 />
               </div>
-              <Button type="submit" disabled={isLoading || !isMultisigOwner} className="mt-4">
-                {isLoading ? "Adding..." : "Add leader"}
-              </Button>
             </div>
+            <Button type="submit" disabled={isLoading || !isMultisigOwner} className="mt-8">
+              {isLoading ? "Adding..." : "Add leader"}
+            </Button>
           </form>
         </div>
       </div>

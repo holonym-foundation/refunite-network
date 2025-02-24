@@ -1,21 +1,39 @@
 "use client";
 import { useState, useEffect } from "react";
 
-import { Badge, ConnectButton } from "@refunite/ui";
+import {
+  Badge,
+  ConnectButton,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@refunite/ui";
 import { Button } from "@refunite/ui";
 import { Skeleton } from "@refunite/ui";
-import { NETWORK_STEWARD_HAT_ID, HATS_CONTRACT_ADDRESS } from "@refunite/web3";
 import { abi as HatsAbi } from "@refunite/web3";
-import { Copy, ChevronDown } from "lucide-react";
+import { NETWORK_STEWARD_HAT_ID, HATS_CONTRACT_ADDRESS } from "@refunite/web3";
+import { Copy, QrCode } from "lucide-react";
 import Link from "next/link";
 import QRCode from "react-qr-code";
 import { useAccount, useReadContract } from "wagmi";
+
+const WhatsAppIcon = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 50 50"
+    className="h-5 w-5"
+    fill="currentColor"
+  >
+    <path d="M25,2C12.318,2,2,12.318,2,25c0,3.96,1.023,7.854,2.963,11.29L2.037,46.73c-0.096,0.343-0.003,0.711,0.245,0.966 C2.473,47.893,2.733,48,3,48c0.08,0,0.161-0.01,0.24-0.029l10.896-2.699C17.463,47.058,21.21,48,25,48c12.682,0,23-10.318,23-23 S37.682,2,25,2z M36.57,33.116c-0.492,1.362-2.852,2.605-3.986,2.772c-1.018,0.149-2.306,0.213-3.72-0.231 c-0.857-0.27-1.957-0.628-3.366-1.229c-5.923-2.526-9.791-8.415-10.087-8.804C15.116,25.235,13,22.463,13,19.594 s1.525-4.28,2.067-4.864c0.542-0.584,1.181-0.73,1.575-0.73s0.787,0.005,1.132,0.021c0.363,0.018,0.85-0.137,1.329,1.001 c0.492,1.168,1.673,4.037,1.819,4.33c0.148,0.292,0.246,0.633,0.05,1.022c-0.196,0.389-0.294,0.632-0.59,0.973 s-0.62,0.76-0.886,1.022c-0.296,0.291-0.603,0.606-0.259,1.19c0.344,0.584,1.529,2.493,3.285,4.039 c2.255,1.986,4.158,2.602,4.748,2.894c0.59,0.292,0.935,0.243,1.279-0.146c0.344-0.39,1.476-1.703,1.869-2.286 s0.787-0.487,1.329-0.292c0.542,0.194,3.445,1.604,4.035,1.896c0.59,0.292,0.984,0.438,1.132,0.681 C37.062,30.587,37.062,31.755,36.57,33.116z"></path>
+  </svg>
+);
 
 export default function AccountPage() {
   const { address, isConnected, chainId } = useAccount();
   const [hasHat, setHasHat] = useState<boolean | null>(null);
   const [showCopied, setShowCopied] = useState(false);
-  const [isQrExpanded, setIsQrExpanded] = useState(false);
+  const [isQrDialogOpen, setIsQrDialogOpen] = useState(false);
 
   const hatsContractAddress = HATS_CONTRACT_ADDRESS;
   const hatsId = BigInt(NETWORK_STEWARD_HAT_ID);
@@ -91,21 +109,39 @@ export default function AccountPage() {
               </div>
             </div>
 
-            {/* QR Code Section */}
+            {/* Share Section */}
             <div className="py-4 border-b border-slate-300">
-              <div
-                className="flex items-center justify-between cursor-pointer"
-                onClick={() => setIsQrExpanded(!isQrExpanded)}
-              >
-                <h3 className="text-lg font-semibold">Show QR code</h3>
-                <ChevronDown
-                  className={`h-6 w-6 mr-2 transition-transform ${
-                    isQrExpanded ? "transform rotate-180" : ""
-                  }`}
-                />
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold">Share address via</h3>
+                <div className="flex gap-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => {
+                      if (address) {
+                        const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(
+                          `My RelayId address: ${address}`
+                        )}`;
+                        window.open(whatsappUrl, "_blank");
+                      }
+                    }}
+                  >
+                    <WhatsAppIcon />
+                  </Button>
+                  <Button variant="ghost" size="icon" onClick={() => setIsQrDialogOpen(true)}>
+                    <QrCode className="h-5 w-5" />
+                  </Button>
+                </div>
               </div>
-              {isQrExpanded && (
-                <div className="flex flex-col items-center space-y-4 mt-4">
+            </div>
+
+            {/* QR Dialog */}
+            <Dialog open={isQrDialogOpen} onOpenChange={setIsQrDialogOpen}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Share QR Code</DialogTitle>
+                </DialogHeader>
+                <div className="flex flex-col items-center space-y-4 p-4">
                   <div className="p-4 bg-white border border-slate-200 rounded-xl">
                     {address && chainId ? (
                       <QRCode
@@ -124,8 +160,8 @@ export default function AccountPage() {
                     Scan this QR code to share your account address
                   </p>
                 </div>
-              )}
-            </div>
+              </DialogContent>
+            </Dialog>
 
             {/* Status Section */}
             <div className="py-4">

@@ -1,0 +1,10 @@
+{
+  "tailwind": {
+    "config": "tailwind.config.ts",
+    "css": "@refunite/ui/styles/globals.css"
+  },
+  "aliases": {
+    "components": "@refunite/ui/components",
+    "utils": "@refunite/ui/utils"
+  }
+}

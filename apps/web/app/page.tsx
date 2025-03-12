@@ -1,4 +1,5 @@
 "use client";
+
 import { useState, useEffect } from "react";
 
 import {
@@ -13,10 +14,19 @@ import { Button } from "@refunite/ui";
 import { Skeleton } from "@refunite/ui";
 import { abi as HatsAbi } from "@refunite/web3";
 import { NETWORK_STEWARD_HAT_ID, HATS_CONTRACT_ADDRESS } from "@refunite/web3";
-import { Copy, QrCode } from "lucide-react";
+import { Copy, QrCode, Edit, Check } from "lucide-react";
 import Link from "next/link";
 import QRCode from "react-qr-code";
+import { useFireproof } from "use-fireproof";
 import { useAccount, useReadContract } from "wagmi";
+
+// Define interface for user profile
+interface UserProfile {
+  _id: string;
+  type: string;
+  displayName: string;
+  walletAddress: string | undefined;
+}
 
 const WhatsAppIcon = () => (
   <svg
@@ -31,9 +41,33 @@ const WhatsAppIcon = () => (
 
 export default function AccountPage() {
   const { address, isConnected, chainId } = useAccount();
+  const { useLiveQuery, useDocument } = useFireproof("refunite");
   const [hasHat, setHasHat] = useState<boolean | null>(null);
   const [showCopied, setShowCopied] = useState(false);
   const [isQrDialogOpen, setIsQrDialogOpen] = useState(false);
+  const [isEditingName, setIsEditingName] = useState(false);
+
+  // Initialize user profile document with useDocument hook - use concrete object instead of function
+  const {
+    doc: userProfile,
+    merge: mergeProfile,
+    save: saveProfile,
+  } = useDocument<UserProfile>({
+    _id: `profile-${address}`,
+    type: "profile",
+    displayName: address || "",
+    walletAddress: address,
+  });
+
+  // Query to load profile
+  const profileResult = useLiveQuery("displayName", { limit: 1 });
+
+  useEffect(() => {
+    // If we have a profile document from the query, update our local state
+    if (profileResult.docs.length > 0) {
+      mergeProfile(profileResult.docs[0]);
+    }
+  }, [profileResult.docs, mergeProfile]);
 
   const hatsContractAddress = HATS_CONTRACT_ADDRESS;
   const hatsId = BigInt(NETWORK_STEWARD_HAT_ID);
@@ -81,10 +115,49 @@ export default function AccountPage() {
             <div className="py-4 border-b border-slate-300">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-lg font-semibold">My Account</h2>
-                  <p className="text-sm font-mono font-semibold text-secondary">
-                    {address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "Unknown"}
-                  </p>
+                  <h2 className="text-lg font-semibold text-slate-900">My Account</h2>
+                  {isEditingName ? (
+                    <div className="flex items-center mt-1">
+                      <input
+                        type="text"
+                        className="text-sm font-medium px-2 py-1 border border-slate-300 rounded mr-2"
+                        value={userProfile.displayName || ""}
+                        onChange={(e) => mergeProfile({ displayName: e.target.value })}
+                        placeholder="Enter display name"
+                        autoFocus
+                      />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          saveProfile();
+                          setIsEditingName(false);
+                        }}
+                      >
+                        <Check className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center">
+                      <p className="text-lg font-medium text-blue-600">
+                        {userProfile.displayName ? (
+                          userProfile.displayName
+                        ) : (
+                          <span className="font-mono text-slate-500">
+                            {address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "Unknown"}
+                          </span>
+                        )}
+                      </p>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 ml-2"
+                        onClick={() => setIsEditingName(true)}
+                      >
+                        <Edit className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  )}
                 </div>
                 <div className="relative">
                   <Button
@@ -118,7 +191,7 @@ export default function AccountPage() {
                     variant="ghost"
                     size="icon"
                     onClick={() => {
-                      if (address) {
+                      if (address && typeof window !== "undefined") {
                         const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(
                           `My RelayId address: ${address}`
                         )}`;

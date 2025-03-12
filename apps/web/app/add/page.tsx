@@ -10,8 +10,19 @@ import { useHatsInteractions } from "@refunite/web3";
 import { useSafeOwner } from "@refunite/web3";
 import { Scanner, type IDetectedBarcode } from "@yudiel/react-qr-scanner";
 import { QrCode } from "lucide-react";
+import { useFireproof } from "use-fireproof";
 import { isAddress } from "viem";
 import { useAccount } from "wagmi";
+
+// Define interface for contact document
+interface Contact {
+  _id?: string;
+  type: "contact";
+  displayName: string;
+  walletAddress: string;
+  addedByAddress: string;
+  dateAdded: number;
+}
 
 export default function AddLeaderPage() {
   const { address: account, isConnected } = useAccount();
@@ -22,6 +33,20 @@ export default function AddLeaderPage() {
   const { isMultisigOwner, isLoading: isSafeLoading } = useSafeOwner();
   const { hatsInteractions, isConnected: isHatsConnected } = useHatsInteractions();
   const [showScanner, setShowScanner] = useState(false);
+
+  // Initialize Fireproof
+  const { useDocument } = useFireproof("refunite");
+  const {
+    doc: contactDoc,
+    merge: mergeContactData,
+    save: saveContact,
+  } = useDocument<Contact>(() => ({
+    type: "contact",
+    displayName: "",
+    walletAddress: "",
+    addedByAddress: account || "",
+    dateAdded: Date.now(),
+  }));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,10 +60,20 @@ export default function AddLeaderPage() {
       if (!isHatsConnected || !hatsInteractions) {
         throw new Error("Hats client not connected");
       }
+
       console.log("sending request");
       const result = await hatsInteractions.createAndMintHatSafe(recipient, name);
 
       if (result.success) {
+        // Save contact to Fireproof
+        mergeContactData({
+          displayName: name,
+          walletAddress: recipient,
+          addedByAddress: account || "",
+          dateAdded: Date.now(),
+        });
+        await saveContact();
+
         setName("");
         setRecipient("");
       }

@@ -12,6 +12,7 @@ node_modules
 # next.js
 **/*/.next/
 **/*/out/
+.next
 
 # production
 **/*/build
@@ -38,3 +39,6 @@ yarn-error.log*
 next-env.d.ts
 
 .idea
+.vscode
+.cursor
+

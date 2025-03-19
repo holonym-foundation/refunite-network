@@ -1,32 +1,24 @@
 "use client";
-import { MultiCallResult } from "@hatsprotocol/sdk-v1-core";
-import { HatsClient } from "@hatsprotocol/sdk-v1-core";
+
 import Safe from "@safe-global/protocol-kit";
 import { Eip1193Provider } from "@safe-global/protocol-kit/dist/src/types/safeProvider";
-import { OperationType, TransactionResult } from "@safe-global/types-kit";
-import { getAddress, Hex } from "viem";
+import { TransactionResult } from "@safe-global/types-kit";
+import { getAddress, encodeFunctionData } from "viem";
 import { useAccount, useWalletClient } from "wagmi";
 
 import {
-  NETWORK_STEWARD_HAT_ID,
-  NETWORK_STEWARD_SAFE_ADDRESS,
+  LEADER_HAT_ID,
+  LEADER_SAFE_ADDRESS,
   HATS_CONTRACT_ADDRESS,
+  HSG_CONTRACT_ADDRESS,
 } from "../lib/constants";
 
 import { useHatsClient } from "./useHatsClient";
 
 type Result<T, E = Error> = { success: true; data: T } | { success: false; error: E };
 
-type CallData = {
-  functionName: string;
-  callData: Hex;
-};
-
-interface CreateHatData {
-  createHatCalldata: CallData;
-  mintHatCalldata: CallData;
-  nextHatId: bigint;
-}
+// TODO: This is temporary. Silk needs to fix their gas estimation, remove once that's done
+const CLAIM_GAS_LIMIT = 250_000;
 
 export interface SafeTxData {
   to: string;
@@ -35,17 +27,14 @@ export interface SafeTxData {
 }
 
 interface HatsInteractions {
-  createAndMintHat: (recipient: string, name: string) => Promise<Result<MultiCallResult, Error>>;
-  createAndMintHatSafe: (
-    recipient: string,
-    name: string
-  ) => Promise<Result<TransactionResult, Error>>;
+  mintHatSafe: (recipient: string) => Promise<Result<TransactionResult, Error>>;
+  claimSignerFor: (recipient: string) => Promise<Result<TransactionResult, Error>>;
 }
 
 export const useHatsInteractions = () => {
   const { hatsClient, isLoading: isClientLoading } = useHatsClient();
   const { address } = useAccount();
-  const { data: walletClient } = useWalletClient();
+  const walletClient = useWalletClient();
 
   if (!hatsClient) {
     return {
@@ -55,77 +44,79 @@ export const useHatsInteractions = () => {
   }
 
   const interactions: HatsInteractions = {
-    createAndMintHat: async (recipient: string, name: string) => {
-      if (!address) {
-        return {
-          success: false,
-          error: new Error("No wallet connected"),
-        };
-      }
-
-      const data = await buildHatData(hatsClient, recipient, name);
-      if (!data) {
-        throw new Error("Failed to construct hat transaction data");
-      }
-
-      try {
-        const result = await hatsClient.multicall({
-          account: address,
-          calls: [data.createHatCalldata, data.mintHatCalldata],
-        });
-
-        return {
-          success: true,
-          data: result,
-        };
-      } catch (err) {
-        return {
-          success: false,
-          error: err instanceof Error ? err : new Error("Failed to create and mint hat"),
-        };
-      }
-    },
-    createAndMintHatSafe: async (recipient: string, name: string) => {
-      console.log("creating and minting hat safe", walletClient);
+    mintHatSafe: async (recipient: string) => {
       try {
         const safe = await Safe.init({
-          provider: walletClient as Eip1193Provider,
-          safeAddress: NETWORK_STEWARD_SAFE_ADDRESS,
+          provider: walletClient.data as Eip1193Provider,
+          safeAddress: LEADER_SAFE_ADDRESS,
         });
 
-        const data = await buildHatData(hatsClient, recipient, name);
-        if (!data) {
+        const { callData: mintData } = hatsClient.mintHatCallData({
+          hatId: BigInt(LEADER_HAT_ID),
+          wearer: getAddress(recipient),
+        });
+        if (!mintData) {
           return {
             success: false,
             error: new Error("Failed to construct hat transaction data"),
           };
         }
 
-        const addOwnerTx = await safe.createAddOwnerTx({ ownerAddress: recipient });
+        const transactions = [
+          {
+            to: HATS_CONTRACT_ADDRESS,
+            value: "0",
+            data: mintData,
+          },
+        ];
 
-        // Extract transaction data
-        const addOwnerTxData = {
-          to: addOwnerTx.data.to,
-          value: addOwnerTx.data.value,
-          data: addOwnerTx.data.data,
-          operation: OperationType.Call,
-        };
-
-        const tx = await safe.createTransaction({
-          transactions: [...mapToSafeTx(HATS_CONTRACT_ADDRESS, data), addOwnerTxData],
-        });
-        // const txHash = await safe.getTransactionHash(tx)
-        // const signature = await safe.signHash(txHash)
+        const tx = await safe.createTransaction({ transactions });
         const txWithSignature = await safe.executeTransaction(tx);
+
         return {
           success: true,
           data: txWithSignature,
         };
       } catch (err) {
-        console.error("the real error", err);
+        console.error("Error in mintHatSafe:", err);
         return {
           success: false,
-          error: err instanceof Error ? err : new Error("Failed to create and mint hat"),
+          error: err instanceof Error ? err : new Error("Failed to mint hat"),
+        };
+      }
+    },
+
+    claimSignerFor: async (recipient: string) => {
+      try {
+        if (!walletClient?.data) {
+          return {
+            success: false,
+            error: new Error("Wallet not connected"),
+          };
+        }
+
+        const data = buildClaimData(recipient);
+        const hash = await walletClient.data.sendTransaction({
+          to: HSG_CONTRACT_ADDRESS,
+          data,
+          value: BigInt(0),
+          account: address!,
+          chain: undefined, // use currently connected chain
+          gas: BigInt(CLAIM_GAS_LIMIT),
+        });
+
+        return {
+          success: true,
+          data: {
+            hash,
+            transactionResponse: { hash },
+          },
+        };
+      } catch (err) {
+        console.error("Failed to claim signer:", err);
+        return {
+          success: false,
+          error: err instanceof Error ? err : new Error("Failed to claim signer"),
         };
       }
     },
@@ -137,51 +128,22 @@ export const useHatsInteractions = () => {
   };
 };
 
-function mapToSafeTx(address: string, data: CreateHatData): SafeTxData[] {
-  return [
-    { to: address, value: "0", data: data.createHatCalldata.callData },
-    { to: address, value: "0", data: data.mintHatCalldata.callData },
-  ];
-}
+function buildClaimData(recipient: string) {
+  const functionAbi = {
+    name: "claimSignerFor",
+    type: "function",
+    inputs: [
+      { name: "_hatId", type: "uint256" },
+      { name: "_signer", type: "address" },
+    ],
+    stateMutability: "nonpayable",
+  } as const;
 
-async function buildHatData(
-  hatsClient: HatsClient,
-  recipient: string,
-  name: string
-): Promise<CreateHatData | undefined> {
-  if (!recipient || !name) {
-    return undefined;
-  }
+  const encodedData = encodeFunctionData({
+    abi: [functionAbi],
+    functionName: "claimSignerFor",
+    args: [BigInt(LEADER_HAT_ID), getAddress(recipient)],
+  });
 
-  try {
-    const createHatCalldata = hatsClient.createHatCallData({
-      admin: BigInt(NETWORK_STEWARD_HAT_ID),
-      details: name,
-      maxSupply: 1,
-      eligibility: NETWORK_STEWARD_SAFE_ADDRESS,
-      toggle: NETWORK_STEWARD_SAFE_ADDRESS,
-      mutable: true,
-    });
-
-    const children = await hatsClient.getChildrenHats(BigInt(NETWORK_STEWARD_HAT_ID));
-    const nextHatId = (
-      await hatsClient.predictNextChildrenHatIDs({
-        admin: BigInt(NETWORK_STEWARD_HAT_ID),
-        numChildren: children.length,
-      })
-    )[0];
-
-    const mintHatCalldata = hatsClient.mintHatCallData({
-      hatId: nextHatId,
-      wearer: getAddress(recipient),
-    });
-
-    return {
-      createHatCalldata,
-      mintHatCalldata,
-      nextHatId,
-    };
-  } catch (err) {
-    return undefined;
-  }
+  return encodedData;
 }

@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import SafeApiKit from "@safe-global/api-kit";
 import { useAccount } from "wagmi";
 
-import { CHAIN_ID, NETWORK_STEWARD_SAFE_ADDRESS } from "../lib/constants";
+import { CHAIN_ID, LEADER_SAFE_ADDRESS } from "../lib/constants";
 
 export const useSafeOwner = () => {
   const { address: account } = useAccount();
@@ -26,7 +26,7 @@ export const useSafeOwner = () => {
         });
 
         // Get Safe info
-        const safeInfo = await safeService.getSafeInfo(NETWORK_STEWARD_SAFE_ADDRESS);
+        const safeInfo = await safeService.getSafeInfo(LEADER_SAFE_ADDRESS);
         const owners = safeInfo.owners;
 
         setIsMultisigOwner(

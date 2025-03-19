@@ -7,11 +7,14 @@ import { Button } from "./ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 import { useToast } from "./ui/use-toast";
 
+import { useUserProfile } from "@/hooks/useUserProfile";
+
 export function ConnectButton() {
   const { connect, error, isError, connectors } = useConnect();
   const { disconnect } = useDisconnect();
   const account = useAccount();
   const { toast } = useToast();
+  const { profile } = useUserProfile(account.address ?? "");
 
   const formatAddress = (address: string) => {
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
@@ -57,7 +60,7 @@ export function ConnectButton() {
                   className="font-mono text-muted-foreground text-sm sm:text-xs"
                   onClick={() => copyAddress(account.address!)}
                 >
-                  {formatAddress(account.address)}
+                  {profile.displayName || formatAddress(account.address)}
                 </Button>
               </TooltipTrigger>
               <TooltipContent>

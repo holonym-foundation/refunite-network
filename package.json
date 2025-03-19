@@ -59,6 +59,7 @@
     "tailwindcss": "^3.4.14",
     "tailwindcss-animate": "^1.0.7",
     "typescript": "^5.6.3",
+    "use-fireproof": "^0.19.125",
     "viem": "~2.7.22",
     "wagmi": "^2.12.19",
     "zod": "^3.23.8"

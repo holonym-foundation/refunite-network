@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 
+import { useUserProfile } from "@/hooks/useUserProfile";
 import { HATS_CONTRACT_ADDRESS, NETWORK_STEWARD_HAT_ID } from "@/lib/constants";
 import { abi as HatsAbi } from "@/lib/hatsAbi";
 
@@ -28,9 +29,13 @@ const WhatsAppIcon = () => (
 
 export default function AccountPage() {
   const { address, isConnected, chainId } = useAccount();
+  const { profile, saveProfile, mergeProfile, resetProfile } = useUserProfile(address ?? "");
   const [hasHat, setHasHat] = useState<boolean | null>(null);
   const [showCopied, setShowCopied] = useState(false);
   const [isQrDialogOpen, setIsQrDialogOpen] = useState(false);
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [displayName, setDisplayName] = useState(profile.displayName);
 
   const hatsContractAddress = HATS_CONTRACT_ADDRESS;
   const hatsId = BigInt(NETWORK_STEWARD_HAT_ID);
@@ -50,6 +55,19 @@ export default function AccountPage() {
       setHasHat(rawHatData[8]); // active flag of hat
     }
   }, [rawHatData]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setDisplayName(e.target.value);
+  };
+
+  const handleSave = async () => {
+    await saveProfile({
+      ...profile,
+      displayName,
+      updatedAt: Date.now(),
+    });
+    setIsEditing(false);
+  };
 
   if (!isConnected) {
     return (
@@ -79,9 +97,66 @@ export default function AccountPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-lg font-semibold">My Account</h2>
-                  <p className="text-sm font-mono font-semibold text-secondary">
-                    {address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "Unknown"}
-                  </p>
+                  {isEditing ? (
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={displayName}
+                        onChange={handleChange}
+                        className="text-sm px-2 py-1 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="Enter username"
+                      />
+                      <button onClick={handleSave} className="text-green-600 hover:text-green-800">
+                        <svg
+                          className="w-5 h-5"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path
+                            d="M20 6L9 17L4 12"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-mono font-semibold text-secondary">
+                        {profile.displayName ||
+                          (address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "Unknown")}
+                      </p>
+                      <button
+                        onClick={() => setIsEditing(true)}
+                        className="text-slate-600 hover:text-slate-800"
+                      >
+                        <svg
+                          className="w-4 h-4"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path
+                            d="M11 4H4C3.46957 4 2.96086 4.21071 2.58579 4.58579C2.21071 4.96086 2 5.46957 2 6V20C2 20.5304 2.21071 21.0391 2.58579 21.4142C2.96086 21.7893 3.46957 22 4 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V13"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                          <path
+                            d="M18.5 2.50001C18.8978 2.10219 19.4374 1.87869 20 1.87869C20.5626 1.87869 21.1022 2.10219 21.5 2.50001C21.8978 2.89784 22.1213 3.4374 22.1213 4.00001C22.1213 4.56262 21.8978 5.10219 21.5 5.50001L12 15L8 16L9 12L18.5 2.50001Z"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                  )}
                 </div>
                 <div className="relative">
                   <Button

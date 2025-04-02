@@ -1,16 +1,13 @@
 "use client";
 import { useEffect, useState } from "react";
 
-import { Copy } from "lucide-react";
 import Link from "next/link";
 import { useAccount, useReadContract } from "wagmi";
 
 import { ConnectButton } from "@/components/ConnectButton";
 import { ProfileSection } from "@/components/ProfileSection";
 import { ShareSection } from "@/components/ShareSection";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
+import { StatusSection } from "@/components/StatusSection";
 
 import { HATS_CONTRACT_ADDRESS, LEADER_ADMIN_HAT_ID } from "@/lib/constants";
 import { abi as HatsAbi } from "@/lib/hatsAbi";
@@ -68,63 +65,7 @@ export default function AccountPage() {
             <ShareSection address={address} chainId={chainId} />
 
             {/* Status Section */}
-            <div className="py-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold">Status</h3>
-                {isHatLoading ? (
-                  <Skeleton className="h-8 w-24" />
-                ) : isHatError ? (
-                  <Badge
-                    variant="destructive"
-                    className="bg-red-200 text-red-700 gap-1 px-3 py-2 shadow-sm font-semibold tracking-wide"
-                  >
-                    Error loading status
-                  </Badge>
-                ) : hasHat ? (
-                  <Badge
-                    variant="default"
-                    className="bg-green-200 text-green-700 gap-1 px-3 py-2 shadow-sm font-semibold tracking-wide"
-                  >
-                    <svg
-                      className="w-4 h-4"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        d="M20 6L9 17L4 12"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                    Added to network
-                  </Badge>
-                ) : (
-                  <Badge
-                    variant="destructive"
-                    className="bg-red-200 text-red-700 gap-1 px-3 py-2 shadow-sm font-semibold tracking-wide"
-                  >
-                    <svg
-                      className="w-4 h-4"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        d="M18 6L6 18M6 6L18 18"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                    Not added to network
-                  </Badge>
-                )}
-              </div>
-            </div>
+            <StatusSection hasHat={hasHat} isHatLoading={isHatLoading} isHatError={isHatError} />
 
             {/* Actions Section */}
             {!isHatLoading && (

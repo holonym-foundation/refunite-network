@@ -31,7 +31,7 @@ export function ShareSection({ address, chainId }: ShareSectionProps) {
       <div className="py-4 border-b border-slate-300">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <h3 className="text-lg font-semibold">Share address via</h3>
+            <h3 className="text-lg font-semibold">Share account info via</h3>
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-6 w-6">

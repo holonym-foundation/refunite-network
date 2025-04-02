@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useAccount, useReadContract } from "wagmi";
 
 import { ConnectButton } from "@/components/ConnectButton";
+import { ProfileSection } from "@/components/ProfileSection";
 import { ShareSection } from "@/components/ShareSection";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,7 +18,6 @@ import { abi as HatsAbi } from "@/lib/hatsAbi";
 export default function AccountPage() {
   const { address, isConnected, chainId } = useAccount();
   const [hasHat, setHasHat] = useState<boolean | null>(null);
-  const [showCopied, setShowCopied] = useState(false);
 
   const hatsContractAddress = HATS_CONTRACT_ADDRESS;
   const hatsId = BigInt(LEADER_ADMIN_HAT_ID);
@@ -62,36 +62,7 @@ export default function AccountPage() {
         <div className="bg-white p-4 pb-16 sm:p-8 sm:rounded-xl sm:border sm:border-slate-300">
           <div>
             {/* Profile Section */}
-            <div className="py-4 border-b border-slate-300">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-lg font-semibold">My Account</h2>
-                  <p className="text-sm font-mono font-semibold text-secondary">
-                    {address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "Unknown"}
-                  </p>
-                </div>
-                <div className="relative">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => {
-                      if (address) {
-                        navigator.clipboard.writeText(address);
-                        setShowCopied(true);
-                        setTimeout(() => setShowCopied(false), 2000);
-                      }
-                    }}
-                  >
-                    <Copy className="h-5 w-5" />
-                  </Button>
-                  {showCopied && (
-                    <div className="absolute right-full mr-2 top-1/2 transform -translate-y-1/2 bg-slate-800 text-white px-2 py-1 rounded text-xs whitespace-nowrap">
-                      Address copied to clipboard
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
+            <ProfileSection address={address} />
 
             {/* Share Section */}
             <ShareSection address={address} chainId={chainId} />

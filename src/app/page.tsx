@@ -3,13 +3,12 @@ import { useEffect, useState } from "react";
 
 import { Copy, QrCode } from "lucide-react";
 import Link from "next/link";
-import QRCode from "react-qr-code";
 import { useAccount, useReadContract } from "wagmi";
 
 import { ConnectButton } from "@/components/ConnectButton";
+import { QRCodeDialog } from "@/components/QRCodeDialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 
 import { HATS_CONTRACT_ADDRESS, LEADER_ADMIN_HAT_ID } from "@/lib/constants";
@@ -51,23 +50,23 @@ export default function AccountPage() {
     }
   }, [rawHatData]);
 
-  if (!isConnected) {
-    return (
-      <div className="min-h-screen py-0 sm:py-8 px-0 sm:px-6 md:px-8">
-        <div className="max-w-3xl mx-0 sm:mx-auto">
-          <div className="bg-white p-4 pb-16 sm:p-8 sm:rounded-xl sm:border sm:border-slate-300">
-            <div className="text-center">
-              <h1 className="text-2xl font-semibold mb-4">My Account</h1>
-              <p className="text-base">Please log in to view your account details.</p>
-              <div className="flex justify-center mt-8">
-                <ConnectButton />
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // if (!isConnected) {
+  //   return (
+  //     <div className="min-h-screen py-0 sm:py-8 px-0 sm:px-6 md:px-8">
+  //       <div className="max-w-3xl mx-0 sm:mx-auto">
+  //         <div className="bg-white p-4 pb-16 sm:p-8 sm:rounded-xl sm:border sm:border-slate-300">
+  //           <div className="text-center">
+  //             <h1 className="text-2xl font-semibold mb-4">My Account</h1>
+  //             <p className="text-base">Please log in to view your account details.</p>
+  //             <div className="flex justify-center mt-8">
+  //               <ConnectButton />
+  //             </div>
+  //           </div>
+  //         </div>
+  //       </div>
+  //     </div>
+  //   );
+  // }
 
   return (
     <div className="min-h-screen py-0 sm:py-8 px-0 sm:px-6 md:px-8">
@@ -133,32 +132,12 @@ export default function AccountPage() {
             </div>
 
             {/* QR Dialog */}
-            <Dialog open={isQrDialogOpen} onOpenChange={setIsQrDialogOpen}>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Share QR Code</DialogTitle>
-                </DialogHeader>
-                <div className="flex flex-col items-center space-y-4 p-4">
-                  <div className="p-4 bg-white border border-slate-200 rounded-xl">
-                    {address && chainId ? (
-                      <QRCode
-                        value={`${chainId}:${address}`}
-                        size={200}
-                        style={{ height: "auto", maxWidth: "100%", width: "100%" }}
-                        viewBox={`0 0 256 256`}
-                      />
-                    ) : (
-                      <div className="w-[200px] h-[200px] bg-slate-100 rounded-lg flex items-center justify-center">
-                        <p className="text-sm text-slate-400">Log in to view QR code</p>
-                      </div>
-                    )}
-                  </div>
-                  <p className="text-sm text-muted-foreground text-center">
-                    Scan this QR code to share your account address
-                  </p>
-                </div>
-              </DialogContent>
-            </Dialog>
+            <QRCodeDialog
+              isOpen={isQrDialogOpen}
+              onOpenChange={setIsQrDialogOpen}
+              address={address}
+              chainId={chainId}
+            />
 
             {/* Status Section */}
             <div className="py-4">

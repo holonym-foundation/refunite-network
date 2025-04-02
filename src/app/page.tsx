@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 
-import { HATS_CONTRACT_ADDRESS, NETWORK_STEWARD_HAT_ID } from "@/lib/constants";
+import { HATS_CONTRACT_ADDRESS, LEADER_ADMIN_HAT_ID } from "@/lib/constants";
 import { abi as HatsAbi } from "@/lib/hatsAbi";
 
 const WhatsAppIcon = () => (
@@ -33,7 +33,7 @@ export default function AccountPage() {
   const [isQrDialogOpen, setIsQrDialogOpen] = useState(false);
 
   const hatsContractAddress = HATS_CONTRACT_ADDRESS;
-  const hatsId = BigInt(NETWORK_STEWARD_HAT_ID);
+  const hatsId = BigInt(LEADER_ADMIN_HAT_ID);
   const {
     data: rawHatData,
     isError: isHatError,

@@ -1,9 +1,10 @@
 "use client";
+
 import { useState } from "react";
 
 import { Scanner, type IDetectedBarcode } from "@yudiel/react-qr-scanner";
 import { QrCode } from "lucide-react";
-import { isAddress } from "viem";
+import { Hash, isAddress } from "viem";
 import { useAccount } from "wagmi";
 
 import { ConnectButton } from "@/components/ConnectButton";
@@ -13,48 +14,48 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 
+import { useChain } from "@/hooks/useChain";
 import { useHatsInteractions } from "@/hooks/useHatsInteractions";
 import { useSafeOwner } from "@/hooks/useSafeOwner";
 
 export default function AddLeaderPage() {
   const { address: account, isConnected } = useAccount();
   const [recipient, setRecipient] = useState("");
-  const [name, setName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const { isMultisigOwner, isLoading: isSafeLoading } = useSafeOwner();
   const { hatsInteractions, isConnected: isHatsConnected } = useHatsInteractions();
   const [showScanner, setShowScanner] = useState(false);
+  const { waitForConfirmations } = useChain();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleAddLeader = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      if (!isMultisigOwner) {
-        throw new Error("Not authorized to create hats");
+      if (!isMultisigOwner || !isHatsConnected || !hatsInteractions) {
+        throw new Error("Not properly connected");
       }
 
-      if (!isHatsConnected || !hatsInteractions) {
-        throw new Error("Hats client not connected");
-      }
-      console.log("sending request");
-      const result = await hatsInteractions.createAndMintHatSafe(recipient, name);
-
-      if (result.success) {
-        setName("");
-        setRecipient("");
+      const mintResult = await hatsInteractions.mintHatSafe(recipient);
+      if (!mintResult.success) {
+        throw mintResult.error;
       }
 
+      await waitForConfirmations(mintResult.data.hash as Hash, 2);
+
+      const claimResult = await hatsInteractions.claimSignerFor(recipient);
+      if (!claimResult.success) {
+        throw claimResult.error;
+      }
+
+      setRecipient("");
       toast({
-        variant: result.success ? "default" : "destructive",
-        title: result.success ? "Success" : "Error",
-        description: result.success
-          ? `Successfully added ${name} (${recipient})`
-          : result.error.message,
+        title: "Success",
+        description: `Successfully added leader ${recipient}`,
       });
     } catch (error) {
-      console.error("the error", error);
+      console.error("Error adding leader:", error);
       toast({
         variant: "destructive",
         title: "Error",
@@ -182,7 +183,7 @@ export default function AddLeaderPage() {
             )}
           </header>
 
-          <form onSubmit={handleSubmit} className="py-4">
+          <form onSubmit={handleAddLeader} className="py-4">
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="address">Their address</Label>
@@ -211,21 +212,25 @@ export default function AddLeaderPage() {
                   </Dialog>
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="name">Their name</Label>
-                <Input
-                  id="name"
-                  type="text"
-                  placeholder="John Doe"
-                  value={name}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setName(e.target.value)}
-                  required
-                />
-              </div>
             </div>
-            <Button type="submit" disabled={isLoading || !isMultisigOwner} className="mt-8">
-              {isLoading ? "Adding..." : "Add leader"}
-            </Button>
+            <div className="flex items-center gap-4">
+              <Button type="submit" disabled={isLoading || !isMultisigOwner} className="mt-8">
+                {isLoading ? (
+                  <div className="flex items-center gap-2">
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                    Adding leader...
+                  </div>
+                ) : (
+                  "Add leader"
+                )}
+              </Button>
+              {isLoading && (
+                <span className="text-secondary text-sm mt-8">
+                  Sending <span className="font-bold">two</span> transactions. Please keep this page
+                  open...
+                </span>
+              )}
+            </div>
           </form>
         </div>
       </div>

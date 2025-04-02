@@ -1,6 +1,9 @@
-import { CustomConfig, SILK_METHOD } from "@silk-wallet/silk-interface-core";
+import { SILK_METHOD } from "@silk-wallet/silk-interface-core";
 import { initSilk } from "@silk-wallet/silk-wallet-sdk";
-import { SilkEthereumProviderInterface } from "@silk-wallet/silk-wallet-sdk/dist/lib/provider/types";
+import {
+  type InitSilkOptions,
+  SilkEthereumProviderInterface,
+} from "@silk-wallet/silk-wallet-sdk/dist/lib/provider/types";
 import { ChainNotConfiguredError, createConnector } from "@wagmi/core";
 import { Chain, getAddress, SwitchChainError, UserRejectedRequestError } from "viem";
 
@@ -9,7 +12,7 @@ import { Chain, getAddress, SwitchChainError, UserRejectedRequestError } from "v
  * @param options Initialization options for the Silk Wallet SDK
  * @returns
  */
-export default function silk(options?: { referralCode?: string; config?: CustomConfig }) {
+export default function silk(options: InitSilkOptions = {}) {
   let silkProvider: SilkEthereumProviderInterface | null = null;
 
   return createConnector<SilkEthereumProviderInterface>((config) => ({

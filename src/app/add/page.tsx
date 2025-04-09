@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState, useEffect } from "react";
 
 import { Scanner, type IDetectedBarcode } from "@yudiel/react-qr-scanner";
 import { QrCode } from "lucide-react";
 import { isAddress } from "viem";
+import { useSearchParams } from "next/navigation";
 import { useAccount, usePublicClient } from "wagmi";
 
 import { ConnectButton } from "@/components/ConnectButton";
@@ -17,7 +18,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { useHatsInteractions } from "@/hooks/useHatsInteractions";
 import { useSafeOwner } from "@/hooks/useSafeOwner";
 
-export default function AddLeaderPage() {
+function AddLeaderForm() {
   const { address: account, isConnected } = useAccount();
   const [recipient, setRecipient] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -26,6 +27,14 @@ export default function AddLeaderPage() {
   const { hatsInteractions, isConnected: isHatsConnected } = useHatsInteractions();
   const [showScanner, setShowScanner] = useState(false);
   const publicClient = usePublicClient();
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const theirAddress = searchParams.get("recipient");
+    if (theirAddress && isAddress(theirAddress)) {
+      setRecipient(theirAddress);
+    }
+  }, [searchParams]);
 
   const handleAddLeader = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -240,5 +249,13 @@ export default function AddLeaderPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function AddLeaderPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <AddLeaderForm />
+    </Suspense>
   );
 }

@@ -26,6 +26,11 @@ interface ShareSectionProps {
 export function ShareSection({ address, chainId }: ShareSectionProps) {
   const [isQrDialogOpen, setIsQrDialogOpen] = useState(false);
 
+  const getShareMessage = (address: string) => {
+    const addPageUrl = `${window.location.origin}/add?recipient=${address}`;
+    return `Please add me to the RelayId network: ${addPageUrl}`;
+  };
+
   return (
     <>
       <div className="py-4 border-b border-slate-300">
@@ -56,7 +61,7 @@ export function ShareSection({ address, chainId }: ShareSectionProps) {
               onClick={() => {
                 if (address) {
                   const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(
-                    `My RelayId address: ${address}`
+                    getShareMessage(address)
                   )}`;
                   window.open(whatsappUrl, "_blank");
                 }

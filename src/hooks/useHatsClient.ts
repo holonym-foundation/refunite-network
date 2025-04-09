@@ -37,7 +37,7 @@ export const useHatsClient = () => {
     };
 
     initHatsClient();
-  }, [walletClient]);
+  }, [walletClient, isWalletClientLoading, publicClient]);
 
   return {
     hatsClient,

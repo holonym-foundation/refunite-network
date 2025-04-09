@@ -33,9 +33,9 @@
     "@safe-global/api-kit": "^2.5.4",
     "@safe-global/protocol-kit": "^5.0.4",
     "@safe-global/types-kit": "^1.0.0",
-    "@silk-wallet/silk-interface-core": "^0.2.0",
-    "@silk-wallet/silk-wallet-sdk": "^0.2.0",
-    "@tanstack/react-query": "^5.59.15",
+    "@silk-wallet/silk-interface-core": "^0.2.1",
+    "@silk-wallet/silk-wallet-sdk": "^0.2.1",
+    "@tanstack/react-query": "^5.72.2",
     "@types/node": "^20.16.12",
     "@types/react-dom": "^18.3.1",
     "@wagmi/core": "^2.13.8",
@@ -60,8 +60,8 @@
     "tailwindcss": "^3.4.14",
     "tailwindcss-animate": "^1.0.7",
     "typescript": "^5.6.3",
-    "viem": "~2.7.22",
-    "wagmi": "^2.12.19",
+    "viem": "~2.26.2",
+    "wagmi": "^2.14.16",
     "zod": "^3.23.8"
   },
   "devDependencies": {

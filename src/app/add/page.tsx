@@ -4,8 +4,8 @@ import { useState } from "react";
 
 import { Scanner, type IDetectedBarcode } from "@yudiel/react-qr-scanner";
 import { QrCode } from "lucide-react";
-import { Hash, isAddress } from "viem";
-import { useAccount } from "wagmi";
+import { isAddress } from "viem";
+import { useAccount, usePublicClient } from "wagmi";
 
 import { ConnectButton } from "@/components/ConnectButton";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 
-import { useChain } from "@/hooks/useChain";
 import { useHatsInteractions } from "@/hooks/useHatsInteractions";
 import { useSafeOwner } from "@/hooks/useSafeOwner";
 
@@ -26,28 +25,34 @@ export default function AddLeaderPage() {
   const { isMultisigOwner, isLoading: isSafeLoading } = useSafeOwner();
   const { hatsInteractions, isConnected: isHatsConnected } = useHatsInteractions();
   const [showScanner, setShowScanner] = useState(false);
-  const { waitForConfirmations } = useChain();
+  const publicClient = usePublicClient();
 
   const handleAddLeader = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      if (!isMultisigOwner || !isHatsConnected || !hatsInteractions) {
+      if (!isMultisigOwner || !isHatsConnected || !hatsInteractions || !publicClient) {
         throw new Error("Not properly connected");
       }
 
-      const mintResult = await hatsInteractions.mintHatSafe(recipient);
-      if (!mintResult.success) {
-        throw mintResult.error;
+      const onboardResult = await hatsInteractions.onboardUser(recipient);
+      if (!onboardResult.success) {
+        throw onboardResult.error;
       }
 
-      await waitForConfirmations(mintResult.data.hash as Hash, 2);
-
-      const claimResult = await hatsInteractions.claimSignerFor(recipient);
-      if (!claimResult.success) {
-        throw claimResult.error;
+      const { mintHatTxHash, claimSignerTxHash } = onboardResult.data;
+      if (!mintHatTxHash || !claimSignerTxHash) {
+        throw new Error("No transaction hashes");
       }
+
+      await publicClient.waitForTransactionReceipt({
+        hash: mintHatTxHash as `0x${string}`,
+      });
+
+      await publicClient.waitForTransactionReceipt({
+        hash: claimSignerTxHash as `0x${string}`,
+      });
 
       setRecipient("");
       toast({

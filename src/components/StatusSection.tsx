@@ -27,7 +27,7 @@ export function StatusSection({ hasHat, isHatLoading, isHatError }: StatusSectio
               <div className="space-y-2">
                 <h4 className="font-medium">Network Status</h4>
                 <p className="text-sm text-muted-foreground">
-                  Your status shows whether you&apos;re connected to the Refunite network. To get
+                  Your status shows whether you&apos;re connected to the RelayId network. To get
                   onboarded, you&apos;ll need to be added by an existing network member.
                 </p>
               </div>
@@ -91,8 +91,8 @@ export function StatusSection({ hasHat, isHatLoading, isHatError }: StatusSectio
         <div className="mt-4 p-4 bg-slate-50 rounded-lg border border-slate-200">
           <h4 className="font-medium mb-2">How to get onboarded</h4>
           <ol className="list-decimal list-inside space-y-2 text-sm text-slate-600">
-            <li>Share your RefuniteID with an existing network member</li>
-            <li>They will need to add you to the network using your ID</li>
+            <li>Share your RelayId with an existing network member</li>
+            <li>They will need to add you to the network using your RelayId</li>
             <li>Once added, your status will update automatically</li>
           </ol>
         </div>

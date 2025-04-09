@@ -42,8 +42,8 @@ export function ShareSection({ address, chainId }: ShareSectionProps) {
                 <div className="space-y-2">
                   <h4 className="font-medium">Share with other members</h4>
                   <p className="text-sm text-muted-foreground">
-                    Share your RefuniteID with an existing member to become a member. They can scan
-                    your QR code or use WhatsApp to get your RefuniteID.
+                    Share your RelayId with an existing member to become a member. They can scan
+                    your QR code or use WhatsApp to get your RelayId.
                   </p>
                 </div>
               </PopoverContent>

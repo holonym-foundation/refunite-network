@@ -32,8 +32,8 @@ export function ProfileSection({ address }: ProfileSectionProps) {
               <div className="space-y-2">
                 <h4 className="font-medium">Your RefuniteID</h4>
                 <p className="text-sm text-muted-foreground">
-                  This is your unique RefuniteID that you can share with other members. They can use
-                  this ID to connect with you in the network.
+                  This is your unique RelayId that you can share with other members. They can use it
+                  to connect with you.
                 </p>
               </div>
             </PopoverContent>

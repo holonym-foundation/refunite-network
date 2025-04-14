@@ -6,6 +6,7 @@ import { ContextProvider } from "@/context";
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
+      <meta name="google-site-verification" content="Ek8qS8p0iYQQxYWW0d52vgKAs4KH3S4DVNCSn9btJFA" />
       <body>
         <ContextProvider>
           <Header />

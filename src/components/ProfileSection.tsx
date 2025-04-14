@@ -30,7 +30,7 @@ export function ProfileSection({ address }: ProfileSectionProps) {
             </PopoverTrigger>
             <PopoverContent className="w-80">
               <div className="space-y-2">
-                <h4 className="font-medium">Your RefuniteID</h4>
+                <h4 className="font-medium">Your RelayId</h4>
                 <p className="text-sm text-muted-foreground">
                   This is your unique RelayId that you can share with other members. They can use it
                   to connect with you.

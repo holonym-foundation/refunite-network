@@ -1,8 +1,8 @@
 "use client";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 
 import Link from "next/link";
-import { useAccount, useReadContract } from "wagmi";
+import { useAccount, useReadContract, WagmiProvider } from "wagmi";
 
 import { ConnectButton } from "@/components/ConnectButton";
 import { ProfileSection } from "@/components/ProfileSection";
@@ -12,7 +12,7 @@ import { StatusSection } from "@/components/StatusSection";
 import { HATS_CONTRACT_ADDRESS, LEADER_ADMIN_HAT_ID } from "@/lib/constants";
 import { abi as HatsAbi } from "@/lib/hatsAbi";
 
-export default function AccountPage() {
+function AccountPage() {
   const { address, isConnected, chainId } = useAccount();
   const [hasHat, setHasHat] = useState<boolean | null>(null);
 
@@ -104,5 +104,13 @@ export default function AccountPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function Page() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <AccountPage />
+    </Suspense>
   );
 }

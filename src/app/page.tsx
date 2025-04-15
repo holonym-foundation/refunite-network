@@ -10,7 +10,7 @@ import { ProfileSection } from "@/components/ProfileSection";
 import { ShareSection } from "@/components/ShareSection";
 import { StatusSection } from "@/components/StatusSection";
 
-import { HATS_CONTRACT_ADDRESS, LEADER_ADMIN_HAT_ID } from "@/lib/constants";
+import { HATS_CONTRACT_ADDRESS, LEADER_HAT_ID } from "@/lib/constants";
 import { abi as HatsAbi } from "@/lib/hatsAbi";
 import { wagmiConfig } from "@/wagmi/config";
 
@@ -20,7 +20,7 @@ function AccountPage() {
   const [isHatLoading, setIsHatLoading] = useState<boolean>(false);
   const [isHatError, setIsHatError] = useState<boolean>(false);
   const hatsContractAddress = HATS_CONTRACT_ADDRESS;
-  const hatsId = BigInt(LEADER_ADMIN_HAT_ID);
+  const hatsId = BigInt(LEADER_HAT_ID);
 
   console.log(address);
 

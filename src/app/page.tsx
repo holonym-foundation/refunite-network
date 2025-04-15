@@ -1,8 +1,9 @@
 "use client";
 import { Suspense, useEffect, useState } from "react";
 
+import { readContract } from "@wagmi/core";
 import Link from "next/link";
-import { useAccount, useReadContract, WagmiProvider } from "wagmi";
+import { useAccount } from "wagmi";
 
 import { ConnectButton } from "@/components/ConnectButton";
 import { ProfileSection } from "@/components/ProfileSection";
@@ -11,29 +12,39 @@ import { StatusSection } from "@/components/StatusSection";
 
 import { HATS_CONTRACT_ADDRESS, LEADER_ADMIN_HAT_ID } from "@/lib/constants";
 import { abi as HatsAbi } from "@/lib/hatsAbi";
+import { wagmiConfig } from "@/wagmi/config";
 
 function AccountPage() {
   const { address, isConnected, chainId } = useAccount();
   const [hasHat, setHasHat] = useState<boolean | null>(null);
-
+  const [isHatLoading, setIsHatLoading] = useState<boolean>(false);
+  const [isHatError, setIsHatError] = useState<boolean>(false);
   const hatsContractAddress = HATS_CONTRACT_ADDRESS;
   const hatsId = BigInt(LEADER_ADMIN_HAT_ID);
-  const {
-    data: rawHatData,
-    isError: isHatError,
-    isLoading: isHatLoading,
-  } = useReadContract({
-    address: hatsContractAddress,
-    abi: HatsAbi,
-    functionName: "viewHat",
-    args: [hatsId],
-  });
+
+  console.log(address);
 
   useEffect(() => {
-    if (rawHatData) {
-      setHasHat(rawHatData[8]); // active flag of hat
-    }
-  }, [rawHatData]);
+    const checkHat = async () => {
+      if (address) {
+        setIsHatLoading(true);
+        try {
+          const rawHatData = await readContract(wagmiConfig, {
+            address: hatsContractAddress,
+            abi: HatsAbi,
+            functionName: "isWearerOfHat",
+            args: [address, hatsId],
+          });
+          setHasHat(rawHatData); // active flag of hat
+        } catch (error) {
+          setIsHatError(true);
+        } finally {
+          setIsHatLoading(false);
+        }
+      }
+    };
+    checkHat();
+  }, [address, hatsId, hatsContractAddress]);
 
   if (!isConnected) {
     return (

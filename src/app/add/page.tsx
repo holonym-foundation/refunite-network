@@ -4,8 +4,8 @@ import { Suspense, useState, useEffect } from "react";
 
 import { Scanner, type IDetectedBarcode } from "@yudiel/react-qr-scanner";
 import { QrCode } from "lucide-react";
-import { isAddress } from "viem";
 import { useSearchParams } from "next/navigation";
+import { isAddress } from "viem";
 import { useAccount, usePublicClient } from "wagmi";
 
 import { ConnectButton } from "@/components/ConnectButton";

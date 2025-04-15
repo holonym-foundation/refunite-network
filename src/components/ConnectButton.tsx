@@ -7,6 +7,8 @@ import { Button } from "./ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 import { useToast } from "./ui/use-toast";
 
+import silk from "@/wagmi/silk-connector";
+
 export function ConnectButton() {
   const { connect, error, isError, connectors } = useConnect();
   const { disconnect } = useDisconnect();
@@ -27,12 +29,16 @@ export function ConnectButton() {
 
   const handleConnect = async () => {
     const silkConnector = connectors.find((connector) => connector.id === "silk");
-    if (!silkConnector) {
-      console.error("Silk connector not found in wagmi config");
-      return;
-    }
-
     try {
+      if (!silkConnector) {
+        console.error("Silk connector not found in wagmi config");
+        connect({
+          chainId: sepolia.id,
+          connector: silk({ useStaging: false, project: { name: "RelayId" } }),
+        });
+        return;
+      }
+
       connect({ chainId: sepolia.id, connector: silkConnector });
     } catch (error) {
       console.error("Error connecting to Silk:", error);

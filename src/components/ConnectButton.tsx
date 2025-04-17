@@ -3,6 +3,15 @@ import { UserRejectedRequestError } from "viem";
 import { useAccount, useConnect, useDisconnect } from "wagmi";
 import { sepolia } from "wagmi/chains";
 
+// Add type declaration for window.silk
+declare global {
+  interface Window {
+    silk?: {
+      disconnect: () => void;
+    };
+  }
+}
+
 import { Button } from "./ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 import { useToast } from "./ui/use-toast";
@@ -34,7 +43,7 @@ export function ConnectButton() {
         console.error("Silk connector not found in wagmi config");
         connect({
           chainId: sepolia.id,
-          connector: silk({ useStaging: false, project: { name: "RelayId" } }),
+          connector: silk({ useStaging: true, project: { name: "RelayId" } }),
         });
         return;
       }
@@ -46,6 +55,17 @@ export function ConnectButton() {
     }
   };
 
+  const handleDisconnect = async () => {
+    if (window.silk) {
+      window.silk.disconnect();
+    }
+    disconnect();
+    toast({
+      description: "Account disconnected",
+      duration: 2000,
+    });
+  };
+
   return (
     <div className="flex items-center gap-2">
       {!account.address ? (
@@ -54,7 +74,7 @@ export function ConnectButton() {
         </div>
       ) : (
         <div className="flex items-center gap-2 flex-row lg:flex-row-reverse">
-          <Button onClick={() => disconnect()}>Logout</Button>
+          <Button onClick={handleDisconnect}>Logout</Button>
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>

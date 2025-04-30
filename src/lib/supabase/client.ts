@@ -1,0 +1,25 @@
+import { createClient } from "@supabase/supabase-js";
+
+import { Database } from "./types";
+
+if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
+  throw new Error("Missing env.NEXT_PUBLIC_SUPABASE_URL");
+}
+if (!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+  throw new Error("Missing env.NEXT_PUBLIC_SUPABASE_ANON_KEY");
+}
+
+export const supabase = createClient<Database>(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+);
+
+// Service role client for admin operations
+if (!process.env.SUPABASE_SERVICE_KEY) {
+  throw new Error("Missing env.SUPABASE_SERVICE_KEY");
+}
+
+export const supabaseAdmin = createClient<Database>(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_KEY
+);

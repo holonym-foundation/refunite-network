@@ -3,6 +3,7 @@
 import { Suspense, useState, useEffect } from "react";
 
 import { Scanner, type IDetectedBarcode } from "@yudiel/react-qr-scanner";
+import { ethers } from "ethers";
 import { QrCode } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { isAddress } from "viem";
@@ -17,6 +18,7 @@ import { useToast } from "@/components/ui/use-toast";
 
 import { useHatsInteractions } from "@/hooks/useHatsInteractions";
 import { useSafeOwner } from "@/hooks/useSafeOwner";
+import { useSilkSigner } from "@/hooks/useSilkSigner";
 
 function AddLeaderForm() {
   const { address: account, isConnected } = useAccount();
@@ -25,9 +27,12 @@ function AddLeaderForm() {
   const { toast } = useToast();
   const { isMultisigOwner, isLoading: isSafeLoading } = useSafeOwner();
   const { hatsInteractions, isConnected: isHatsConnected } = useHatsInteractions();
+  const { signMessage, isConnected: isSilkConnected } = useSilkSigner();
   const [showScanner, setShowScanner] = useState(false);
   const publicClient = usePublicClient();
   const searchParams = useSearchParams();
+  const [inviteLink, setInviteLink] = useState<string>("");
+  const [isGeneratingInvite, setIsGeneratingInvite] = useState(false);
 
   useEffect(() => {
     const theirAddress = searchParams.get("recipient");
@@ -116,6 +121,66 @@ function AddLeaderForm() {
         description: "An unknown error occurred",
       });
     }
+  };
+
+  const handleGenerateInvite = async () => {
+    if (!account || !isSilkConnected) return;
+
+    setIsGeneratingInvite(true);
+    try {
+      // Generate a nonce
+      const nonce = ethers.hexlify(ethers.randomBytes(32));
+
+      // Request signature from Silk wallet
+      const message = `I authorize this invite to be created for the RelayId Network. Nonce: ${nonce}`;
+      const signature = await signMessage(message);
+
+      const response = await fetch("/api/invites", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          inviterAddress: account,
+          signature,
+          nonce,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to generate invite");
+      }
+
+      const { inviteCode } = await response.json();
+      const link = `${window.location.origin}/invite/${inviteCode}`;
+      setInviteLink(link);
+    } catch (error) {
+      console.error("Error generating invite:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to generate invite link",
+      });
+    } finally {
+      setIsGeneratingInvite(false);
+    }
+  };
+
+  const handleCopyLink = () => {
+    if (!inviteLink) return;
+    navigator.clipboard.writeText(inviteLink);
+    toast({
+      title: "Copied!",
+      description: "Invite link copied to clipboard",
+    });
+  };
+
+  const handleShareWhatsApp = () => {
+    if (!inviteLink) return;
+    const message = `Join me on the RelayId Network! Use this invite link: ${inviteLink}`;
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, "_blank");
   };
 
   if (!isConnected) {
@@ -246,6 +311,44 @@ function AddLeaderForm() {
               )}
             </div>
           </form>
+
+          {/* Invite Link Section */}
+          <div className="mt-8 pt-8 border-t border-slate-200">
+            <h2 className="text-lg font-semibold mb-4">Send invite link</h2>
+            <div className="space-y-4">
+              <div className="flex gap-2">
+                <Button
+                  onClick={handleGenerateInvite}
+                  disabled={isGeneratingInvite || !isMultisigOwner || !!inviteLink}
+                  className="shrink-0"
+                >
+                  {isGeneratingInvite ? (
+                    <div className="flex items-center gap-2">
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                      Generating...
+                    </div>
+                  ) : (
+                    "Generate invite link"
+                  )}
+                </Button>
+                {inviteLink && (
+                  <>
+                    <Button onClick={handleCopyLink} variant="outline" className="shrink-0">
+                      Copy link
+                    </Button>
+                    <Button onClick={handleShareWhatsApp} variant="outline" className="shrink-0">
+                      Share on WhatsApp
+                    </Button>
+                  </>
+                )}
+              </div>
+              {inviteLink && (
+                <div className="text-sm text-slate-500">
+                  <p>Invite link expires in 24 hours</p>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </div>

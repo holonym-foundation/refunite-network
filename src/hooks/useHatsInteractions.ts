@@ -8,6 +8,12 @@ interface HatsInteractions {
   onboardUser: (
     recipient: string
   ) => Promise<Result<{ mintHatTxHash: string; claimSignerTxHash: string }, Error>>;
+  inviteUser: (
+    recipient: string,
+    signature: string,
+    inviterAddress: string,
+    nonce: string
+  ) => Promise<Result<{ mintHatTxHash: string; claimSignerTxHash: string }, Error>>;
 }
 
 export const useHatsInteractions = () => {
@@ -48,6 +54,46 @@ export const useHatsInteractions = () => {
         return {
           success: false,
           error: err instanceof Error ? err : new Error("Failed to mint hat"),
+        };
+      }
+    },
+    inviteUser: async (
+      recipient: string,
+      signature: string,
+      inviterAddress: string,
+      nonce: string
+    ) => {
+      try {
+        const response = await fetch("/api/defender", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            recipient,
+            signature,
+            inviterAddress,
+            nonce,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`API responded with status ${response.status}`);
+        }
+
+        const data = await response.json();
+        return {
+          success: true,
+          data: {
+            mintHatTxHash: data.mintHatTxHash,
+            claimSignerTxHash: data.claimSignerTxHash,
+          },
+        };
+      } catch (err) {
+        console.error("Error in inviteUser:", err);
+        return {
+          success: false,
+          error: err instanceof Error ? err : new Error("Failed to onboard user with invite"),
         };
       }
     },

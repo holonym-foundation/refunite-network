@@ -15,7 +15,7 @@ export function ProfileSection({ address }: ProfileSectionProps) {
   return (
     <div className="py-4 border-b border-slate-300">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
+        <div className="flex items-start gap-2">
           <div>
             <h2 className="text-lg font-semibold">My Account</h2>
             <p className="text-sm font-mono font-semibold text-secondary">

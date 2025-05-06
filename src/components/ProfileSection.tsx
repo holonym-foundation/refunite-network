@@ -32,8 +32,8 @@ export function ProfileSection({ address }: ProfileSectionProps) {
               <div className="space-y-2">
                 <h4 className="font-medium">Your RelayId</h4>
                 <p className="text-sm text-muted-foreground">
-                  This is your unique RelayId that you can share with other members. They can use it
-                  to connect with you.
+                  This is your unique RelayId that you can share with other leaders. They can use it
+                  to add you as a leader.
                 </p>
               </div>
             </PopoverContent>
@@ -54,8 +54,8 @@ export function ProfileSection({ address }: ProfileSectionProps) {
             <Copy className="h-5 w-5" />
           </Button>
           {showCopied && (
-            <div className="absolute right-full mr-2 top-1/2 transform -translate-y-1/2 bg-slate-800 text-white px-2 py-1 rounded text-xs whitespace-nowrap">
-              RefuniteID copied to clipboard
+            <div className="absolute right-full mr-2 top-1/2 transform -translate-y-1/2 bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded text-xs whitespace-nowrap">
+              Copied
             </div>
           )}
         </div>

@@ -72,9 +72,6 @@ function AccountPage() {
             {/* Profile Section */}
             <ProfileSection address={address} />
 
-            {/* Share Section */}
-            <ShareSection address={address} chainId={chainId} />
-
             {/* Status Section */}
             <StatusSection hasHat={hasHat} isHatLoading={isHatLoading} isHatError={isHatError} />
 
@@ -82,7 +79,8 @@ function AccountPage() {
             {!isHatLoading && (
               <div className="mt-8">
                 <div className="flex gap-4">
-                  {hasHat ? (
+                  {hasHat === false && <ShareSection address={address} chainId={chainId} />}
+                  {hasHat === true && (
                     <Link
                       href="/add"
                       className="font-semibold text-blue-600 hover:text-blue-800 border-b-2 border-blue-600 flex items-center gap-1"
@@ -103,10 +101,6 @@ function AccountPage() {
                         />
                       </svg>
                     </Link>
-                  ) : (
-                    <span className="text-slate-500">
-                      You don&apos;t have permission to add another leader.
-                    </span>
                   )}
                 </div>
               </div>

@@ -1,11 +1,12 @@
-import { ethers } from "ethers";
 import { NextResponse } from "next/server";
+import { Address, getAddress, Hash } from "viem";
 
-import { supabaseAdmin } from "@/lib/supabase/client";
+import { verifyNetworkInviteSignature } from "@/lib/eip712";
+import { supabase } from "@/lib/supabase/client";
+import { randomBytes } from "crypto";
 
-// Function to generate a random base62 string
 function generateInviteCode(): string {
-  const bytes = ethers.randomBytes(6);
+  const bytes = randomBytes(6);
   return Buffer.from(bytes)
     .toString("base64")
     .replace(/\+/g, "-")
@@ -17,55 +18,65 @@ function generateInviteCode(): string {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { inviterAddress, signature, nonce } = body;
+    const { inviterAddress, signature, nonce, typedData } = body;
 
-    if (!inviterAddress) {
-      return NextResponse.json({ error: "Inviter address is required" }, { status: 400 });
+    if (!inviterAddress || !signature || !nonce || !typedData) {
+      return NextResponse.json(
+        { error: "inviterAddress, signature, nonce, and typedData are required" },
+        { status: 400 }
+      );
     }
 
-    if (!signature) {
-      return NextResponse.json({ error: "Signature is required" }, { status: 400 });
-    }
+    // Verify the EIP-712 signature
+    const isValidSignature = await verifyNetworkInviteSignature({
+      typedData,
+      signature: signature as Hash,
+      address: getAddress(inviterAddress),
+    });
 
-    if (!nonce) {
-      return NextResponse.json({ error: "Nonce is required" }, { status: 400 });
-    }
-
-    // Verify the signature
-    const message = `I authorize this invite to be created for the RelayID Network. Nonce: ${nonce}`;
-    const recoveredAddress = ethers.verifyMessage(message, signature);
-
-    if (recoveredAddress.toLowerCase() !== inviterAddress.toLowerCase()) {
+    if (!isValidSignature) {
       return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
     }
 
-    const inviteCode = generateInviteCode();
-
-    // Set expiration to 24 hours from now
-    const expiresAt = new Date();
-    expiresAt.setHours(expiresAt.getHours() + 24);
-
-    // Insert the invite into the database
-    const { data: invite, error } = await supabaseAdmin
-      .from("invites")
-      .insert({
-        inviter_address: inviterAddress,
-        signature_nonce: nonce,
-        inviter_signature: signature,
-        invite_code: inviteCode,
-        expires_at: expiresAt.toISOString(),
-      })
-      .select()
-      .single();
-
-    if (error) {
-      console.error("Error creating invite:", error);
-      return NextResponse.json({ error: "Failed to create invite" }, { status: 500 });
+    // Verify the typedData contents match the request
+    if (typedData.message.inviterAddress !== inviterAddress || typedData.message.nonce !== nonce) {
+      return NextResponse.json({ error: "TypedData mismatch with request data" }, { status: 400 });
     }
 
-    return NextResponse.json({ inviteCode });
+    // Extract data from the verified typed data
+    const { createdAt } = typedData.message;
+
+    // Check if signature creation time is not too old (24 hours)
+    const signatureTimestamp = Number(createdAt);
+    const currentTimestamp = Math.floor(Date.now() / 1000);
+    if (currentTimestamp - signatureTimestamp > 86400) {
+      return NextResponse.json({ error: "Signature has expired" }, { status: 401 });
+    }
+
+    // Generate unique invite code
+    const inviteCode = generateInviteCode();
+
+    // Store invite in database
+    const { error } = await supabase.from("invites").insert({
+      invite_code: inviteCode,
+      inviter_address: inviterAddress,
+      signature: signature,
+      signature_nonce: nonce,
+      message: typedData,
+      created_at: new Date(signatureTimestamp * 1000).toISOString(),
+      expires_at: new Date(signatureTimestamp * 1000 + 24 * 60 * 60 * 1000).toISOString(), // 24 hours from now
+    });
+
+    if (error) {
+      console.error("Error storing invite:", error);
+      return NextResponse.json({ error: "Failed to store invite" }, { status: 500 });
+    }
+
+    return NextResponse.json({
+      inviteCode,
+    });
   } catch (error) {
-    console.error("Error in invites endpoint:", error);
-    return NextResponse.json({ error: "Failed to process request" }, { status: 500 });
+    console.error("Error creating invite:", error);
+    return NextResponse.json({ error: "Failed to create invite" }, { status: 500 });
   }
 }

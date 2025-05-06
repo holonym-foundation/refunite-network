@@ -76,8 +76,7 @@ export function AddLeaderViaQRSection({ onSuccess }: AddLeaderViaQRSectionProps)
         body: JSON.stringify({
           recipient,
           signature,
-          inviterAddress: account,
-          nonce,
+          message,
         }),
       });
       const data = await response.json();

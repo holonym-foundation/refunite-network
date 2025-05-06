@@ -1,19 +1,19 @@
-import { ethers } from "ethers";
 import { NextResponse } from "next/server";
+import { Address, Hash } from "viem";
 
 import { LEADER_HAT_ID } from "@/lib/constants";
+import { verifyNetworkInviteSignature } from "@/lib/eip712";
 import { supabase } from "@/lib/supabase/client";
-import { getInviteSignatureMessage, verifyInviteSignature } from "@/lib/signature";
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { recipient, signature, inviterAddress, nonce, isInviteLink } = body;
+    const { recipient, signature, isInviteLink, typedData } = body;
 
     // Require all fields for all onboarding flows
-    if (!recipient || !signature || !inviterAddress || !nonce) {
+    if (!recipient || !signature || !typedData) {
       return NextResponse.json(
-        { error: "recipient, signature, inviterAddress, and nonce are required" },
+        { error: "recipient, signature, and typedData are required" },
         { status: 400 }
       );
     }
@@ -23,18 +23,31 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Defender webhook URL not configured" }, { status: 500 });
     }
 
-    // Verify the signature
-    const message = getInviteSignatureMessage(nonce);
-    if (!verifyInviteSignature({ message, signature, expectedAddress: inviterAddress })) {
+    // Verify the EIP-712 signature
+    const isValidSignature = await verifyNetworkInviteSignature({
+      typedData,
+      signature: signature as Hash,
+      address: typedData.message.inviterAddress as Address,
+    });
+
+    if (!isValidSignature) {
       return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+    }
+
+    // Extract data from the verified typed data
+    const { inviterAddress, nonce, createdAt } = typedData.message;
+
+    // Check if signature creation time is not too old (24 hours)
+    const signatureTimestamp = Number(createdAt);
+    const currentTimestamp = Math.floor(Date.now() / 1000);
+    if (currentTimestamp - signatureTimestamp > 86400) {
+      return NextResponse.json({ error: "Signature has expired" }, { status: 401 });
     }
 
     const payload = {
       recipient,
       signature,
-      inviterAddress,
       hatId: LEADER_HAT_ID,
-      nonce,
     };
 
     const response = await fetch(defenderWebhookUrl, {

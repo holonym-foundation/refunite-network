@@ -11,8 +11,7 @@ interface HatsInteractions {
   inviteUser: (
     recipient: string,
     signature: string,
-    inviterAddress: string,
-    nonce: string
+    message: string
   ) => Promise<Result<{ mintHatTxHash: string; claimSignerTxHash: string }, Error>>;
 }
 
@@ -57,12 +56,7 @@ export const useHatsInteractions = () => {
         };
       }
     },
-    inviteUser: async (
-      recipient: string,
-      signature: string,
-      inviterAddress: string,
-      nonce: string
-    ) => {
+    inviteUser: async (recipient: string, signature: string, message: string) => {
       try {
         const response = await fetch("/api/defender", {
           method: "POST",
@@ -72,8 +66,7 @@ export const useHatsInteractions = () => {
           body: JSON.stringify({
             recipient,
             signature,
-            inviterAddress,
-            nonce,
+            message,
           }),
         });
 

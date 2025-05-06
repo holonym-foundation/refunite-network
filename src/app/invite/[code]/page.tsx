@@ -47,15 +47,14 @@ export default function InvitePage() {
     try {
       // Get the verified invite details
       const verifyResult = await verifyInvite(code as string);
-      if (!verifyResult.success || !verifyResult.signature) {
+      if (!verifyResult.success || !verifyResult.signature || !verifyResult.message) {
         throw new Error(verifyResult.error || "Invalid invite");
       }
 
       const onboardResult = await hatsInteractions.inviteUser(
         address,
         verifyResult.signature,
-        verifyResult.inviterAddress!,
-        verifyResult.nonce!
+        verifyResult.message
       );
 
       if (!onboardResult.success) {

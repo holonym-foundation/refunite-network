@@ -31,9 +31,8 @@ export function AddLeaderViaInviteLinkSection({ disabled, onSuccess }: InviteLin
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          inviterAddress: account,
           signature,
-          nonce,
+          message,
         }),
       });
       if (!response.ok) {

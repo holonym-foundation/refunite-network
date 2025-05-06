@@ -7,10 +7,14 @@ import { supabase } from "@/lib/supabase/client";
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { recipient, signature, inviterAddress, nonce } = body;
+    const { recipient, signature, inviterAddress, nonce, isInviteLink } = body;
 
-    if (!recipient) {
-      return NextResponse.json({ error: "Recipient address is required" }, { status: 400 });
+    // Require all fields for all onboarding flows
+    if (!recipient || !signature || !inviterAddress || !nonce) {
+      return NextResponse.json(
+        { error: "recipient, signature, inviterAddress, and nonce are required" },
+        { status: 400 }
+      );
     }
 
     const defenderWebhookUrl = process.env.DEFENDER_WEBHOOK_URL;
@@ -18,27 +22,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Defender webhook URL not configured" }, { status: 500 });
     }
 
-    // If this is an invite-based onboarding, verify the signature
-    if (signature && inviterAddress && nonce) {
-      // Verify the signature
-      const message = `I authorize this invite to be created for the RelayID Network. Nonce: ${nonce}`;
-      const recoveredAddress = ethers.verifyMessage(message, signature);
-
-      if (recoveredAddress.toLowerCase() !== inviterAddress.toLowerCase()) {
-        return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
-      }
+    // Verify the signature
+    const message = `I authorize this invite to be created for the RelayId Network. Nonce: ${nonce}`;
+    const recoveredAddress = ethers.verifyMessage(message, signature);
+    if (recoveredAddress.toLowerCase() !== inviterAddress.toLowerCase()) {
+      return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
     }
 
     const payload = {
       recipient,
-      ...(signature && inviterAddress && nonce
-        ? {
-            signature,
-            inviterAddress,
-            hatId: LEADER_HAT_ID,
-            nonce,
-          }
-        : {}),
+      signature,
+      inviterAddress,
+      hatId: LEADER_HAT_ID,
+      nonce,
     };
 
     const response = await fetch(defenderWebhookUrl, {
@@ -58,7 +54,7 @@ export async function POST(request: Request) {
     }
 
     // Only mark the invite as used after successful Defender response
-    if (nonce) {
+    if (nonce && isInviteLink) {
       const { error: markError } = await supabase
         .from("invites")
         .update({

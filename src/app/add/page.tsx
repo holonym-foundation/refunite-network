@@ -1,12 +1,12 @@
 "use client";
 
-import { Suspense, useState, useEffect } from "react";
+import { Suspense, useEffect, useState } from "react";
 
 import { Scanner, type IDetectedBarcode } from "@yudiel/react-qr-scanner";
 import { QrCode } from "lucide-react";
 import { useSearchParams } from "next/navigation";
-import { isAddress, generateSiweNonce } from "viem";
-import { useAccount, usePublicClient } from "wagmi";
+import { isAddress } from "viem";
+import { useAccount, useChainId } from "wagmi";
 
 import { ConnectButton } from "@/components/ConnectButton";
 import { Button } from "@/components/ui/button";
@@ -16,9 +16,9 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 
 import en from "@/content/en";
-import { useHatsInteractions } from "@/hooks/useHatsInteractions";
 import { useSafeOwner } from "@/hooks/useSafeOwner";
 import { useSilkSigner } from "@/hooks/useSilkSigner";
+import { createNetworkInviteTypedData, generateNonce } from "@/lib/eip712";
 
 function AddLeaderForm() {
   const { address: account, isConnected } = useAccount();
@@ -26,13 +26,13 @@ function AddLeaderForm() {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const { isMultisigOwner, isLoading: isSafeLoading } = useSafeOwner();
-  const { hatsInteractions, isConnected: isHatsConnected } = useHatsInteractions();
-  const { signMessage, isConnected: isSilkConnected } = useSilkSigner();
+  const { signMessage, signTypedData, isConnected: isSilkConnected } = useSilkSigner();
   const [showScanner, setShowScanner] = useState(false);
-  const publicClient = usePublicClient();
+  const chainId = useChainId();
   const searchParams = useSearchParams();
   const [inviteLink, setInviteLink] = useState<string>("");
   const [isGeneratingInvite, setIsGeneratingInvite] = useState(false);
+  const [scannedViaQR, setScannedViaQR] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
 
   useEffect(() => {
@@ -41,52 +41,6 @@ function AddLeaderForm() {
       setRecipient(theirAddress);
     }
   }, [searchParams]);
-
-  const handleAddLeader = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-
-    try {
-      if (!isMultisigOwner || !isHatsConnected || !hatsInteractions || !publicClient) {
-        throw new Error("Not properly connected");
-      }
-
-      const onboardResult = await hatsInteractions.onboardUser(recipient);
-      if (!onboardResult.success) {
-        throw onboardResult.error;
-      }
-
-      const { mintHatTxHash, claimSignerTxHash } = onboardResult.data;
-      if (!mintHatTxHash || !claimSignerTxHash) {
-        throw new Error("No transaction hashes");
-      }
-
-      await publicClient.waitForTransactionReceipt({
-        hash: mintHatTxHash as `0x${string}`,
-      });
-
-      await publicClient.waitForTransactionReceipt({
-        hash: claimSignerTxHash as `0x${string}`,
-      });
-
-      setRecipient("");
-      toast({
-        title: "Success",
-        description: `Successfully added leader ${recipient}`,
-      });
-      setShowCelebration(true);
-      setTimeout(() => setShowCelebration(false), 2500);
-    } catch (error) {
-      console.error("Error adding leader:", error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: error instanceof Error ? error.message : "An error occurred",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleScan = (results: IDetectedBarcode[]) => {
     const qrCode = results[0];
@@ -106,6 +60,7 @@ function AddLeaderForm() {
 
     setRecipient(address);
     setShowScanner(false);
+    setScannedViaQR(true);
   };
 
   const handleScanError = (error: unknown) => {
@@ -127,16 +82,22 @@ function AddLeaderForm() {
   };
 
   const handleGenerateInvite = async () => {
-    if (!account || !isSilkConnected) return;
+    if (!account || !isSilkConnected || !chainId) return;
 
     setIsGeneratingInvite(true);
     try {
       // Generate a nonce
-      const nonce = generateSiweNonce();
+      const nonce = generateNonce();
+
+      // Create EIP-712 typed data
+      const typedData = createNetworkInviteTypedData({
+        inviterAddress: account,
+        nonce,
+        chainId,
+      });
 
       // Request signature from Silk wallet
-      const message = `I authorize this invite to be created for the RelayID Network. Nonce: ${nonce}`;
-      const signature = await signMessage(message);
+      const signature = await signTypedData(typedData);
 
       const response = await fetch("/api/invites", {
         method: "POST",
@@ -147,6 +108,7 @@ function AddLeaderForm() {
           inviterAddress: account,
           signature,
           nonce,
+          typedData,
         }),
       });
 
@@ -184,6 +146,62 @@ function AddLeaderForm() {
     const message = `${en.common.joinMe}${inviteLink}`;
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, "_blank");
+  };
+
+  const handleAddLeaderViaSignature = async () => {
+    setIsLoading(true);
+    try {
+      if (!account || !isSilkConnected || !chainId) throw new Error("Not connected to Silk wallet");
+
+      // Generate a nonce
+      const nonce = generateNonce();
+
+      // Create EIP-712 typed data
+      const typedData = createNetworkInviteTypedData({
+        inviterAddress: account,
+        nonce,
+        chainId,
+      });
+
+      // Request signature from Silk wallet
+      const signature = await signTypedData(typedData);
+
+      // Call /api/defender
+      const response = await fetch("/api/defender", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          recipient,
+          signature,
+          inviterAddress: account,
+          nonce,
+          typedData,
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to add leader via Defender");
+      }
+
+      setRecipient("");
+      setScannedViaQR(false);
+      setShowCelebration(true);
+
+      toast({
+        title: "Success",
+        description: `Successfully added leader ${recipient}`,
+      });
+    } catch (error) {
+      console.error("Error adding leader:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error instanceof Error ? error.message : "An error occurred",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   if (!isConnected) {
@@ -234,7 +252,9 @@ function AddLeaderForm() {
                 <p className="mt-2 text-green-600 animate-fade-in">
                   You successfully added a new leader to the network.
                 </p>
-                <Button onClick={() => setShowCelebration(false)}>Close</Button>
+                <Button onClick={() => setShowCelebration(false)} className="mt-4">
+                  Close
+                </Button>
               </div>
             </div>
           )}
@@ -306,94 +326,112 @@ function AddLeaderForm() {
             )}
           </header>
 
-          <form onSubmit={handleAddLeader} className="py-4">
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="address">{en.common.theirAddress}</Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="address"
-                    type="text"
-                    placeholder="0x..."
-                    value={recipient}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      setRecipient(e.target.value)
-                    }
-                    required
-                  />
-                  <Dialog open={showScanner} onOpenChange={setShowScanner}>
-                    <DialogTrigger asChild>
-                      <Button type="button" variant="outline" size="icon" className="shrink-0">
-                        <QrCode className="h-4 w-4" />
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <div className="pt-4">
-                        <Scanner onScan={handleScan} onError={handleScanError} />
-                      </div>
-                    </DialogContent>
-                  </Dialog>
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center gap-4">
-              <Button type="submit" disabled={isLoading || !isMultisigOwner} className="mt-8">
-                {isLoading ? (
-                  <div className="flex items-center gap-2">
-                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                    {en.common.addingLeader}
-                  </div>
-                ) : (
-                  en.common.addLeader
-                )}
-              </Button>
-              {isLoading && (
-                <span className="text-secondary text-sm mt-8">
-                  {en.common.sendingTx}
-                  <span className="font-bold">2</span>
-                  {en.common.transactionsPleaseWait}
-                </span>
-              )}
-            </div>
-          </form>
+          {/* TODO: explain what to do when not allowed */}
 
-          {/* Invite Link Section */}
-          <div className="mt-8 pt-8 border-t border-slate-200">
-            <h2 className="text-lg font-semibold mb-4">{en.addPage.headings.sendInviteLink}</h2>
-            <div className="space-y-4">
-              <div className="flex gap-2">
-                <Button
-                  onClick={handleGenerateInvite}
-                  disabled={isGeneratingInvite || !isMultisigOwner || !!inviteLink}
-                  className="shrink-0"
-                >
-                  {isGeneratingInvite ? (
-                    <div className="flex items-center gap-2">
-                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                      {en.common.generating}
+          {!isSafeLoading && isMultisigOwner && (
+            <>
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleAddLeaderViaSignature();
+                }}
+                className="py-4"
+              >
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="address">Their address</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        id="address"
+                        type="text"
+                        placeholder="0x..."
+                        value={recipient}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                          setRecipient(e.target.value)
+                        }
+                        required
+                      />
+                      <Dialog open={showScanner} onOpenChange={setShowScanner}>
+                        <DialogTrigger asChild>
+                          <Button type="button" variant="outline" size="icon" className="shrink-0">
+                            <QrCode className="h-4 w-4" />
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <div className="pt-4">
+                            <Scanner onScan={handleScan} onError={handleScanError} />
+                          </div>
+                        </DialogContent>
+                      </Dialog>
                     </div>
-                  ) : (
-                    en.common.generateInvite
-                  )}
-                </Button>
-                {inviteLink && (
-                  <>
-                    <Button onClick={handleCopyLink} variant="outline" className="shrink-0">
-                      {en.common.copyLink}
-                    </Button>
-                    <Button onClick={handleShareWhatsApp} variant="outline" className="shrink-0">
-                      {en.common.shareWhatsApp}
-                    </Button>
-                  </>
-                )}
-              </div>
-              {inviteLink && (
-                <div className="text-sm text-slate-500">
-                  <p>{en.common.inviteExpires}</p>
+                  </div>
                 </div>
-              )}
-            </div>
-          </div>
+                <div className="flex items-center gap-4">
+                  <Button
+                    type="submit"
+                    disabled={isLoading || !isMultisigOwner || !recipient}
+                    className="mt-8"
+                  >
+                    {isLoading ? (
+                      <div className="flex items-center gap-2">
+                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                        Adding leader...
+                      </div>
+                    ) : (
+                      "Add leader"
+                    )}
+                  </Button>
+                  {isLoading && (
+                    <span className="text-secondary text-sm mt-8">
+                      Sending <span className="font-bold">two</span> transactions. Please keep this
+                      page open...
+                    </span>
+                  )}
+                </div>
+              </form>
+
+              <div className="mt-8 pt-8 border-t border-slate-200">
+                <h2 className="text-lg font-semibold mb-4">Send invite link</h2>
+                <div className="space-y-4">
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={handleGenerateInvite}
+                      disabled={isGeneratingInvite || !isMultisigOwner || !!inviteLink}
+                      className="shrink-0"
+                    >
+                      {isGeneratingInvite ? (
+                        <div className="flex items-center gap-2">
+                          <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                          Generating...
+                        </div>
+                      ) : (
+                        "Generate invite link"
+                      )}
+                    </Button>
+                    {inviteLink && (
+                      <>
+                        <Button onClick={handleCopyLink} variant="outline" className="shrink-0">
+                          Copy link
+                        </Button>
+                        <Button
+                          onClick={handleShareWhatsApp}
+                          variant="outline"
+                          className="shrink-0"
+                        >
+                          Share on WhatsApp
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                  {inviteLink && (
+                    <div className="text-sm text-slate-500">
+                      <p>Invite link expires in 24 hours</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>

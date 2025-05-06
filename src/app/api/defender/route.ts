@@ -21,7 +21,7 @@ export async function POST(request: Request) {
     // If this is an invite-based onboarding, verify the signature
     if (signature && inviterAddress && nonce) {
       // Verify the signature
-      const message = `I authorize this invite to be created for the RelayId Network. Nonce: ${nonce}`;
+      const message = `I authorize this invite to be created for the RelayID Network. Nonce: ${nonce}`;
       const recoveredAddress = ethers.verifyMessage(message, signature);
 
       if (recoveredAddress.toLowerCase() !== inviterAddress.toLowerCase()) {

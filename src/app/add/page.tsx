@@ -135,7 +135,7 @@ function AddLeaderForm() {
       const nonce = generateSiweNonce();
 
       // Request signature from Silk wallet
-      const message = `I authorize this invite to be created for the RelayId Network. Nonce: ${nonce}`;
+      const message = `I authorize this invite to be created for the RelayID Network. Nonce: ${nonce}`;
       const signature = await signMessage(message);
 
       const response = await fetch("/api/invites", {

@@ -7,8 +7,8 @@ const en = {
     unknown: "Unknown",
     login: "Login",
     logout: "Logout",
-    clickToCopyAddress: "Click to copy address",
-    addressCopied: "Address copied to clipboard",
+    clickToCopyAddress: "Click to copy your RelayID",
+    addressCopied: "RelayID copied to clipboard",
     accountDisconnected: "Account disconnected",
     loading: "Loading...",
     success: "Success",
@@ -20,7 +20,7 @@ const en = {
     inviteExpires: "Invite link expires in 24 hours",
     generating: "Generating...",
     generateInvite: "Generate invite link",
-    joinMe: "Join me on the RelayId Network! Use this invite link: ",
+    joinMe: "Join me on the RelayID Network! Use this invite link: ",
     failedToGenerate: "Failed to generate invite",
     failedToGenerateLink: "Failed to generate invite link",
     invalidAddress: "Invalid address: ",
@@ -31,7 +31,7 @@ const en = {
     sendingTx: "Sending ",
     transactionsPleaseWait: " transactions. Please keep this page open...",
     checkingPermissions: "Checking permissions...",
-    theirAddress: "Their address",
+    theirAddress: "Their RelayID",
     inviteCopied: "Invite link copied to clipboard",
     copiedExclamation: "Copied!",
   },
@@ -40,20 +40,20 @@ const en = {
     description: "This is the home page of the application.",
   },
   profile: {
-    myAccount: "My Account",
-    relayIdTitle: "Your RelayId",
+    myAccount: "My RelayID",
+    relayIdTitle: "Your RelayID",
     relayIdDescription:
-      "This is your unique RelayId that you can share with other leaders. They can use it to add you as a leader.",
+      "This is your unique RelayID that you can share with other leaders. They can use it to add you as a leader.",
   },
   status: {
     status: "Status",
     networkStatus: "Network Status",
     networkStatusDescription:
-      "Your status shows whether you're connected to the RelayId network. To get onboarded, you'll need to be added by an existing network member.",
+      "Your status shows whether you're connected to the RelayID network. To get onboarded, you'll need to be added by an existing network member.",
     onboardingTitle: "How to get onboarded",
     onboardingSteps: [
-      "Share your RelayId with an existing network member",
-      "They will need to add you to the network using your RelayId",
+      "Share your RelayID with another leader",
+      "They will need to add you to the network using your RelayID",
       "Once added, your status will update automatically",
     ],
     errorLoadingStatus: "Error loading status",
@@ -61,11 +61,11 @@ const en = {
     notALeader: "Not a leader",
   },
   share: {
-    shareAccountInfo: "Share account info via",
-    shareWithMembersTitle: "Share with other members",
+    shareAccountInfo: "Add me as a leader via",
+    shareWithMembersTitle: "Share with other leaders",
     shareWithMembersDescription:
-      "Share your RelayId with an existing member to become a member. They can scan your QR code or use WhatsApp to get your RelayId.",
-    whatsappShareMessage: "Please add me to the RelayId network: ",
+      "Share your RelayID with another leader to join the network. They can scan your QR code or use WhatsApp to get your RelayID.",
+    whatsappShareMessage: "Please add me to the RelayID network: ",
   },
   qrCodeDialog: {
     shareQrCode: "Share QR Code",
@@ -77,7 +77,7 @@ const en = {
   },
   header: {
     nav: {
-      myAccount: "My Account",
+      myAccount: "My RelayID",
       addLeader: "Add Leader",
     },
     menu: {
@@ -86,8 +86,8 @@ const en = {
     },
   },
   page: {
-    myAccountTitle: "My Account",
-    loginPrompt: "Please log in to view your account details.",
+    myAccountTitle: "My RelayID",
+    loginPrompt: "Please log in to view your RelayID.",
     addAnotherLeader: "Add another leader",
     noPermission: "You don't have permission to add another leader.",
   },
@@ -99,7 +99,6 @@ const en = {
     },
     prompts: {
       loginToAdd: "Please log in to add a leader.",
-
       two: "two",
     },
     toasts: {
@@ -117,7 +116,7 @@ const en = {
     },
     prompts: {
       onboarded: "You have been successfully onboarded as a leader!",
-      viewAccount: "View your account",
+      viewAccount: "View your RelayID",
       invalid: "This invite is no longer valid.",
       login: "Please login or sign up to be accepted as a leader.",
       accept: "Please accept the invite to join the Relay Network as a leader.",

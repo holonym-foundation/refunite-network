@@ -44,7 +44,7 @@ export function ConnectButton() {
         console.error("Silk connector not found in wagmi config");
         connect({
           chainId: sepolia.id,
-          connector: silk({ useStaging: true, project: { name: "RelayId" } }),
+          connector: silk({ useStaging: true, project: { name: "RelayID" } }),
         });
         return;
       }

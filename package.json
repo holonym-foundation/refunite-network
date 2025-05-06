@@ -35,6 +35,7 @@
     "@safe-global/types-kit": "^2.0.1",
     "@silk-wallet/silk-interface-core": "^0.4.0",
     "@silk-wallet/silk-wallet-sdk": "^0.4.0",
+    "@supabase/supabase-js": "^2.49.4",
     "@tanstack/react-query": "^5.75.4",
     "@types/node": "^20.16.12",
     "@types/react-dom": "^18.3.1",

@@ -56,10 +56,12 @@ export function ConnectButton() {
   };
 
   const handleDisconnect = async () => {
-    if (window.silk) {
-      window.silk.disconnect();
-    }
     disconnect();
+
+    //@ts-ignore
+    window.silk.logout().then(() => {
+      console.log("Logged out from Silk");
+    });
     toast({
       description: "Account disconnected",
       duration: 2000,

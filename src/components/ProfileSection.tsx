@@ -15,7 +15,7 @@ export function ProfileSection({ address }: ProfileSectionProps) {
   return (
     <div className="py-4 border-b border-slate-300">
       <div className="flex items-center justify-between">
-        <div className="flex items-start gap-2">
+        <div className="flex items-center gap-2">
           <div>
             <h2 className="text-lg font-semibold">My Account</h2>
             <p className="text-sm font-mono font-semibold text-secondary">
@@ -54,8 +54,8 @@ export function ProfileSection({ address }: ProfileSectionProps) {
             <Copy className="h-5 w-5" />
           </Button>
           {showCopied && (
-            <div className="absolute right-full mr-2 top-1/2 transform -translate-y-1/2 bg-slate-800 text-white px-2 py-1 rounded text-xs whitespace-nowrap">
-              RefuniteID copied to clipboard
+            <div className="absolute right-full mr-2 top-1/2 transform -translate-y-1/2 bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded text-xs whitespace-nowrap">
+              Copied
             </div>
           )}
         </div>

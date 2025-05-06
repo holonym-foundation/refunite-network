@@ -62,7 +62,7 @@ export function StatusSection({ hasHat, isHatLoading, isHatError }: StatusSectio
                 strokeLinejoin="round"
               />
             </svg>
-            Added to network
+            You are a leader
           </Badge>
         ) : (
           <Badge
@@ -83,7 +83,7 @@ export function StatusSection({ hasHat, isHatLoading, isHatError }: StatusSectio
                 strokeLinejoin="round"
               />
             </svg>
-            Not added to network
+            Not a leader
           </Badge>
         )}
       </div>

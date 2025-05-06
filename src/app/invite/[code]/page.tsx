@@ -146,7 +146,7 @@ export default function InvitePage() {
             <div className="text-center">
               <h1 className="text-2xl font-semibold mb-4">Accept Invite</h1>
               <p className="text-muted-foreground mb-4">
-                Please connect your wallet to accept this invite.
+                Please login or sign up to be accepted as a leader.
               </p>
               <div className="flex justify-center">
                 <ConnectButton />
@@ -165,7 +165,7 @@ export default function InvitePage() {
           <div className="text-center">
             <h1 className="text-2xl font-semibold mb-4">Accept Invite</h1>
             <p className="text-muted-foreground mb-8">
-              You have been invited to join the Refunite Network as a leader.
+              Please accept the invite to join the Relay Network as a leader.
             </p>
             <Button
               onClick={handleAcceptInvite}

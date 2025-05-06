@@ -32,8 +32,8 @@ export function ProfileSection({ address }: ProfileSectionProps) {
               <div className="space-y-2">
                 <h4 className="font-medium">Your RelayId</h4>
                 <p className="text-sm text-muted-foreground">
-                  This is your unique RelayId that you can share with other members. They can use it
-                  to connect with you.
+                  This is your unique RelayId that you can share with other leaders. They can use it
+                  to add you as a leader.
                 </p>
               </div>
             </PopoverContent>

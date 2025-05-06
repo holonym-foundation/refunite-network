@@ -10,6 +10,7 @@ import { ProfileSection } from "@/components/ProfileSection";
 import { ShareSection } from "@/components/ShareSection";
 import { StatusSection } from "@/components/StatusSection";
 
+import en from "@/content/en";
 import { HATS_CONTRACT_ADDRESS, LEADER_HAT_ID } from "@/lib/constants";
 import { abi as HatsAbi } from "@/lib/hatsAbi";
 import { wagmiConfig } from "@/wagmi/config";
@@ -52,8 +53,8 @@ function AccountPage() {
         <div className="max-w-3xl mx-0 sm:mx-auto">
           <div className="bg-white p-4 pb-16 sm:p-8 sm:rounded-xl sm:border sm:border-slate-300">
             <div className="text-center">
-              <h1 className="text-2xl font-semibold mb-4">My Account</h1>
-              <p className="text-base">Please log in to view your account details.</p>
+              <h1 className="text-2xl font-semibold mb-4">{en.page.myAccountTitle}</h1>
+              <p className="text-base">{en.page.loginPrompt}</p>
               <div className="flex justify-center mt-8">
                 <ConnectButton />
               </div>
@@ -85,7 +86,7 @@ function AccountPage() {
                       href="/add"
                       className="font-semibold text-blue-600 hover:text-blue-800 border-b-2 border-blue-600 flex items-center gap-1"
                     >
-                      Add another leader
+                      {en.page.addAnotherLeader}
                       <svg
                         className="w-4 h-4"
                         viewBox="0 0 24 24"
@@ -114,7 +115,7 @@ function AccountPage() {
 
 export default function Page() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense fallback={<div>{en.common.loading}</div>}>
       <AccountPage />
     </Suspense>
   );

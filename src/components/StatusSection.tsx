@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
 
+import en from "@/content/en";
+
 interface StatusSectionProps {
   hasHat: boolean | null;
   isHatLoading: boolean;
@@ -16,7 +18,7 @@ export function StatusSection({ hasHat, isHatLoading, isHatError }: StatusSectio
     <div className="py-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <h3 className="text-lg font-semibold">Status</h3>
+          <h3 className="text-lg font-semibold">{en.status.status}</h3>
           <Popover>
             <PopoverTrigger asChild>
               <Button variant="ghost" size="icon" className="h-6 w-6">
@@ -25,10 +27,9 @@ export function StatusSection({ hasHat, isHatLoading, isHatError }: StatusSectio
             </PopoverTrigger>
             <PopoverContent className="w-80">
               <div className="space-y-2">
-                <h4 className="font-medium">Network Status</h4>
+                <h4 className="font-medium">{en.status.networkStatus}</h4>
                 <p className="text-sm text-muted-foreground">
-                  Your status shows whether you&apos;re connected to the RelayId network. To get
-                  onboarded, you&apos;ll need to be added by an existing network member.
+                  {en.status.networkStatusDescription}
                 </p>
               </div>
             </PopoverContent>
@@ -41,7 +42,7 @@ export function StatusSection({ hasHat, isHatLoading, isHatError }: StatusSectio
             variant="destructive"
             className="bg-red-200 text-red-700 gap-1 px-3 py-2 shadow-sm font-semibold tracking-wide"
           >
-            Error loading status
+            {en.status.errorLoadingStatus}
           </Badge>
         ) : hasHat ? (
           <Badge
@@ -62,7 +63,7 @@ export function StatusSection({ hasHat, isHatLoading, isHatError }: StatusSectio
                 strokeLinejoin="round"
               />
             </svg>
-            You are a leader
+            {en.status.youAreALeader}
           </Badge>
         ) : (
           <Badge
@@ -83,17 +84,17 @@ export function StatusSection({ hasHat, isHatLoading, isHatError }: StatusSectio
                 strokeLinejoin="round"
               />
             </svg>
-            Not a leader
+            {en.status.notALeader}
           </Badge>
         )}
       </div>
       {!isHatLoading && !hasHat && (
         <div className="mt-4 p-4 bg-slate-50 rounded-lg border border-slate-200">
-          <h4 className="font-medium mb-2">How to get onboarded</h4>
+          <h4 className="font-medium mb-2">{en.status.onboardingTitle}</h4>
           <ol className="list-decimal list-inside space-y-2 text-sm text-slate-600">
-            <li>Share your RelayId with an existing network member</li>
-            <li>They will need to add you to the network using your RelayId</li>
-            <li>Once added, your status will update automatically</li>
+            {en.status.onboardingSteps.map((step, idx) => (
+              <li key={idx}>{step}</li>
+            ))}
           </ol>
         </div>
       )}

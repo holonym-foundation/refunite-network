@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 
 import { verifyInvite } from "@/app/actions/invite";
+import en from "@/content/en";
 import { useHatsInteractions } from "@/hooks/useHatsInteractions";
 
 export default function InvitePage() {
@@ -66,7 +67,7 @@ export default function InvitePage() {
       console.error("Error accepting invite:", error);
       toast({
         variant: "destructive",
-        title: "Error",
+        title: en.common.error,
         description: error instanceof Error ? error.message : "Failed to accept invite",
       });
     } finally {
@@ -94,13 +95,11 @@ export default function InvitePage() {
                     d="M5 13l4 4L19 7"
                   />
                 </svg>
-                <h1 className="text-2xl font-semibold">Success!</h1>
+                <h1 className="text-2xl font-semibold">{en.invitePage.headings.success}</h1>
               </div>
-              <p className="text-muted-foreground mb-6">
-                You have been successfully onboarded as a leader!
-              </p>
+              <p className="text-muted-foreground mb-6">{en.invitePage.prompts.onboarded}</p>
               <Button asChild>
-                <a href={`/`}>View your account</a>
+                <a href={`/`}>{en.invitePage.prompts.viewAccount}</a>
               </Button>
             </div>
           </div>
@@ -115,7 +114,7 @@ export default function InvitePage() {
         <div className="max-w-3xl mx-0 sm:mx-auto">
           <div className="bg-white p-4 pb-16 sm:p-8 sm:rounded-xl sm:border sm:border-slate-300">
             <div className="text-center">
-              <h1 className="text-2xl font-semibold mb-4">Verifying invite...</h1>
+              <h1 className="text-2xl font-semibold mb-4">{en.invitePage.headings.verifying}</h1>
             </div>
           </div>
         </div>
@@ -129,8 +128,8 @@ export default function InvitePage() {
         <div className="max-w-3xl mx-0 sm:mx-auto">
           <div className="bg-white p-4 pb-16 sm:p-8 sm:rounded-xl sm:border sm:border-slate-300">
             <div className="text-center">
-              <h1 className="text-2xl font-semibold mb-4">Invalid Invite</h1>
-              <p className="text-muted-foreground">{error || "This invite is no longer valid."}</p>
+              <h1 className="text-2xl font-semibold mb-4">{en.invitePage.headings.invalid}</h1>
+              <p className="text-muted-foreground">{error || en.invitePage.prompts.invalid}</p>
             </div>
           </div>
         </div>
@@ -144,10 +143,8 @@ export default function InvitePage() {
         <div className="max-w-3xl mx-0 sm:mx-auto">
           <div className="bg-white p-4 pb-16 sm:p-8 sm:rounded-xl sm:border sm:border-slate-300">
             <div className="text-center">
-              <h1 className="text-2xl font-semibold mb-4">Accept Invite</h1>
-              <p className="text-muted-foreground mb-4">
-                Please login or sign up to be accepted as a leader.
-              </p>
+              <h1 className="text-2xl font-semibold mb-4">{en.invitePage.headings.accept}</h1>
+              <p className="text-muted-foreground mb-4">{en.invitePage.prompts.login}</p>
               <div className="flex justify-center">
                 <ConnectButton />
               </div>
@@ -163,16 +160,14 @@ export default function InvitePage() {
       <div className="max-w-3xl mx-0 sm:mx-auto">
         <div className="bg-white p-4 pb-16 sm:p-8 sm:rounded-xl sm:border sm:border-slate-300">
           <div className="text-center">
-            <h1 className="text-2xl font-semibold mb-4">Accept Invite</h1>
-            <p className="text-muted-foreground mb-8">
-              Please accept the invite to join the Relay Network as a leader.
-            </p>
+            <h1 className="text-2xl font-semibold mb-4">{en.invitePage.headings.accept}</h1>
+            <p className="text-muted-foreground mb-8">{en.invitePage.prompts.accept}</p>
             <Button
               onClick={handleAcceptInvite}
               disabled={isLoading || !isHatsConnected}
               className="w-full sm:w-auto"
             >
-              {isLoading ? "Processing..." : "Accept Invite"}
+              {isLoading ? en.invitePage.prompts.processing : en.invitePage.prompts.acceptInvite}
             </Button>
           </div>
         </div>

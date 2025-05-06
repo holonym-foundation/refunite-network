@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 
 import { LEADER_HAT_ID } from "@/lib/constants";
 import { supabase } from "@/lib/supabase/client";
+import { getInviteSignatureMessage, verifyInviteSignature } from "@/lib/signature";
 
 export async function POST(request: Request) {
   try {
@@ -23,9 +24,8 @@ export async function POST(request: Request) {
     }
 
     // Verify the signature
-    const message = `I authorize this invite to be created for the RelayId Network. Nonce: ${nonce}`;
-    const recoveredAddress = ethers.verifyMessage(message, signature);
-    if (recoveredAddress.toLowerCase() !== inviterAddress.toLowerCase()) {
+    const message = getInviteSignatureMessage(nonce);
+    if (!verifyInviteSignature({ message, signature, expectedAddress: inviterAddress })) {
       return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
     }
 

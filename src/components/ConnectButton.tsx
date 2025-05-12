@@ -16,6 +16,7 @@ import { Button } from "./ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 import { useToast } from "./ui/use-toast";
 
+import en from "@/content/en";
 import silk from "@/wagmi/silk-connector";
 
 export function ConnectButton() {
@@ -31,7 +32,7 @@ export function ConnectButton() {
   const copyAddress = async (address: string) => {
     await navigator.clipboard.writeText(address);
     toast({
-      description: "Address copied to clipboard",
+      description: en.common.addressCopied,
       duration: 2000,
     });
   };
@@ -43,7 +44,7 @@ export function ConnectButton() {
         console.error("Silk connector not found in wagmi config");
         connect({
           chainId: sepolia.id,
-          connector: silk({ useStaging: true, project: { name: "RelayId" } }),
+          connector: silk({ useStaging: true, project: { name: "RelayID" } }),
         });
         return;
       }
@@ -56,12 +57,14 @@ export function ConnectButton() {
   };
 
   const handleDisconnect = async () => {
-    if (window.silk) {
-      window.silk.disconnect();
-    }
     disconnect();
+
+    //@ts-ignore
+    window.silk.logout().then(() => {
+      console.log("Logged out from Silk");
+    });
     toast({
-      description: "Account disconnected",
+      description: en.common.accountDisconnected,
       duration: 2000,
     });
   };
@@ -70,11 +73,11 @@ export function ConnectButton() {
     <div className="flex items-center gap-2">
       {!account.address ? (
         <div className="flex items-center gap-2">
-          <Button onClick={handleConnect}>Login</Button>
+          <Button onClick={handleConnect}>{en.common.login}</Button>
         </div>
       ) : (
         <div className="flex items-center gap-2 flex-row lg:flex-row-reverse">
-          <Button onClick={handleDisconnect}>Logout</Button>
+          <Button onClick={handleDisconnect}>{en.common.logout}</Button>
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -87,7 +90,7 @@ export function ConnectButton() {
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Click to copy address</p>
+                <p>{en.common.clickToCopyAddress}</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>

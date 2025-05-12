@@ -8,9 +8,11 @@ import Link from "next/link";
 import { ConnectButton } from "./ConnectButton";
 import { Button } from "./ui/button";
 
+import en from "@/content/en";
+
 const navItems = [
-  { name: "My Account", href: "/" },
-  { name: "Add Leader", href: "/add" },
+  { name: en.header.nav.myAccount, href: "/" },
+  { name: en.header.nav.addLeader, href: "/add" },
 ];
 
 export function Header() {
@@ -47,7 +49,9 @@ export function Header() {
                     aria-expanded={isOpen}
                     aria-controls="mobile-menu"
                   >
-                    <span className="sr-only">{isOpen ? "Close menu" : "Open menu"}</span>
+                    <span className="sr-only">
+                      {isOpen ? en.header.menu.close : en.header.menu.open}
+                    </span>
                     {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
                   </Button>
                 </div>

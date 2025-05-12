@@ -5,7 +5,7 @@ import silk from "./silk-connector";
 
 export const wagmiConfig = createConfig({
   chains: [sepolia],
-  connectors: [silk({ useStaging: false, project: { name: "RelayId" } })],
+  connectors: [silk({ useStaging: false, project: { name: "RelayID" } })],
   transports: {
     [sepolia.id]: http(process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL),
   },

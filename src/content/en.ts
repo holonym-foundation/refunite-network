@@ -1,0 +1,133 @@
+const en = {
+  common: {
+    welcome: "Welcome to the application!",
+    submit: "Submit",
+    cancel: "Cancel",
+    copied: "Copied",
+    unknown: "Unknown",
+    login: "Login",
+    logout: "Logout",
+    clickToCopyAddress: "Click to copy your RelayID",
+    addressCopied: "RelayID copied to clipboard",
+    accountDisconnected: "Account disconnected",
+    loading: "Loading...",
+    success: "Success",
+    error: "Error",
+    notAllowed: "Not allowed",
+    allowed: "Allowed",
+    copyLink: "Copy link",
+    shareWhatsApp: "Share on WhatsApp",
+    inviteExpires: "Invite link expires in 24 hours",
+    generating: "Generating...",
+    generateInvite: "Generate invite link",
+    joinMe: "Join me on the RelayID Network! Use this invite link: ",
+    failedToGenerate: "Failed to generate invite",
+    failedToGenerateLink: "Failed to generate invite link",
+    invalidAddress: "Invalid address: ",
+    errorWhileScanning: "Error while scanning",
+    unknownError: "An unknown error occurred",
+    addLeader: "Add leader",
+    addingLeader: "Adding leader...",
+    sendingTx: "Sending ",
+    transactionsPleaseWait: " transactions. Please keep this page open...",
+    checkingPermissions: "Checking permissions...",
+    theirAddress: "Their RelayID",
+    inviteCopied: "Invite link copied to clipboard",
+    copiedExclamation: "Copied!",
+  },
+  home: {
+    title: "Home Page",
+    description: "This is the home page of the application.",
+  },
+  profile: {
+    myAccount: "My RelayID",
+    relayIdTitle: "Your RelayID",
+    relayIdDescription:
+      "This is your unique RelayID that you can share with other leaders. They can use it to add you as a leader.",
+  },
+  status: {
+    status: "Status",
+    networkStatus: "Network Status",
+    networkStatusDescription:
+      "Your status shows whether you're connected to the RelayID network. To get onboarded, you'll need to be added by an existing network member.",
+    onboardingTitle: "How to get onboarded",
+    onboardingSteps: [
+      "Share your RelayID with another leader",
+      "They will need to add you to the network using your RelayID",
+      "Once added, your status will update automatically",
+    ],
+    errorLoadingStatus: "Error loading status",
+    youAreALeader: "You are a leader",
+    notALeader: "Not a leader",
+  },
+  share: {
+    shareAccountInfo: "Add me as a leader via",
+    shareWithMembersTitle: "Share with other leaders",
+    shareWithMembersDescription:
+      "Share your RelayID with another leader to join the network. They can scan your QR code or use WhatsApp to get your RelayID.",
+    whatsappShareMessage: "Please add me to the RelayID network: ",
+  },
+  qrCodeDialog: {
+    shareQrCode: "Share QR Code",
+    loginToViewQr: "Log in to view QR code",
+    showQrInstruction: "Show this QR code to another community leader.",
+    scanInstruction: "They can scan this code on the ",
+    addLeaderPage: "Add Leader",
+    pageSuffix: " page.",
+  },
+  header: {
+    nav: {
+      myAccount: "My RelayID",
+      addLeader: "Add Leader",
+    },
+    menu: {
+      open: "Open menu",
+      close: "Close menu",
+    },
+  },
+  page: {
+    myAccountTitle: "My RelayID",
+    loginPrompt: "Please log in to view your RelayID.",
+    addAnotherLeader: "Add another leader",
+    noPermission: "You don't have permission to add another leader.",
+  },
+  addPage: {
+    headings: {
+      addLeaderToNetwork: "Add leader to the network",
+      addLeaderToNetworkShort: "Add leader to network",
+      sendInviteLink: "Send invite link",
+    },
+    prompts: {
+      loginToAdd: "Please log in to add a leader.",
+      two: "two",
+    },
+    toasts: {
+      successAdded: "Successfully added leader ",
+      errorAdding: "Error adding leader:",
+      errorQr: "Error in QR code",
+    },
+  },
+  invitePage: {
+    headings: {
+      success: "Success!",
+      verifying: "Verifying invite...",
+      invalid: "Invalid Invite",
+      accept: "Accept Invite",
+    },
+    prompts: {
+      onboarded: "You have been successfully onboarded as a leader!",
+      viewAccount: "View your RelayID",
+      invalid: "This invite is no longer valid.",
+      login: "Please login or sign up to be accepted as a leader.",
+      accept: "Please accept the invite to join the Relay Network as a leader.",
+      processing: "Processing...",
+      acceptInvite: "Accept Invite",
+    },
+    toasts: {
+      errorAccepting: "Error accepting invite:",
+      failedToAccept: "Failed to accept invite",
+    },
+  },
+};
+
+export default en;

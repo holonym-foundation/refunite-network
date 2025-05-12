@@ -3,10 +3,9 @@
 import { Suspense, useState, useEffect } from "react";
 
 import { Scanner, type IDetectedBarcode } from "@yudiel/react-qr-scanner";
-import { ethers } from "ethers";
 import { QrCode } from "lucide-react";
 import { useSearchParams } from "next/navigation";
-import { isAddress } from "viem";
+import { isAddress, generateSiweNonce } from "viem";
 import { useAccount, usePublicClient } from "wagmi";
 
 import { ConnectButton } from "@/components/ConnectButton";
@@ -16,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 
+import en from "@/content/en";
 import { useHatsInteractions } from "@/hooks/useHatsInteractions";
 import { useSafeOwner } from "@/hooks/useSafeOwner";
 import { useSilkSigner } from "@/hooks/useSilkSigner";
@@ -132,10 +132,10 @@ function AddLeaderForm() {
     setIsGeneratingInvite(true);
     try {
       // Generate a nonce
-      const nonce = ethers.hexlify(ethers.randomBytes(32));
+      const nonce = generateSiweNonce();
 
       // Request signature from Silk wallet
-      const message = `I authorize this invite to be created for the RelayId Network. Nonce: ${nonce}`;
+      const message = `I authorize this invite to be created for the RelayID Network. Nonce: ${nonce}`;
       const signature = await signMessage(message);
 
       const response = await fetch("/api/invites", {
@@ -174,14 +174,14 @@ function AddLeaderForm() {
     if (!inviteLink) return;
     navigator.clipboard.writeText(inviteLink);
     toast({
-      title: "Copied!",
-      description: "Invite link copied to clipboard",
+      title: en.common.copiedExclamation,
+      description: en.common.inviteCopied,
     });
   };
 
   const handleShareWhatsApp = () => {
     if (!inviteLink) return;
-    const message = `Join me on the RelayId Network! Use this invite link: ${inviteLink}`;
+    const message = `${en.common.joinMe}${inviteLink}`;
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, "_blank");
   };
@@ -192,8 +192,10 @@ function AddLeaderForm() {
         <div className="max-w-3xl mx-0 sm:mx-auto">
           <div className="bg-white p-4 pb-16 sm:p-8 sm:rounded-xl sm:border sm:border-slate-300">
             <div className="text-center">
-              <h1 className="text-2xl font-semibold mb-4">Add leader to the network</h1>
-              <p className="text-base">Please log in to add a leader.</p>
+              <h1 className="text-2xl font-semibold mb-4">
+                {en.addPage.headings.addLeaderToNetwork}
+              </h1>
+              <p className="text-base">{en.addPage.prompts.loginToAdd}</p>
               <div className="flex justify-center mt-8">
                 <ConnectButton />
               </div>
@@ -248,12 +250,12 @@ function AddLeaderForm() {
             </div>
           )}
           <header className="py-2 flex justify-between items-center">
-            <h1 className="text-lg font-semibold">Add leader to network</h1>
+            <h1 className="text-lg font-semibold">{en.addPage.headings.addLeaderToNetworkShort}</h1>
             {account && (
               <div>
                 {isSafeLoading ? (
                   <span className="text-sm text-muted-foreground font-medium">
-                    Checking permissions...
+                    {en.common.checkingPermissions}
                   </span>
                 ) : (
                   <div
@@ -277,7 +279,7 @@ function AddLeaderForm() {
                             strokeLinejoin="round"
                           />
                         </svg>
-                        Allowed
+                        {en.common.allowed}
                       </>
                     ) : (
                       <>
@@ -295,7 +297,7 @@ function AddLeaderForm() {
                             strokeLinejoin="round"
                           />
                         </svg>
-                        Not allowed
+                        {en.common.notAllowed}
                       </>
                     )}
                   </div>
@@ -307,7 +309,7 @@ function AddLeaderForm() {
           <form onSubmit={handleAddLeader} className="py-4">
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="address">Their address</Label>
+                <Label htmlFor="address">{en.common.theirAddress}</Label>
                 <div className="flex gap-2">
                   <Input
                     id="address"
@@ -339,16 +341,17 @@ function AddLeaderForm() {
                 {isLoading ? (
                   <div className="flex items-center gap-2">
                     <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                    Adding leader...
+                    {en.common.addingLeader}
                   </div>
                 ) : (
-                  "Add leader"
+                  en.common.addLeader
                 )}
               </Button>
               {isLoading && (
                 <span className="text-secondary text-sm mt-8">
-                  Sending <span className="font-bold">two</span> transactions. Please keep this page
-                  open...
+                  {en.common.sendingTx}
+                  <span className="font-bold">2</span>
+                  {en.common.transactionsPleaseWait}
                 </span>
               )}
             </div>
@@ -356,7 +359,7 @@ function AddLeaderForm() {
 
           {/* Invite Link Section */}
           <div className="mt-8 pt-8 border-t border-slate-200">
-            <h2 className="text-lg font-semibold mb-4">Send invite link</h2>
+            <h2 className="text-lg font-semibold mb-4">{en.addPage.headings.sendInviteLink}</h2>
             <div className="space-y-4">
               <div className="flex gap-2">
                 <Button
@@ -367,26 +370,26 @@ function AddLeaderForm() {
                   {isGeneratingInvite ? (
                     <div className="flex items-center gap-2">
                       <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                      Generating...
+                      {en.common.generating}
                     </div>
                   ) : (
-                    "Generate invite link"
+                    en.common.generateInvite
                   )}
                 </Button>
                 {inviteLink && (
                   <>
                     <Button onClick={handleCopyLink} variant="outline" className="shrink-0">
-                      Copy link
+                      {en.common.copyLink}
                     </Button>
                     <Button onClick={handleShareWhatsApp} variant="outline" className="shrink-0">
-                      Share on WhatsApp
+                      {en.common.shareWhatsApp}
                     </Button>
                   </>
                 )}
               </div>
               {inviteLink && (
                 <div className="text-sm text-slate-500">
-                  <p>Invite link expires in 24 hours</p>
+                  <p>{en.common.inviteExpires}</p>
                 </div>
               )}
             </div>
@@ -399,7 +402,7 @@ function AddLeaderForm() {
 
 export default function AddLeaderPage() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense fallback={<div>{en.common.loading}</div>}>
       <AddLeaderForm />
     </Suspense>
   );

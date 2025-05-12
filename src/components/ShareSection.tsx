@@ -7,6 +7,8 @@ import { QRCodeDialog } from "@/components/QRCodeDialog";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
+import en from "@/content/en";
+
 const WhatsAppIcon = () => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -28,7 +30,7 @@ export function ShareSection({ address, chainId }: ShareSectionProps) {
 
   const getShareMessage = (address: string) => {
     const addPageUrl = `${window.location.origin}/add?recipient=${address}`;
-    return `Please add me to the RelayId network: ${addPageUrl}`;
+    return `${en.share.whatsappShareMessage}${addPageUrl}`;
   };
 
   return (
@@ -36,7 +38,7 @@ export function ShareSection({ address, chainId }: ShareSectionProps) {
       <div className="py-4 border-b border-slate-300">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <h3 className="text-lg font-semibold">Share account info via</h3>
+            <h3 className="text-lg font-semibold">{en.share.shareAccountInfo}</h3>
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-6 w-6">
@@ -45,10 +47,9 @@ export function ShareSection({ address, chainId }: ShareSectionProps) {
               </PopoverTrigger>
               <PopoverContent className="w-80">
                 <div className="space-y-2">
-                  <h4 className="font-medium">Share with other members</h4>
+                  <h4 className="font-medium">{en.share.shareWithMembersTitle}</h4>
                   <p className="text-sm text-muted-foreground">
-                    Share your RelayId with an existing member to become a member. They can scan
-                    your QR code or use WhatsApp to get your RelayId.
+                    {en.share.shareWithMembersDescription}
                   </p>
                 </div>
               </PopoverContent>

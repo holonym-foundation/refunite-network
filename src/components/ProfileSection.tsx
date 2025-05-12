@@ -5,6 +5,8 @@ import { Copy, InfoIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
+import en from "@/content/en";
+
 interface ProfileSectionProps {
   address?: string;
 }
@@ -17,9 +19,9 @@ export function ProfileSection({ address }: ProfileSectionProps) {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div>
-            <h2 className="text-lg font-semibold">My Account</h2>
+            <h2 className="text-lg font-semibold">{en.profile.myAccount}</h2>
             <p className="text-sm font-mono font-semibold text-secondary">
-              {address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "Unknown"}
+              {address ? `${address.slice(0, 6)}...${address.slice(-4)}` : en.common.unknown}
             </p>
           </div>
           <Popover>
@@ -30,11 +32,8 @@ export function ProfileSection({ address }: ProfileSectionProps) {
             </PopoverTrigger>
             <PopoverContent className="w-80">
               <div className="space-y-2">
-                <h4 className="font-medium">Your RelayId</h4>
-                <p className="text-sm text-muted-foreground">
-                  This is your unique RelayId that you can share with other leaders. They can use it
-                  to add you as a leader.
-                </p>
+                <h4 className="font-medium">{en.profile.relayIdTitle}</h4>
+                <p className="text-sm text-muted-foreground">{en.profile.relayIdDescription}</p>
               </div>
             </PopoverContent>
           </Popover>
@@ -55,7 +54,7 @@ export function ProfileSection({ address }: ProfileSectionProps) {
           </Button>
           {showCopied && (
             <div className="absolute right-full mr-2 top-1/2 transform -translate-y-1/2 bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded text-xs whitespace-nowrap">
-              Copied
+              {en.common.copied}
             </div>
           )}
         </div>

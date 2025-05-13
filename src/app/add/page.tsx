@@ -18,6 +18,8 @@ function AddLeaderForm() {
   const { isMultisigOwner, isLoading: isSafeLoading } = useSafeOwner();
   const [showCelebration, setShowCelebration] = useState(false);
 
+  // TODO: add adding leader callback
+
   if (!isConnected) {
     return (
       <div className="min-h-screen py-0 sm:py-8 px-0 sm:px-6 md:px-8">
@@ -72,6 +74,7 @@ function AddLeaderForm() {
               </div>
             </div>
           )}
+
           {isSafeLoading && !showCelebration && (
             <div className="absolute inset-0 z-40 flex flex-col items-center justify-center bg-white/80">
               <div className="flex flex-col items-center">
@@ -92,7 +95,7 @@ function AddLeaderForm() {
             )}
           </header>
 
-          {!isSafeLoading && isMultisigOwner && (
+          {!isSafeLoading && (
             <>
               <AddLeaderViaQRSection onSuccess={() => {}} />
               <AddLeaderViaInviteLinkSection disabled={!isMultisigOwner} />

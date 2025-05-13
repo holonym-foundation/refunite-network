@@ -1,5 +1,7 @@
 import { ethers } from "ethers";
 import { z } from "zod";
+import { createNetworkInviteTypedData } from "./eip712";
+import { TypedDataDefinition } from "viem";
 
 export const inviteSignatureMessageSchema = z.object({
   message: z.string(),
@@ -9,13 +11,15 @@ export const inviteSignatureMessageSchema = z.object({
 
 export type InviteSignatureMessage = z.infer<typeof inviteSignatureMessageSchema>;
 
-export function getInviteSignatureMessage(nonce: string): string {
-  const msgObj: InviteSignatureMessage = {
-    message: "I authorize this invite to be created for the RelayId Network.",
+export function getInviteSignatureMessage(
+  inviterAddress: string,
+  nonce: string
+): TypedDataDefinition {
+  return createNetworkInviteTypedData({
+    inviterAddress,
     nonce,
-    timestamp: Math.floor(Date.now() / 1000),
-  };
-  return JSON.stringify(msgObj);
+    chainId: 11155111,
+  });
 }
 
 export function verifyInviteSignature({

@@ -59,12 +59,8 @@ export async function POST(request: Request) {
     // Store invite in database
     const { error } = await supabase.from("invites").insert({
       invite_code: inviteCode,
-      inviter_address: inviterAddress,
-      signature: signature,
-      signature_nonce: nonce,
-      message: typedData,
-      created_at: new Date(signatureTimestamp * 1000).toISOString(),
-      expires_at: new Date(signatureTimestamp * 1000 + 24 * 60 * 60 * 1000).toISOString(), // 24 hours from now
+      inviter_signature: signature,
+      typed_data: typedData,
     });
 
     if (error) {

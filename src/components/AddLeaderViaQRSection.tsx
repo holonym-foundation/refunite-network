@@ -1,16 +1,16 @@
+import { QrScannerDialog } from "@/components/QrScannerDialog";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
-import { QrScannerDialog } from "@/components/QrScannerDialog";
-import { QrCode } from "lucide-react";
-import { useState } from "react";
-import { isAddress } from "viem";
-import { ethers } from "ethers";
-import { useAccount } from "wagmi";
 import { useToast } from "@/components/ui/use-toast";
 import { useSafeOwner } from "@/hooks/useSafeOwner";
 import { useSilkSigner } from "@/hooks/useSilkSigner";
+import { generateNonce } from "@/lib/eip712";
 import { getInviteSignatureMessage } from "@/lib/signature";
+import { QrCode } from "lucide-react";
+import { useState } from "react";
+import { isAddress } from "viem";
+import { useAccount } from "wagmi";
 
 interface AddLeaderViaQRSectionProps {
   onSuccess?: (recipient: string) => void;
@@ -20,7 +20,7 @@ export function AddLeaderViaQRSection({ onSuccess }: AddLeaderViaQRSectionProps)
   const { address: account } = useAccount();
   const { toast } = useToast();
   const { isMultisigOwner, isLoading: isSafeLoading } = useSafeOwner();
-  const { signMessage, isConnected: isSilkConnected } = useSilkSigner();
+  const { signTypedData, isConnected: isSilkConnected } = useSilkSigner();
   const [recipient, setRecipient] = useState("");
   const [showScanner, setShowScanner] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -67,9 +67,9 @@ export function AddLeaderViaQRSection({ onSuccess }: AddLeaderViaQRSectionProps)
     setIsLoading(true);
     try {
       if (!account || !isSilkConnected) throw new Error("Not connected to Silk wallet");
-      const nonce = ethers.hexlify(ethers.randomBytes(32));
-      const message = getInviteSignatureMessage(nonce);
-      const signature = await signMessage(message);
+      const nonce = generateNonce();
+      const message = getInviteSignatureMessage(account, nonce);
+      const signature = await signTypedData(message);
       const response = await fetch("/api/defender", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

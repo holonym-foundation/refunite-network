@@ -1,10 +1,10 @@
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
-import { ethers } from "ethers";
 import { useAccount } from "wagmi";
 import { useSilkSigner } from "@/hooks/useSilkSigner";
 import { useToast } from "@/components/ui/use-toast";
 import { getInviteSignatureMessage } from "@/lib/signature";
+import { generateNonce } from "@/lib/eip712";
 
 interface InviteLinkSectionProps {
   disabled?: boolean;
@@ -13,7 +13,7 @@ interface InviteLinkSectionProps {
 
 export function AddLeaderViaInviteLinkSection({ disabled, onSuccess }: InviteLinkSectionProps) {
   const { address: account } = useAccount();
-  const { signMessage, isConnected: isSilkConnected } = useSilkSigner();
+  const { signTypedData, isConnected: isSilkConnected } = useSilkSigner();
   const { toast } = useToast();
   const [isGeneratingInvite, setIsGeneratingInvite] = useState(false);
   const [inviteLink, setInviteLink] = useState<string>("");
@@ -22,9 +22,9 @@ export function AddLeaderViaInviteLinkSection({ disabled, onSuccess }: InviteLin
     if (!account || !isSilkConnected) return;
     setIsGeneratingInvite(true);
     try {
-      const nonce = ethers.hexlify(ethers.randomBytes(32));
-      const message = getInviteSignatureMessage(nonce);
-      const signature = await signMessage(message);
+      const nonce = generateNonce();
+      const message = getInviteSignatureMessage(account, nonce);
+      const signature = await signTypedData(message);
       const response = await fetch("/api/invites", {
         method: "POST",
         headers: {

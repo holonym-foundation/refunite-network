@@ -9,9 +9,11 @@ import { ConnectButton } from "@/components/ConnectButton";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 
+import { addLeaderViaSignedTypedData } from "@/app/actions/defender";
 import { verifyInvite } from "@/app/actions/invite";
 import en from "@/content/en";
 import { useHatsInteractions } from "@/hooks/useHatsInteractions";
+import { Hash } from "viem/_types/types/misc";
 
 export default function InvitePage() {
   const { code } = useParams();
@@ -47,17 +49,17 @@ export default function InvitePage() {
     try {
       // Get the verified invite details
       const verifyResult = await verifyInvite(code as string);
-      if (!verifyResult.success || !verifyResult.signature || !verifyResult.message) {
+      if (!verifyResult.success || !verifyResult.signature || !verifyResult.typedData) {
         throw new Error(verifyResult.error || "Invalid invite");
       }
 
-      const onboardResult = await hatsInteractions.inviteUser(
+      const onboardResult = await addLeaderViaSignedTypedData(
         address,
-        verifyResult.signature,
-        verifyResult.message
+        verifyResult.typedData,
+        verifyResult.signature as Hash
       );
 
-      if (!onboardResult.success) {
+      if (onboardResult.error) {
         throw onboardResult.error;
       }
 

@@ -99,6 +99,49 @@ sequenceDiagram
     Peer Leader->>System: Burns old credential token
 ```
 
+# Utility Functions
+
+## BigInt Serialization/Deserialization
+
+### Background
+
+JavaScript cannot natively serialize BigInt values to JSON. When storing objects containing BigInt values in a database via Supabase (or any JSON-based storage), we need to convert BigInt values to strings before storage and convert them back to BigInt when retrieving.
+
+### Solution
+
+The `serialize.ts` file provides two utility functions:
+
+1. `serializeBigInts(obj)`: Recursively converts all BigInt values in an object to strings.
+2. `deserializeBigInts(obj)`: Recursively converts string values that look like BigInts back to BigInt objects.
+
+### Usage
+
+#### When storing data (serializing)
+
+```typescript
+import { serializeBigInts } from "@/lib/utils/serialize";
+
+// Before storing in database
+const dataToStore = serializeBigInts(myObjectWithBigInts);
+await supabase.from("my_table").insert({ data: dataToStore });
+```
+
+#### When retrieving data (deserializing)
+
+```typescript
+import { deserializeBigInts } from "@/lib/utils/serialize";
+
+// After fetching from database
+const { data } = await supabase.from("my_table").select("*").single();
+const deserializedData = deserializeBigInts(data.my_json_column);
+```
+
+### Implementation Notes
+
+- The deserializer uses a regex pattern to identify strings that look like they represent BigInt values.
+- The serialization process is recursive and handles nested objects and arrays.
+- JSONB columns in Supabase are perfect for storing these serialized objects.
+
 ## Future Enhancements
 
     1.	Self-Curation: Empower leaders to onboard new members autonomously, further decentralizing control.

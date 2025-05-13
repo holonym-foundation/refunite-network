@@ -1,11 +1,26 @@
 import { Address, Hash, TypedDataDefinition, verifyTypedData } from "viem";
 import { generateSiweNonce } from "viem/siwe";
+import { z } from "zod";
+
+export const domainSchema = z.object({
+  name: z.string(),
+  version: z.string(),
+  verifyingContract: z.string(),
+  chainId: z.number(),
+});
+
+export const networkInviteSchema = z.object({
+  content: z.string(),
+  inviterAddress: z.string(),
+  nonce: z.string(),
+  createdAt: z.number(),
+});
 
 /**
  * Domain definition for the RelayID Network
  * This provides separation between different applications using EIP-712
  */
-export const EIP712_DOMAIN = {
+const DOMAIN = {
   name: "RelayID Network",
   version: "1",
   verifyingContract: "0x0000000000000000000000000000000000000000",
@@ -17,7 +32,7 @@ export const EIP712_DOMAIN = {
  * The same structure is used for both creating invites and adding leaders
  * since they are the same in the current implementation
  */
-export const NETWORK_INVITE_TYPE = {
+const TYPES = {
   NetworkInvite: [
     { name: "content", type: "string" },
     { name: "inviterAddress", type: "address" },
@@ -41,19 +56,23 @@ export function createNetworkInviteTypedData({
 }): TypedDataDefinition {
   const content = `I authorize this invite to be created for the RelayID Network.`;
 
+  const domain = {
+    ...DOMAIN,
+    chainId,
+  };
+
+  const message = {
+    content,
+    inviterAddress,
+    nonce,
+    createdAt: Math.floor(Date.now() / 1000),
+  };
+
   return {
-    domain: {
-      ...EIP712_DOMAIN,
-      chainId,
-    },
+    domain: domainSchema.parse(domain),
     primaryType: "NetworkInvite",
-    types: NETWORK_INVITE_TYPE,
-    message: {
-      content,
-      inviterAddress,
-      nonce,
-      createdAt: BigInt(Math.floor(Date.now() / 1000)),
-    },
+    types: TYPES,
+    message: networkInviteSchema.parse(message),
   };
 }
 

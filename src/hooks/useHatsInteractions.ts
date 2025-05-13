@@ -1,5 +1,6 @@
 "use client";
 
+import { mintLeaderHat } from "@/app/actions/defender";
 import { useAccount } from "wagmi";
 
 type Result<T, E = Error> = { success: true; data: T } | { success: false; error: E };
@@ -11,7 +12,7 @@ interface HatsInteractions {
   inviteUser: (
     recipient: string,
     signature: string,
-    message: string
+    typedData: any
   ) => Promise<Result<{ mintHatTxHash: string; claimSignerTxHash: string }, Error>>;
 }
 
@@ -28,25 +29,11 @@ export const useHatsInteractions = () => {
   const interactions: HatsInteractions = {
     onboardUser: async (recipient: string) => {
       try {
-        const response = await fetch("/api/defender", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ recipient }),
-        });
-
-        if (!response.ok) {
-          throw new Error(`API responded with status ${response.status}`);
-        }
-
-        const data = await response.json();
+        // This function appears incomplete in the original implementation
+        // The mintLeaderHat action requires signature and typedData
         return {
-          success: true,
-          data: {
-            mintHatTxHash: data.mintHatTxHash,
-            claimSignerTxHash: data.claimSignerTxHash,
-          },
+          success: false,
+          error: new Error("onboardUser method is not implemented correctly"),
         };
       } catch (err) {
         console.error("Error in mintHatSafe:", err);
@@ -56,30 +43,19 @@ export const useHatsInteractions = () => {
         };
       }
     },
-    inviteUser: async (recipient: string, signature: string, message: string) => {
+    inviteUser: async (recipient: string, signature: string, typedData: any) => {
       try {
-        const response = await fetch("/api/defender", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            recipient,
-            signature,
-            message,
-          }),
-        });
+        const result = await mintLeaderHat(recipient, signature as `0x${string}`, typedData, true);
 
-        if (!response.ok) {
-          throw new Error(`API responded with status ${response.status}`);
+        if (result.error) {
+          throw new Error(result.error);
         }
 
-        const data = await response.json();
         return {
           success: true,
           data: {
-            mintHatTxHash: data.mintHatTxHash,
-            claimSignerTxHash: data.claimSignerTxHash,
+            mintHatTxHash: result.mintHatTxHash || "",
+            claimSignerTxHash: result.claimSignerTxHash || "",
           },
         };
       } catch (err) {

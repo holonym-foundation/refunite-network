@@ -18,7 +18,7 @@
     "supabase:db:push": "pnpx supabase db push",
     "supabase:db:reset": "pnpx supabase db reset",
     "supabase:db:migrate": "pnpx supabase db migrate",
-    "supabase:db:types": "pnpx supabase gen types typescript --local > database.types.ts",
+    "supabase:db:types": "pnpx supabase gen types typescript --local > src/lib/supabase/types.ts",
     "setup:local": "pnpm supabase:start && pnpm supabase:db:reset"
   },
   "dependencies": {

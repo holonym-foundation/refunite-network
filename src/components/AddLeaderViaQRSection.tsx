@@ -1,3 +1,4 @@
+import { addLeaderViaSignedTypedData } from "@/app/actions/defender";
 import { QrScannerDialog } from "@/components/QrScannerDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -5,8 +6,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 import { useSafeOwner } from "@/hooks/useSafeOwner";
 import { useSilkSigner } from "@/hooks/useSilkSigner";
-import { generateNonce } from "@/lib/eip712";
-import { getInviteSignatureMessage } from "@/lib/signature";
+import { createNetworkInviteTypedData, generateNonce } from "@/lib/eip712";
 import { QrCode } from "lucide-react";
 import { useState } from "react";
 import { isAddress } from "viem";
@@ -17,7 +17,7 @@ interface AddLeaderViaQRSectionProps {
 }
 
 export function AddLeaderViaQRSection({ onSuccess }: AddLeaderViaQRSectionProps) {
-  const { address: account } = useAccount();
+  const { address: account, chainId } = useAccount();
   const { toast } = useToast();
   const { isMultisigOwner, isLoading: isSafeLoading } = useSafeOwner();
   const { signTypedData, isConnected: isSilkConnected } = useSilkSigner();
@@ -66,23 +66,20 @@ export function AddLeaderViaQRSection({ onSuccess }: AddLeaderViaQRSectionProps)
     e.preventDefault();
     setIsLoading(true);
     try {
-      if (!account || !isSilkConnected) throw new Error("Not connected to Silk wallet");
+      if (!account || !isSilkConnected || !chainId) throw new Error("Not connected to Silk wallet");
       const nonce = generateNonce();
-      const message = getInviteSignatureMessage(account, nonce);
-      const signature = await signTypedData(message);
-      const response = await fetch("/api/defender", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          recipient,
-          signature,
-          message,
-        }),
+      const typedData = createNetworkInviteTypedData({
+        inviterAddress: account,
+        nonce,
+        chainId,
       });
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to add leader via Defender");
+      const signature = await signTypedData(typedData);
+      const result = await addLeaderViaSignedTypedData(recipient, typedData, signature);
+
+      if (result.error) {
+        throw new Error(result.error);
       }
+
       setRecipient("");
       setScannedViaQR(false);
       toast({

@@ -1,10 +1,10 @@
+import { createInvite } from "@/app/actions/invite";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/use-toast";
+import { useSilkSigner } from "@/hooks/useSilkSigner";
+import { createNetworkInviteTypedData, generateNonce } from "@/lib/eip712";
 import { useState } from "react";
 import { useAccount } from "wagmi";
-import { useSilkSigner } from "@/hooks/useSilkSigner";
-import { useToast } from "@/components/ui/use-toast";
-import { getInviteSignatureMessage } from "@/lib/signature";
-import { generateNonce } from "@/lib/eip712";
 
 interface InviteLinkSectionProps {
   disabled?: boolean;
@@ -12,35 +12,31 @@ interface InviteLinkSectionProps {
 }
 
 export function AddLeaderViaInviteLinkSection({ disabled, onSuccess }: InviteLinkSectionProps) {
-  const { address: account } = useAccount();
+  const { address: account, chainId } = useAccount();
   const { signTypedData, isConnected: isSilkConnected } = useSilkSigner();
   const { toast } = useToast();
   const [isGeneratingInvite, setIsGeneratingInvite] = useState(false);
   const [inviteLink, setInviteLink] = useState<string>("");
 
   const handleGenerateInvite = async () => {
-    if (!account || !isSilkConnected) return;
+    if (!account || !isSilkConnected || !chainId) return;
     setIsGeneratingInvite(true);
     try {
       const nonce = generateNonce();
-      const message = getInviteSignatureMessage(account, nonce);
-      const signature = await signTypedData(message);
-      const response = await fetch("/api/invites", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          signature,
-          message,
-        }),
+      const typedData = createNetworkInviteTypedData({
+        inviterAddress: account,
+        nonce,
+        chainId,
       });
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to generate invite");
+      const signature = await signTypedData(typedData);
+
+      const result = await createInvite(account, signature, nonce, typedData);
+
+      if (!result.success) {
+        throw new Error(result.error || "Failed to generate invite");
       }
-      const { inviteCode } = await response.json();
-      const link = `${window.location.origin}/invite/${inviteCode}`;
+
+      const link = `${window.location.origin}/invite/${result.inviteCode}`;
       setInviteLink(link);
       toast({
         title: "Success",

@@ -84,6 +84,9 @@ export default function silk(options: InitSilkOptions = silkConfig) {
     async getProvider(): Promise<SilkEthereumProviderInterface> {
       if (!silkProvider) {
         silkProvider = initSilk(options);
+
+        //@ts-ignore
+        window.silk = silkProvider;
       }
 
       return silkProvider;

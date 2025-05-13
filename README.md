@@ -1,157 +1,296 @@
-# Refunite
+# Refunite Network Onboarding
 
-Refunite is the world’s largest missing persons platform designed for refugees and displaced populations. This project
-aims to empower Refunite’s network of over 100,000 community leaders representing 100 million members across Africa by
-introducing decentralized technology to support a self-managed, trust-based network.
+A Next.js application facilitating a secure and streamlined onboarding process for new members into the Refunite network. It leverages EIP-712 signed typed data for enhanced security and user experience during critical operations like inviting new users and adding leaders.
 
 ## Table of Contents
 
-- [Goal](#goal)
-- [Features](#features)
-- [Technology Stack](#technology-stack)
-- [Getting Started](#getting-started)
-- [User Flows](#user-flows)
-- [Future Enhancements](#future-enhancements)
-- [Contributing](#contributing)
-- [License](#license)
+- [Refunite Network Onboarding](#refunite-network-onboarding)
+  - [Table of Contents](#table-of-contents)
+  - [Architecture Overview](#architecture-overview)
+  - [Key Features](#key-features)
+  - [Core Technologies](#core-technologies)
+  - [Onboarding Flow](#onboarding-flow)
+    - [EIP-712 Signatures](#eip-712-signatures)
+  - [Server Actions](#server-actions)
+  - [Getting Started](#getting-started)
+    - [Prerequisites](#prerequisites)
+    - [Installation](#installation)
+    - [Running the Development Server](#running-the-development-server)
+  - [Environment Variables](#environment-variables)
+  - [Database Schema](#database-schema)
+    - [Invites Table Schema](#invites-table-schema)
+  - [Defender Integration](#defender-integration)
+  - [BigInt Serialization/Deserialization](#bigint-serializationdeserialization)
+  - [Troubleshooting](#troubleshooting)
+  - [Contributing](#contributing)
+  - [License](#license)
 
-## Goal
+## Architecture Overview
 
-The primary goal is to create a decentralized network for community leaders within Refunite's ecosystem, enabling:
+The application is built with Next.js, utilizing its App Router for routing and React Server Components for efficient rendering. Server Actions are employed for handling backend logic directly within React components, eliminating the need for traditional API routes for internal operations. Supabase serves as the backend database for storing invite data, and OpenZeppelin Defender is used for secure transaction relaying (e.g., minting Hats).
 
-1. Onboarding of community leaders to acknowledge their role within the trust network.
-2. Secure role recovery via peer-to-peer social recovery mechanisms when access is lost.
+```mermaid
+graph TD
+    A[User Browser] --> B{Next.js Frontend};
+    B --> C[Next.js Server Actions];
+    C --> D{EIP-712 Signature Utils};
+    C --> E[Supabase DB];
+    C --> F[OpenZeppelin Defender];
+    G[Silk Wallet/Metamask] <--> A;
+    F --> H[Blockchain Interaction];
+```
 
-## Features
+## Key Features
 
-- **Role Management**: Community leaders receive on-chain credentials through
-  the [Hats Protocol](https://www.hatsprotocol.xyz/) to attest to their roles.
-- **Social Recovery**: Leaders who lose access to their credentials can regain access through peer validation.
+- **Role Management**: Community leaders receive on-chain credentials through the [Hats Protocol](https://www.hatsprotocol.xyz/) to attest to their roles.
 - **Decentralized Trust Network**: No central control over the state; managed entirely by leaders themselves.
 - **Scalability**: Designed to support up to 100,000 leaders, grouped by geographic or other predefined subsets.
+- **Secure Onboarding**: Utilizes EIP-712 typed data signatures for inviting and adding new leaders, ensuring clarity and security for signers.
 
-## Technology Stack
+## Core Technologies
 
-- **Hats protocol**: Powered by [Hats Protocol](https://www.hatsprotocol.xyz/) for role management and governance.
-- **Frontend**: NextJS web application built with Web3 connectivity.
-- **Silk wallet**: [Silk Wallet](https://www.silk.sc/) for Web3 connectivity.
-- **Gnosis Safe**: [Gnosis Safe](https://gnosis-safe.io/) for multi-sig wallet management.
-- **Blockchain**: Blockchain-based for immutable, secure credential management.
+- **Next.js**: React framework for building the user interface and handling server-side logic with Server Actions.
+- **EIP-712**: Standard for typed structured data signing, enhancing security and UX for wallet interactions.
+- **Viem**: TypeScript interface for Ethereum, used for wallet interactions and cryptographic operations.
+- **Supabase**: Backend-as-a-Service for database storage (PostgreSQL) and authentication.
+- **OpenZeppelin Defender**: Platform for secure smart contract operations, including transaction relaying.
+- **Hats Protocol**: For on-chain role management and attestations.
+- **Silk Wallet / MetaMask**: User wallets for interacting with the application and signing transactions/messages.
+- **Tailwind CSS & shadcn/ui**: For styling and UI components.
+
+## Onboarding Flow
+
+The onboarding process involves either an existing leader inviting a new user or directly adding a new leader. Both flows leverage EIP-712 signed typed data for secure interactions.
+
+### EIP-712 Signatures
+
+To enhance security and provide a better user experience, the application uses EIP-712 for signing messages. This standard allows for structured, human-readable data to be presented to the user when they are asked to sign a message with their wallet (e.g., Silk Wallet or MetaMask).
+
+The core components of an EIP-712 signature in this application are:
+
+- **Domain Separator**: Defines the context of the signature (e.g., application name, version, chain ID, verifying contract).
+- **Typed Data**: The actual message being signed, structured with clear field names and types.
+
+When a leader initiates an invite or adds another leader:
+
+1. The frontend constructs the EIP-712 typed data (`NetworkInvite`).
+2. The leader signs this typed data using their connected wallet.
+3. The signature, along with the typed data, is sent to a Server Action.
+4. The Server Action verifies the signature against the provided data and the inviter's address using `viem` utility functions.
+5. If valid, the action proceeds (e.g., stores the invite in Supabase or calls Defender to mint a Hat).
+
+**Typed Data Format (`NetworkInvite`)**
+
+```typescript
+const types = {
+  NetworkInvite: [
+    { name: "content", type: "string" },
+    { name: "inviterAddress", type: "address" },
+    { name: "nonce", type: "string" },
+    { name: "createdAt", type: "uint256" },
+  ],
+};
+
+// Example message structure
+const message = {
+  content: "I authorize this invite to be created for the RelayID Network.",
+  inviterAddress: "0xCD2a3d9F938E13CD947Ec05AbC7FE734Df8DD826",
+  nonce: "a1b2c3d4e5f67890",
+  createdAt: 1678886400, // Unix timestamp
+};
+```
+
+This structured data is what the user sees and approves in their wallet, ensuring they understand what they are authorizing.
+
+```mermaid
+sequenceDiagram
+    participant UserFrontend as User (Frontend)
+    participant Wallet as User's Wallet
+    participant ServerAction as Next.js Server Action
+    participant SupabaseDB as Supabase DB
+    participant DefenderRelay as OpenZeppelin Defender
+    participant Blockchain
+
+    alt Invite Flow / Add Leader Flow
+        UserFrontend->>Wallet: Request EIP-712 Signature (for NetworkInvite)
+        Wallet-->>UserFrontend: Provides Signature
+        UserFrontend->>ServerAction: Send recipient, typedData, signature
+        ServerAction->>ServerAction: Verify EIP-712 Signature against inviterAddress
+        alt Signature Valid
+            ServerAction->>SupabaseDB: (If invite link) Mark invite as used
+            ServerAction->>DefenderRelay: Request mintHat (recipient, signature, hatId)
+            DefenderRelay->>Blockchain: Mint Hat Transaction
+            Blockchain-->>DefenderRelay: Transaction Hash
+            DefenderRelay-->>ServerAction: Transaction Hash / Result
+            ServerAction-->>UserFrontend: Success (mintHatTxHash, claimSignerTxHash)
+        else Signature Invalid
+            ServerAction-->>UserFrontend: Error (Invalid Signature)
+        end
+    end
+```
+
+## Server Actions
+
+This project utilizes Next.js Server Actions to handle backend logic and data mutations. Server Actions are functions that run on the server but can be called directly from React Server Components or Client Components.
+
+Key Server Actions in this project:
+
+1. **`src/app/actions/invite.ts`**: Handles invite creation, verification, and retrieval
+
+   - `createInvite`: Creates a new invite with EIP-712 signed data
+   - `verifyInvite`: Checks if an invite code is valid and unused
+   - `getInviteByCode`: Retrieves invite data by code
+
+2. **`src/app/actions/defender.ts`**: Handles blockchain interactions through Defender
+   - `addLeaderViaSignedTypedData`: Processes verified signatures to add new leaders via the Hats Protocol
+
+These actions provide a streamlined way to handle server-side operations without creating separate API routes.
 
 ## Getting Started
 
 ### Prerequisites
 
-- [Node.js](https://nodejs.org/)
-- [Silk Wallet](https://semaphore.pse.dev/)
+- [Node.js](https://nodejs.org/) (v18 or later)
+- [pnpm](https://pnpm.io/installation)
+- [Supabase Account](https://supabase.com/) (for managing onboarding invites)
+- [OpenZeppelin Defender Account](https://defender.openzeppelin.com/) (for blockchain interactions)
 
 ### Installation
 
 1. Clone the repository:
-
-   ```bash
-   git clone https://github.com/syntro-fi/refunite-network.git
-   cd refunite-network
-   ```
-
 2. Install dependencies:
 
    ```bash
    pnpm install
    ```
 
-3. Run the application:
+3. Set up environment variables:
+   Copy the `.env.example` file to `.env.local` and fill in the required values.
 
    ```bash
-   pnpm dev
+   cp .env.example .env.local
    ```
 
-4. Open in your browser at `http://localhost:3000`.
+4. Update the `.env.local` file with your own values:
 
-## User Flows
+   ```
+   # Supabase
+   NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+   SUPABASE_SERVICE_KEY=your_supabase_service_key
 
-### 1. Role Onboarding
+   # Defender
+   DEFENDER_WEBHOOK_URL=your_defender_webhook_url
 
-```mermaid
-sequenceDiagram
-    autonumber
-    New Leader->>+Existing Leader: Seeks acknowledgment
-    Existing Leader->>+New Leader: Peer validation
-    New Leader->>+Existing Leader: Provides wallet address
-    Existing Leader->>-New Leader: Issues leadership token
+   # Hats Protocol
+   NEXT_PUBLIC_HATS_TREE_ID=your_hats_tree_id
+   NEXT_PUBLIC_HATS_LEADER_ID=your_leader_hat_id
+   NEXT_PUBLIC_HATS_LEADER_SAFE_ACCOUNT=your_leader_safe_address
+
+   # Chain
+   NEXT_PUBLIC_CHAIN_ID=10 # Optimism
+   ```
+
+### Running the Development Server
+
+```bash
+pnpm dev
 ```
 
-### 2. Role Recovery (Outdated)
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-This paragraph is kept around for historical reasons. We removed recovery flow
-for now as we're not going to have a need for it due to using face id to
-recover roles. The face, as a biometric feature, will give us the same wallet
-address, so recovery will happen at the wallet level and not at the application
-level any longer.
+## Environment Variables
 
-```mermaid
-sequenceDiagram
-    autonumber
-    Trusted Leader->>+Peer Leader: Reports credential loss
-    Peer Leader->>+Trusted Leader: Peer validation
-    Trusted Leader->>+Peer Leader: Provides new wallet address
-    Peer Leader->>-Trusted Leader: Issues new leadership token
-    Peer Leader->>System: Burns old credential token
-```
+Required environment variables:
 
-# Utility Functions
+| Variable                               | Description                              | Public? |
+| -------------------------------------- | ---------------------------------------- | ------- |
+| `NEXT_PUBLIC_SUPABASE_URL`             | Supabase project URL                     | Yes     |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY`        | Supabase anonymous API key               | Yes     |
+| `SUPABASE_SERVICE_KEY`                 | Supabase service role key (admin access) | No      |
+| `DEFENDER_WEBHOOK_URL`                 | OpenZeppelin Defender webhook URL        | No      |
+| `NEXT_PUBLIC_HATS_TREE_ID`             | Hats Protocol tree ID                    | Yes     |
+| `NEXT_PUBLIC_HATS_LEADER_ID`           | Leader hat ID in Hats Protocol           | Yes     |
+| `NEXT_PUBLIC_HATS_LEADER_SAFE_ACCOUNT` | Safe account address for leaders         | Yes     |
+| `NEXT_PUBLIC_CHAIN_ID`                 | Blockchain network chain ID              | Yes     |
+
+**Important**: `NEXT_PUBLIC_` variables are exposed to the browser. Do not store sensitive secrets with this prefix.
+
+## Database Schema
+
+The application uses Supabase (PostgreSQL) for data storage. The main table is `invites`, created by the migration in `supabase/migrations/20250506121339_create_invites_table.sql`.
+
+### Invites Table Schema
+
+| Column              | Type      | Description                                          |
+| ------------------- | --------- | ---------------------------------------------------- |
+| `id`                | UUID      | Primary key, auto-generated                          |
+| `invite_code`       | TEXT      | Unique invite code for sharing                       |
+| `inviter_signature` | TEXT      | EIP-712 signature from the inviter                   |
+| `typed_data`        | JSONB     | Structured data that was signed (serialized)         |
+| `used_at`           | TIMESTAMP | When the invite was used (null if unused)            |
+| `used_by`           | TEXT      | Address of user who used the invite (null if unused) |
+
+The table also has:
+
+- An index on `inviter_signature` for faster lookups
+- Row Level Security enabled
+- A policy restricting access to the service role only
+
+## Defender Integration
+
+This application uses OpenZeppelin Defender to securely interact with smart contracts:
+
+1. **Create a Defender Relayer**: Set up a relayer in Defender for your target network (e.g., Optimism).
+2. **Create a Defender Autotask**: This will be triggered by a webhook to execute the smart contract interactions (e.g., minting a Hat).
+3. **Configure the Webhook**: The Autotask should expose a webhook URL which you'll set as `DEFENDER_WEBHOOK_URL` in your environment variables.
+
+The `addLeaderViaSignedTypedData` server action in `src/app/actions/defender.ts` handles sending the request to Defender, which then executes the blockchain transaction.
 
 ## BigInt Serialization/Deserialization
 
-### Background
-
-JavaScript cannot natively serialize BigInt values to JSON. When storing objects containing BigInt values in a database via Supabase (or any JSON-based storage), we need to convert BigInt values to strings before storage and convert them back to BigInt when retrieving.
-
-### Solution
-
-The `serialize.ts` file provides two utility functions:
-
-1. `serializeBigInts(obj)`: Recursively converts all BigInt values in an object to strings.
-2. `deserializeBigInts(obj)`: Recursively converts string values that look like BigInts back to BigInt objects.
-
-### Usage
-
-#### When storing data (serializing)
+JavaScript cannot natively serialize `BigInt` values to JSON. The utility functions in `src/lib/utils/serialize.ts` handle this conversion for storage and retrieval:
 
 ```typescript
-import { serializeBigInts } from "@/lib/utils/serialize";
+// When storing data with BigInt values
+const serializableData = serializeBigInts(dataWithBigInts);
 
-// Before storing in database
-const dataToStore = serializeBigInts(myObjectWithBigInts);
-await supabase.from("my_table").insert({ data: dataToStore });
+// When retrieving stored data
+const dataWithBigInts = deserializeBigInts(retrievedData);
 ```
 
-#### When retrieving data (deserializing)
+These utilities are used automatically in the server actions when handling typed data.
 
-```typescript
-import { deserializeBigInts } from "@/lib/utils/serialize";
+## Troubleshooting
 
-// After fetching from database
-const { data } = await supabase.from("my_table").select("*").single();
-const deserializedData = deserializeBigInts(data.my_json_column);
-```
+Common issues and solutions:
 
-### Implementation Notes
+1. **Invalid EIP-712 Signature**
 
-- The deserializer uses a regex pattern to identify strings that look like they represent BigInt values.
-- The serialization process is recursive and handles nested objects and arrays.
-- JSONB columns in Supabase are perfect for storing these serialized objects.
+   - Ensure the wallet is connected to the correct network (check CHAIN_ID)
+   - Verify the inviter has proper permissions to create invites
 
-## Future Enhancements
+2. **Defender Webhook Errors**
 
-    1.	Self-Curation: Empower leaders to onboard new members autonomously, further decentralizing control.
-    2.	Privacy Layer: Introduce zero-knowledge proof (ZKP) technology (e.g., Semaphore) to obfuscate user data on-chain for increased privacy.
-    3.	Enhanced UI/UX: Streamline user interactions for better accessibility to non-technical users.
-    4.	Expanded Governance: Support varied governance models with flexible voting quorums (e.g., 1-of-n, n-of-n) for approvals.
+   - Check Defender Relayer has sufficient funds for gas
+   - Verify the Autotask is properly configured with the correct contract ABI
+
+3. **Database Access Issues**
+   - Ensure Supabase service key has proper permissions
+   - Check Row Level Security policies
 
 ## Contributing
 
-Refunite welcomes contributions! Please open an issue to discuss any proposed changes or submit a pull request.
+Contributions to the Refunite Network are welcome! To contribute:
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Make your changes (following the code style of the project)
+4. Commit your changes (`git commit -m 'Add some amazing feature'`)
+5. Push to the branch (`git push origin feature/amazing-feature`)
+6. Open a Pull Request
+
+Please make sure to update tests as appropriate and follow the existing code style.
 
 ## License
 

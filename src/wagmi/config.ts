@@ -14,7 +14,7 @@ const getAlchemyRpcUrl = (chainId: number) => {
 
 export const wagmiConfig = createConfig({
   chains: supportedChains,
-  connectors: [silk({ useStaging: true, project: { name: "RelayID" } })],
+  connectors: [silk()],
   transports: {
     [supportedChains[0].id]: http(getAlchemyRpcUrl(supportedChains[0].id)),
     [supportedChains[1].id]: http(getAlchemyRpcUrl(supportedChains[1].id)),

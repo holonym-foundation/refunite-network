@@ -12,7 +12,7 @@ export const useSafeOwner = () => {
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
-    const checkSafeOwnership = async () => {
+    const checkSafeOwnership = async (chainId: string, safeAddress: string) => {
       if (!account) {
         setIsMultisigOwner(false);
         setIsLoading(false);
@@ -22,11 +22,11 @@ export const useSafeOwner = () => {
       try {
         setIsLoading(true);
         const safeService = new SafeApiKit({
-          chainId: BigInt(CHAIN_ID),
+          chainId: BigInt(chainId),
         });
 
         // Get Safe info
-        const safeInfo = await safeService.getSafeInfo(LEADER_SAFE_ADDRESS);
+        const safeInfo = await safeService.getSafeInfo(safeAddress);
         const owners = safeInfo.owners;
 
         setIsMultisigOwner(
@@ -41,7 +41,9 @@ export const useSafeOwner = () => {
       }
     };
 
-    checkSafeOwnership();
+    if (CHAIN_ID && LEADER_SAFE_ADDRESS) {
+      checkSafeOwnership(CHAIN_ID, LEADER_SAFE_ADDRESS);
+    }
   }, [account]);
 
   return {

@@ -21,7 +21,7 @@ function AccountPage() {
   const [isHatLoading, setIsHatLoading] = useState<boolean>(false);
   const [isHatError, setIsHatError] = useState<boolean>(false);
   const hatsContractAddress = HATS_CONTRACT_ADDRESS;
-  const hatsId = BigInt(LEADER_HAT_ID);
+  const hatsId = BigInt(LEADER_HAT_ID || "0");
 
   useEffect(() => {
     const checkHat = async () => {

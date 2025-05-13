@@ -67,6 +67,11 @@ export function AddLeaderViaQRSection({ onSuccess }: AddLeaderViaQRSectionProps)
     setIsLoading(true);
     try {
       if (!account || !isSilkConnected || !chainId) throw new Error("Not connected to Silk wallet");
+
+      if (!isAddress(recipient)) {
+        throw new Error("Invalid recipient address");
+      }
+
       const nonce = generateNonce();
       const typedData = createNetworkInviteTypedData({
         inviterAddress: account,

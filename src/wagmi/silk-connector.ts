@@ -7,12 +7,14 @@ import {
 import { ChainNotConfiguredError, createConnector } from "@wagmi/core";
 import { Chain, getAddress, SwitchChainError, UserRejectedRequestError } from "viem";
 
+import { silkConfig } from "./silk-config";
+
 /**
  * Creates a WAGMI connector for the Silk Wallet SDK
- * @param options Initialization options for the Silk Wallet SDK
+ * @param options Initialization options for the Silk Wallet SDK. If not provided, uses the default configuration.
  * @returns
  */
-export default function silk(options: InitSilkOptions = {}) {
+export default function silk(options: InitSilkOptions = silkConfig) {
   let silkProvider: SilkEthereumProviderInterface | null = null;
 
   return createConnector<SilkEthereumProviderInterface>((config) => ({

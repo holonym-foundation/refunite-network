@@ -1,7 +1,6 @@
 "use client";
 import { UserRejectedRequestError } from "viem";
 import { useAccount, useConnect, useDisconnect } from "wagmi";
-import { sepolia } from "wagmi/chains";
 
 // Add type declaration for window.silk
 declare global {
@@ -17,6 +16,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/t
 import { useToast } from "./ui/use-toast";
 
 import en from "@/content/en";
+import { defaultChain } from "@/wagmi/chain-config";
 import silk from "@/wagmi/silk-connector";
 
 export function ConnectButton() {
@@ -43,13 +43,13 @@ export function ConnectButton() {
       if (!silkConnector) {
         console.error("Silk connector not found in wagmi config");
         connect({
-          chainId: sepolia.id,
-          connector: silk({ useStaging: true, project: { name: "RelayID" } }),
+          chainId: defaultChain.id,
+          connector: silk(),
         });
         return;
       }
 
-      connect({ chainId: sepolia.id, connector: silkConnector });
+      connect({ chainId: defaultChain.id, connector: silkConnector });
     } catch (error) {
       console.error("Error connecting to Silk:", error);
       if (error instanceof UserRejectedRequestError) console.log("User aborted the transaction");

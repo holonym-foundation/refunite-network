@@ -4,3 +4,4 @@ export const HATS_TREE_ID = process.env.NEXT_PUBLIC_HATS_TREE_ID;
 export const LEADER_HAT_ID = process.env.NEXT_PUBLIC_HATS_LEADER_ID;
 export const LEADER_SAFE_ADDRESS = process.env.NEXT_PUBLIC_HATS_LEADER_SAFE_ACCOUNT;
 export const CHAIN_ID = process.env.NEXT_PUBLIC_CHAIN_ID;
+export const INVITE_TTL_SECONDS = 86400; // 24 hours

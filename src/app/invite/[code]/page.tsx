@@ -9,15 +9,15 @@ import { ConnectButton } from "@/components/ConnectButton";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 
+import { addLeaderViaSignedTypedData } from "@/app/actions/defender";
 import { verifyInvite } from "@/app/actions/invite";
 import en from "@/content/en";
-import { useHatsInteractions } from "@/hooks/useHatsInteractions";
+import { Hash } from "viem/_types/types/misc";
 
 export default function InvitePage() {
   const { code } = useParams();
   const { address, isConnected } = useAccount();
   const { toast } = useToast();
-  const { hatsInteractions, isConnected: isHatsConnected } = useHatsInteractions();
   const [isLoading, setIsLoading] = useState(false);
   const [isVerifying, setIsVerifying] = useState(true);
   const [isValid, setIsValid] = useState(false);
@@ -41,24 +41,23 @@ export default function InvitePage() {
   }, [code]);
 
   const handleAcceptInvite = async () => {
-    if (!address || !hatsInteractions) return;
+    if (!address) return;
 
     setIsLoading(true);
     try {
       // Get the verified invite details
       const verifyResult = await verifyInvite(code as string);
-      if (!verifyResult.success || !verifyResult.signature) {
+      if (!verifyResult.success || !verifyResult.signature || !verifyResult.typedData) {
         throw new Error(verifyResult.error || "Invalid invite");
       }
 
-      const onboardResult = await hatsInteractions.inviteUser(
+      const onboardResult = await addLeaderViaSignedTypedData(
         address,
-        verifyResult.signature,
-        verifyResult.inviterAddress!,
-        verifyResult.nonce!
+        verifyResult.typedData,
+        verifyResult.signature as Hash
       );
 
-      if (!onboardResult.success) {
+      if (onboardResult.error) {
         throw onboardResult.error;
       }
 
@@ -162,11 +161,7 @@ export default function InvitePage() {
           <div className="text-center">
             <h1 className="text-2xl font-semibold mb-4">{en.invitePage.headings.accept}</h1>
             <p className="text-muted-foreground mb-8">{en.invitePage.prompts.accept}</p>
-            <Button
-              onClick={handleAcceptInvite}
-              disabled={isLoading || !isHatsConnected}
-              className="w-full sm:w-auto"
-            >
+            <Button onClick={handleAcceptInvite} disabled={isLoading} className="w-full sm:w-auto">
               {isLoading ? en.invitePage.prompts.processing : en.invitePage.prompts.acceptInvite}
             </Button>
           </div>

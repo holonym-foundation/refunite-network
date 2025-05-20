@@ -11,7 +11,15 @@
     "clean": "rm -rf node_modules .next",
     "prepare": "husky",
     "lint-staged": "lint-staged",
-    "check-types": "tsc --noEmit"
+    "check-types": "tsc --noEmit",
+    "supabase:start": "pnpx supabase start",
+    "supabase:stop": "pnpx supabase stop",
+    "supabase:status": "pnpx supabase status",
+    "supabase:db:push": "pnpx supabase db push",
+    "supabase:db:reset": "pnpx supabase db reset",
+    "supabase:db:migrate": "pnpx supabase db migrate",
+    "supabase:db:types": "pnpx supabase gen types typescript --local > src/lib/supabase/types.ts",
+    "setup:local": "pnpm supabase:start && pnpm supabase:db:reset"
   },
   "dependencies": {
     "@hatsprotocol/sdk-v1-core": "^0.12.4",
@@ -61,7 +69,7 @@
     "tailwindcss": "^3.4.14",
     "tailwindcss-animate": "^1.0.7",
     "typescript": "^5.8.3",
-    "viem": "~2.29.0",
+    "viem": "2.29.2",
     "wagmi": "^2.15.2",
     "zod": "^3.24.3"
   },

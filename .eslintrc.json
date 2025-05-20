@@ -2,29 +2,6 @@
   "extends": ["next/core-web-vitals", "prettier"],
   "plugins": ["prettier"],
   "rules": {
-    "prettier/prettier": "error",
-    "import/order": [
-      "error",
-      {
-        "groups": ["builtin", "external", "parent", "sibling", "index", "object", "type"],
-        "pathGroups": [
-          {
-            "pattern": "{react,react-dom/**,react-router-dom}",
-            "group": "builtin",
-            "position": "before"
-          },
-          {
-            "pattern": "@/components/**",
-            "group": "parent",
-            "position": "before"
-          }
-        ],
-        "pathGroupsExcludedImportTypes": ["builtin"],
-        "alphabetize": {
-          "order": "asc"
-        },
-        "newlines-between": "always"
-      }
-    ]
+    "prettier/prettier": "error"
   }
 }

@@ -1,5 +1,6 @@
 "use server";
 
+import { INVITE_TTL_SECONDS } from "@/lib/constants";
 import { verifyNetworkInviteSignature } from "@/lib/eip712";
 import { supabase, supabaseAdmin } from "@/lib/supabase/client";
 import { deserializeBigInts, serializeBigInts } from "@/lib/utils/serialize";
@@ -147,12 +148,9 @@ export async function verifyInvite(inviteCode: string): Promise<VerifyInviteResu
 
     const typedData = deserializeBigInts(data.typed_data);
     // Check if invite has expired
-    // TODO: make invite TTL configurable
-    const INVITE_TTL = 86400; // 24 hours
-
     const signatureTimestamp = Number(typedData.message.createdAt);
     const currentTimestamp = Math.floor(Date.now() / 1000);
-    if (currentTimestamp - signatureTimestamp > INVITE_TTL) {
+    if (currentTimestamp - signatureTimestamp > INVITE_TTL_SECONDS) {
       return { success: false, error: "Invite has expired" };
     }
 

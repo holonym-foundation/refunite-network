@@ -143,9 +143,7 @@ export default function silk(options: InitSilkOptions = silkConfig) {
 
     async disconnect(): Promise<void> {
       const provider = await this.getProvider();
-      provider.uiMessageManager.removeListener("accountsChanged", this.onAccountsChanged);
-      provider.uiMessageManager.removeListener("chainChanged", this.onChainChanged);
-      provider.uiMessageManager.removeListener("disconnect", this.onDisconnect);
+      await provider.logout();
     },
 
     onAccountsChanged(accounts) {

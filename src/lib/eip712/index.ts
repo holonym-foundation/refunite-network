@@ -13,7 +13,7 @@ export const networkInviteSchema = z.object({
   content: z.string(),
   inviterAddress: z.string(),
   nonce: z.string(),
-  createdAt: z.number(),
+  createdAt: z.bigint(),
 });
 
 /**
@@ -65,7 +65,7 @@ export function createNetworkInviteTypedData({
     content,
     inviterAddress,
     nonce,
-    createdAt: Math.floor(Date.now() / 1000),
+    createdAt: BigInt(Math.floor(Date.now() / 1000)),
   };
 
   return {

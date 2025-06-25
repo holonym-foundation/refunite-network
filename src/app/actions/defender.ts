@@ -4,6 +4,7 @@ import { Address, Hash, TypedDataDefinition } from "viem";
 
 import { verifyNetworkInviteSignature } from "@/lib/eip712";
 import { INVITE_TTL_SECONDS } from "@/lib/constants";
+import { serializeBigInts } from "@/lib/utils/serialize";
 
 type AddLeaderViaSignedTypedDataResult = {
   mintHatTxHash?: string;
@@ -50,7 +51,7 @@ export async function addLeaderViaSignedTypedData(
 
     const payload = {
       recipient,
-      typedData,
+      typedData: serializeBigInts(typedData),
       signature,
     };
 
@@ -63,11 +64,16 @@ export async function addLeaderViaSignedTypedData(
     });
 
     const responseBody = await response.text();
+
+    if (!response.ok) {
+      throw new Error(`Defender webhook error: ${response.status}`);
+    }
+
     const data = JSON.parse(responseBody);
     const result = JSON.parse(data.result);
 
-    if (!response.ok || result.error) {
-      throw new Error(result.error || `Defender webhook responded with status ${response.status}`);
+    if (result.error) {
+      throw new Error(result.error);
     }
 
     return {

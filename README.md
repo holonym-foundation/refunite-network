@@ -96,7 +96,7 @@ const message = {
   content: "I authorize this invite to be created for the RelayID Network.",
   inviterAddress: "0xCD2a3d9F938E13CD947Ec05AbC7FE734Df8DD826",
   nonce: "a1b2c3d4e5f67890",
-  createdAt: 1678886400, // Unix timestamp
+  createdAt: 1678886400n, // Unix timestamp as BigInt
 };
 ```
 

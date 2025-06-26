@@ -147,6 +147,7 @@ export async function verifyInvite(inviteCode: string): Promise<VerifyInviteResu
     }
 
     const typedData = deserializeBigInts(data.typed_data);
+
     // Check if invite has expired
     const signatureTimestamp = Number(typedData.message.createdAt);
     const currentTimestamp = Math.floor(Date.now() / 1000);

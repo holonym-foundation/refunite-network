@@ -8,7 +8,7 @@ import { CHAIN_ID, LEADER_SAFE_ADDRESS } from "../lib/constants";
 export const useSafeOwner = () => {
   const { address: account } = useAccount();
   const [isMultisigOwner, setIsMultisigOwner] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {

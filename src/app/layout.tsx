@@ -14,7 +14,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             <Toaster />
             {children}
           </main>
-          {children}
         </ContextProvider>
       </body>
     </html>

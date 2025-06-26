@@ -3,7 +3,7 @@
 import { INVITE_TTL_SECONDS } from "@/lib/constants";
 import { verifyNetworkInviteSignature } from "@/lib/eip712";
 import { supabase, supabaseAdmin } from "@/lib/supabase/client";
-import { deserializeBigInts, serializeBigInts } from "@/lib/utils/serialize";
+import { marshalTypedData, unmarshalTypedData } from "@/lib/utils/serialize";
 import { randomBytes } from "crypto";
 import { getAddress, Hash } from "viem";
 
@@ -77,8 +77,8 @@ export async function createInvite(
     // Generate unique invite code
     const inviteCode = generateInviteCode();
 
-    // Serialize BigInt values in typedData before storing
-    const serializedTypedData = serializeBigInts(typedData);
+    // Marshal BigInt values in typedData before storing
+    const marshaledTypedData = marshalTypedData(typedData);
 
     // Store invite in database
     const { error, data } = await supabaseAdmin
@@ -86,7 +86,7 @@ export async function createInvite(
       .insert({
         invite_code: inviteCode,
         inviter_signature: signature,
-        typed_data: serializedTypedData,
+        typed_data: marshaledTypedData,
       })
       .select("invite_code")
       .single();
@@ -121,9 +121,9 @@ export async function getInviteByCode(inviteCode: string) {
       return { success: false, error: "Invalid invite code" };
     }
 
-    // Deserialize any BigInt values in typed_data
+    // Unmarshal any BigInt values in typed_data
     if (data.typed_data) {
-      data.typed_data = deserializeBigInts(data.typed_data);
+      data.typed_data = unmarshalTypedData(data.typed_data);
     }
 
     return { success: true, data };
@@ -141,12 +141,11 @@ export async function verifyInvite(inviteCode: string): Promise<VerifyInviteResu
       .eq("invite_code", inviteCode)
       .single();
 
-    console.log("Verify invite data:", data, error);
     if (error || !data) {
       return { success: false, error: "Invalid invite code" };
     }
 
-    const typedData = deserializeBigInts(data.typed_data);
+    const typedData = unmarshalTypedData(data.typed_data);
 
     // Check if invite has expired
     const signatureTimestamp = Number(typedData.message.createdAt);

@@ -1,62 +1,73 @@
 /**
- * Converts all BigInt values in an object to strings for JSON serialization
+ * Converts EIP-712 TypedData BigInt values to strings for JSON storage
+ * Specifically handles the NetworkInvite typed data structure
  */
-export function serializeBigInts(obj: any): any {
-  if (obj === null || obj === undefined) {
-    return obj;
+export function marshalTypedData(typedData: any): any {
+  if (typedData === null || typedData === undefined) {
+    return typedData;
   }
 
-  if (typeof obj === "bigint") {
-    return obj.toString();
+  if (typeof typedData === "bigint") {
+    return typedData.toString();
   }
 
-  if (Array.isArray(obj)) {
-    return obj.map(serializeBigInts);
+  if (Array.isArray(typedData)) {
+    return typedData.map(marshalTypedData);
   }
 
-  if (typeof obj === "object") {
+  if (typeof typedData === "object") {
     const result: any = {};
-    for (const key in obj) {
-      result[key] = serializeBigInts(obj[key]);
+    for (const key in typedData) {
+      result[key] = marshalTypedData(typedData[key]);
     }
     return result;
   }
 
-  return obj;
+  return typedData;
 }
 
 /**
- * Converts string values that look like BigInts back to BigInt
- * This is useful when retrieving data from Supabase that originally contained BigInt values
- *
- * Note: This uses a regex to detect strings that look like they were BigInt values
- * You may need to adjust this logic based on your specific data patterns
+ * Converts stored EIP-712 TypedData back to correct types for verification
+ * Specifically handles the NetworkInvite typed data structure:
+ * - domain.chainId: string → number
+ * - message.createdAt: string → BigInt
+ * - other fields: preserved as-is
  */
-export function deserializeBigInts(obj: any): any {
-  if (obj === null || obj === undefined) {
-    return obj;
+export function unmarshalTypedData(data: any): any {
+  if (data === null || data === undefined) {
+    return data;
   }
 
-  // Check if string looks like a BigInt (only numbers)
-  if (typeof obj === "string" && /^-?\d+$/.test(obj) && !Object.is(parseInt(obj), NaN)) {
-    try {
-      return BigInt(obj);
-    } catch {
-      return obj; // If conversion fails, return original string
+  // Handle domain object
+  if (data.domain) {
+    const domain = { ...data.domain };
+    if (typeof domain.chainId === "string" && /^\d+$/.test(domain.chainId)) {
+      domain.chainId = Number(domain.chainId);
     }
+    return {
+      ...data,
+      domain,
+      message: data.message ? unmarshalMessage(data.message) : data.message,
+    };
   }
 
-  if (Array.isArray(obj)) {
-    return obj.map(deserializeBigInts);
+  return data;
+}
+
+/**
+ * Helper function to unmarshal message fields
+ */
+function unmarshalMessage(message: any): any {
+  if (!message || typeof message !== "object") {
+    return message;
   }
 
-  if (typeof obj === "object") {
-    const result: any = {};
-    for (const key in obj) {
-      result[key] = deserializeBigInts(obj[key]);
-    }
-    return result;
+  const result = { ...message };
+
+  // Convert createdAt back to BigInt
+  if (typeof result.createdAt === "string" && /^\d+$/.test(result.createdAt)) {
+    result.createdAt = BigInt(result.createdAt);
   }
 
-  return obj;
+  return result;
 }

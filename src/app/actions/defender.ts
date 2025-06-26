@@ -4,7 +4,7 @@ import { Address, Hash, TypedDataDefinition } from "viem";
 
 import { verifyNetworkInviteSignature } from "@/lib/eip712";
 import { INVITE_TTL_SECONDS } from "@/lib/constants";
-import { serializeBigInts } from "@/lib/utils/serialize";
+import { marshalTypedData } from "@/lib/utils/serialize";
 
 type AddLeaderViaSignedTypedDataResult = {
   mintHatTxHash?: string;
@@ -51,7 +51,7 @@ export async function addLeaderViaSignedTypedData(
 
     const payload = {
       recipient,
-      typedData: serializeBigInts(typedData),
+      typedData: marshalTypedData(typedData),
       signature,
     };
 

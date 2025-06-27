@@ -162,7 +162,14 @@ export default function InvitePage() {
             <h1 className="text-2xl font-semibold mb-4">{en.invitePage.headings.accept}</h1>
             <p className="text-muted-foreground mb-8">{en.invitePage.prompts.accept}</p>
             <Button onClick={handleAcceptInvite} disabled={isLoading} className="w-full sm:w-auto">
-              {isLoading ? en.invitePage.prompts.processing : en.invitePage.prompts.acceptInvite}
+              {isLoading ? (
+                <div className="flex items-center gap-2">
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  {en.invitePage.prompts.processing}
+                </div>
+              ) : (
+                en.invitePage.prompts.acceptInvite
+              )}
             </Button>
           </div>
         </div>

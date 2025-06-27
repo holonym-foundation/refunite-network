@@ -73,17 +73,6 @@ function AddLeaderForm() {
             </div>
           )}
 
-          {isSafeLoading && !showCelebration && (
-            <div className="absolute inset-0 z-40 flex flex-col items-center justify-center bg-white/80">
-              <div className="flex flex-col items-center">
-                <div className="h-16 w-16 animate-spin rounded-full border-4 border-green-500 border-t-transparent mb-6" />
-                <span className="text-lg font-semibold text-green-700">Adding leader...</span>
-                <span className="text-sm text-muted-foreground mt-2">
-                  This may take a moment. Please keep this page open.
-                </span>
-              </div>
-            </div>
-          )}
           <header className="py-2 flex justify-between items-center">
             <h1 className="text-lg font-semibold">{en.addPage.headings.addLeaderToNetworkShort}</h1>
             {account && (

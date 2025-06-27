@@ -85,10 +85,7 @@ function AddLeaderForm() {
           {!isSafeLoading && (
             <>
               <AddLeaderViaQRSection onSuccess={() => setShowCelebration(true)} />
-              <AddLeaderViaInviteLinkSection
-                disabled={!isMultisigOwner}
-                onSuccess={() => setShowCelebration(true)}
-              />
+              <AddLeaderViaInviteLinkSection disabled={!isMultisigOwner} />
             </>
           )}
 

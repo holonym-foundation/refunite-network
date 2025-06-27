@@ -8,10 +8,9 @@ import { useAccount } from "wagmi";
 
 interface InviteLinkSectionProps {
   disabled?: boolean;
-  onSuccess?: (inviteLink: string) => void;
 }
 
-export function AddLeaderViaInviteLinkSection({ disabled, onSuccess }: InviteLinkSectionProps) {
+export function AddLeaderViaInviteLinkSection({ disabled }: InviteLinkSectionProps) {
   const { address: account, chainId } = useAccount();
   const { signTypedData, isConnected: isSilkConnected } = useSilkSigner();
   const { toast } = useToast();
@@ -39,10 +38,9 @@ export function AddLeaderViaInviteLinkSection({ disabled, onSuccess }: InviteLin
       const link = `${window.location.origin}/invite/${result.inviteCode}`;
       setInviteLink(link);
       toast({
-        title: "Success",
-        description: "Invite link generated!",
+        title: "Invite link generated!",
+        description: "Send this link to the leader you want to add to the network",
       });
-      onSuccess?.(link);
     } catch (error) {
       console.error("Error generating invite:", error);
       toast({

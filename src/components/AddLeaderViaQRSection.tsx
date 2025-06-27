@@ -149,8 +149,7 @@ export function AddLeaderViaQRSection({ onSuccess }: AddLeaderViaQRSectionProps)
         </Button>
         {isLoading && (
           <span className="text-secondary text-sm mt-8">
-            Sending <span className="font-bold">two</span> transactions. Please keep this page
-            open...
+            This may take a moment. Please keep this page open.
           </span>
         )}
       </div>

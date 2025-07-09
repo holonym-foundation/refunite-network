@@ -2,10 +2,11 @@
 
 import { INVITE_TTL_SECONDS } from "@/lib/constants";
 import { verifyNetworkInviteSignature } from "@/lib/eip712";
-import { supabase, supabaseAdmin } from "@/lib/supabase/client";
+import client from "@/client/turso";
 import { marshalTypedData, unmarshalTypedData } from "@/lib/utils/serialize";
 import { randomBytes } from "crypto";
 import { getAddress, Hash } from "viem";
+import assert from "assert";
 
 export type VerifyInviteResult = {
   success: boolean;
@@ -81,24 +82,16 @@ export async function createInvite(
     const marshaledTypedData = marshalTypedData(typedData);
 
     // Store invite in database
-    const { error, data } = await supabaseAdmin
-      .from("invites")
-      .insert({
-        invite_code: inviteCode,
-        inviter_signature: signature,
-        typed_data: marshaledTypedData,
-      })
-      .select("invite_code")
-      .single();
+    const result = await client.execute(
+      "INSERT INTO invites (invite_code, inviter_signature, typed_data) VALUES (?, ?, ?)",
+      [inviteCode, signature, JSON.stringify(marshaledTypedData)]
+    );
 
-    if (error) {
-      console.error("Error storing invite:", error);
-      return { success: false, error: "Failed to store invite" };
-    }
+    assert(result.rowsAffected === 1, "Failed to store invite");
 
     return {
       success: true,
-      inviteCode: data.invite_code,
+      inviteCode,
     };
   } catch (error) {
     console.error("Error creating invite:", error);
@@ -111,17 +104,16 @@ export async function createInvite(
  */
 export async function getInviteByCode(inviteCode: string) {
   try {
-    const { data, error } = await supabase
-      .from("invites")
-      .select("*")
-      .eq("invite_code", inviteCode)
-      .single();
+    const result = await client.execute("SELECT * FROM invites WHERE invite_code = ?", [
+      inviteCode,
+    ]);
 
-    if (error || !data) {
+    if (result.rows.length === 0) {
       return { success: false, error: "Invalid invite code" };
     }
 
     // Unmarshal any BigInt values in typed_data
+    const data = result.rows[0];
     if (data.typed_data) {
       data.typed_data = unmarshalTypedData(data.typed_data);
     }
@@ -135,17 +127,16 @@ export async function getInviteByCode(inviteCode: string) {
 
 export async function verifyInvite(inviteCode: string): Promise<VerifyInviteResult> {
   try {
-    const { data, error } = await supabaseAdmin
-      .from("invites")
-      .select("*")
-      .eq("invite_code", inviteCode)
-      .single();
+    const result = await client.execute("SELECT * FROM invites WHERE invite_code = ?", [
+      inviteCode,
+    ]);
 
-    if (error || !data) {
+    if (result.rows.length === 0) {
       return { success: false, error: "Invalid invite code" };
     }
 
-    const typedData = unmarshalTypedData(data.typed_data);
+    const data = result.rows[0];
+    const typedData = unmarshalTypedData(JSON.parse(data.typed_data as string));
 
     // Check if invite has expired
     const signatureTimestamp = Number(typedData.message.createdAt);
@@ -162,7 +153,7 @@ export async function verifyInvite(inviteCode: string): Promise<VerifyInviteResu
     return {
       success: true,
       inviterAddress: typedData.message.inviterAddress,
-      signature: data.inviter_signature,
+      signature: data.inviter_signature as string,
       typedData,
     };
   } catch (error) {

@@ -224,7 +224,7 @@ Following the [local developement guide](https://docs.turso.tech/local-developme
 
 ## Database Schema
 
-The application uses Supabase (PostgreSQL) for data storage. The main table is `invites`, created by running `dump.ql`
+The application uses Tursu (libSQL) for data storage. The main table is `invites`, created by running `dump.ql` for local development (which will actually run `sqlite3`). Turso we manage using their cloud dashboard.
 
 The table also has:
 

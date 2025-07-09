@@ -87,7 +87,10 @@ export async function createInvite(
       [inviteCode, signature, JSON.stringify(marshaledTypedData)]
     );
 
-    assert(result.rowsAffected === 1, "Failed to store invite");
+    if (result.rowsAffected !== 1) {
+      console.error("Failed to store invite: no rows affected", result);
+      return { success: false, error: "Failed to store invite" };
+    }
 
     return {
       success: true,

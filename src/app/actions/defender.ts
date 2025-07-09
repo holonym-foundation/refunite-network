@@ -5,6 +5,7 @@ import { Address, Hash, TypedDataDefinition } from "viem";
 import { verifyNetworkInviteSignature } from "@/lib/eip712";
 import { INVITE_TTL_SECONDS } from "@/lib/constants";
 import { marshalTypedData } from "@/lib/utils/serialize";
+import client from "@/client/turso";
 
 type AddLeaderViaSignedTypedDataResult = {
   mintHatTxHash?: string;
@@ -75,6 +76,12 @@ export async function addLeaderViaSignedTypedData(
     if (result.error) {
       throw new Error(result.error);
     }
+
+    // Set invite to user
+    await client.execute(
+      "UPDATE invites SET used_by = ?, used_at = ? WHERE inviter_signature = ?",
+      [recipient, new Date().toISOString(), signature]
+    );
 
     return {
       mintHatTxHash: result.mintHatTxHash,

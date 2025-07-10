@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 
 import SafeApiKit from "@safe-global/api-kit";
-import { useAccount } from "wagmi";
+import { useAccount, useChainId } from "wagmi";
 
-import { CHAIN_ID, LEADER_SAFE_ADDRESS } from "../lib/constants";
+import { LEADER_SAFE_ADDRESS } from "../lib/constants";
 
 export const useSafeOwner = () => {
   const { address: account } = useAccount();
+  const chainId = useChainId();
   const [isMultisigOwner, setIsMultisigOwner] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
@@ -41,10 +42,10 @@ export const useSafeOwner = () => {
       }
     };
 
-    if (CHAIN_ID && LEADER_SAFE_ADDRESS) {
-      checkSafeOwnership(CHAIN_ID, LEADER_SAFE_ADDRESS);
+    if (chainId && LEADER_SAFE_ADDRESS) {
+      checkSafeOwnership(chainId.toString(), LEADER_SAFE_ADDRESS);
     }
-  }, [account]);
+  }, [account, chainId]);
 
   return {
     isMultisigOwner,

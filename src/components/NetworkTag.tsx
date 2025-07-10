@@ -1,6 +1,7 @@
 "use client";
 
 import { useChainId } from "wagmi";
+import { defaultChain } from "../wagmi/chain-config";
 
 export function NetworkTag() {
   const chainId = useChainId();
@@ -10,15 +11,18 @@ export function NetworkTag() {
     return null;
   }
 
+  // Use defaultChain if chainId is undefined (no wallet connected)
+  const currentChainId = chainId || defaultChain.id;
+
   // Show network name based on chain ID
   const getNetworkName = () => {
-    switch (chainId) {
+    switch (currentChainId) {
       case 11155111:
         return "sepolia";
       case 42220:
         return "celo";
       default:
-        return "unknown";
+        return `unknown (${currentChainId})`;
     }
   };
 

@@ -8,6 +8,7 @@ import { ChainNotConfiguredError, createConnector } from "@wagmi/core";
 import { Chain, getAddress, SwitchChainError, UserRejectedRequestError } from "viem";
 
 import { silkConfig } from "./silk-config";
+import { defaultChain } from "./chain-config";
 
 /**
  * Creates a WAGMI connector for the Silk Wallet SDK
@@ -45,8 +46,12 @@ export default function silk(options: InitSilkOptions = silkConfig) {
         }
 
         let currentChainId = await this.getChainId();
-        if (chainId && currentChainId !== chainId) {
-          const chain = await this.switchChain!({ chainId }).catch((error) => {
+
+        // If no specific chainId is provided, use the default chain
+        const targetChainId = chainId || defaultChain.id;
+
+        if (currentChainId !== targetChainId) {
+          const chain = await this.switchChain!({ chainId: targetChainId }).catch((error) => {
             if (error.code === UserRejectedRequestError.code) throw error;
             return { id: currentChainId };
           });

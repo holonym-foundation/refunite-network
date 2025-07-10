@@ -33,9 +33,11 @@ function AccountPage() {
             abi: HatsAbi,
             functionName: "isWearerOfHat",
             args: [address, hatsId],
+            chainId: chainId,
           });
           setHasHat(rawHatData); // active flag of hat
         } catch (error) {
+          console.error("Error checking hat status:", error);
           setIsHatError(true);
         } finally {
           setIsHatLoading(false);
@@ -43,7 +45,7 @@ function AccountPage() {
       }
     };
     checkHat();
-  }, [address, hatsId, hatsContractAddress]);
+  }, [address, hatsId, hatsContractAddress, chainId]);
 
   if (!isConnected) {
     return (

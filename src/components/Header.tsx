@@ -6,6 +6,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { ConnectButton } from "./ConnectButton";
+import { NetworkTag } from "./NetworkTag";
 import { Button } from "./ui/button";
 
 import en from "@/content/en";
@@ -25,16 +26,19 @@ export function Header() {
           <nav className="px-4 lg:px-6 py-4" aria-label="Main Navigation">
             <div className="flex flex-col lg:flex-col justify-between items-center gap-4">
               <div className="flex w-full justify-between items-center">
-                <Link href="/" className="flex items-center">
-                  <Image
-                    src="/logo.svg"
-                    alt="Refunite Relay ID logo"
-                    width={120}
-                    height={48}
-                    priority
-                    className="h-14 w-auto"
-                  />
-                </Link>
+                <div className="flex flex-row items-center gap-2">
+                  <Link href="/" className="flex items-center">
+                    <Image
+                      src="/logo.svg"
+                      alt="Refunite Relay ID logo"
+                      width={120}
+                      height={48}
+                      priority
+                      className="h-14 w-auto"
+                    />
+                  </Link>
+                  <NetworkTag />
+                </div>
 
                 <div className="flex items-center gap-2">
                   <div className="hidden lg:flex items-center">

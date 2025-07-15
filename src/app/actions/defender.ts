@@ -4,6 +4,12 @@ import { Hash, TypedDataDefinition } from "viem";
 import { marshalTypedData } from "@/lib/utils/serialize";
 import { generateWebhookSignature } from "@/lib/utils/webhook-security";
 import { sendOnboardingFailedMessage, sendOnboardingSuccessMessage } from "@/lib/slack/webhook";
+import {
+  createDirectReservation,
+  reserveInvite,
+  confirmReservation,
+  rollbackReservation,
+} from "@/lib/onboarding/reservations";
 
 type AddLeaderViaSignedTypedDataResult = {
   mintHatTxHash?: string;
@@ -55,7 +61,7 @@ export async function addLeaderViaSignedTypedData(
 
     if (flowType === "direct") {
       // Direct onboarding: create reservation first
-      const directResult = await callDirectOnboardAPI(reservationPayload);
+      const directResult = await createDirectReservation(reservationPayload);
 
       if (!directResult.success) {
         return { error: directResult.error };
@@ -63,7 +69,7 @@ export async function addLeaderViaSignedTypedData(
 
       reservationId = directResult.reservationId!;
     } else if (flowType === "invite") {
-      const validateResult = await callValidateAPI(reservationPayload);
+      const validateResult = await reserveInvite(reservationPayload);
 
       if (!validateResult.success) {
         return { error: validateResult.error };
@@ -113,7 +119,7 @@ export async function addLeaderViaSignedTypedData(
 
     if (!response.ok) {
       // Rollback reservation on Defender failure
-      await callRollbackAPI(reservationId, "blockchain_failure", apiToken, appUrl);
+      await rollbackReservation({ reservationId, reason: "blockchain_failure" });
       throw new Error(`Defender webhook error: ${response.status}`);
     }
 
@@ -122,7 +128,7 @@ export async function addLeaderViaSignedTypedData(
 
     if (result.error) {
       // Rollback reservation on transaction failure
-      await callRollbackAPI(reservationId, "blockchain_failure", apiToken, appUrl);
+      await rollbackReservation({ reservationId, reason: "blockchain_failure" });
       throw new Error(result.error);
     }
 
@@ -139,13 +145,11 @@ export async function addLeaderViaSignedTypedData(
     );
 
     // Step 3: Confirm successful completion
-    const confirmResult = await callConfirmAPI({
+    const confirmResult = await confirmReservation({
       reservationId,
       mintHatTxHash: result.mintHatTxHash,
       claimSignerTxHash: result.claimSignerTxHash,
       recipient,
-      apiToken,
-      appUrl,
     });
 
     if (!confirmResult.success) {
@@ -186,135 +190,5 @@ export async function addLeaderViaSignedTypedData(
   } catch (error) {
     console.error("Error in defender action:", error);
     return { error: "Failed to process request" };
-  }
-}
-
-// Helper functions for API calls
-async function callDirectOnboardAPI(data: {
-  signature: Hash;
-  typedData: TypedDataDefinition;
-  recipient: string;
-  inviterAddress: string;
-  apiToken: string;
-  appUrl: string;
-}): Promise<{ success: boolean; reservationId?: string; error?: string }> {
-  try {
-    const response = await fetch(`${data.appUrl}/api/invites/direct`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${data.apiToken}`,
-      },
-      body: JSON.stringify({
-        signature: data.signature,
-        typedData: marshalTypedData(data.typedData),
-        recipient: data.recipient,
-        inviterAddress: data.inviterAddress,
-      }),
-    });
-
-    const result = await response.json();
-
-    if (!response.ok) {
-      return { success: false, error: result.error || "Direct onboard API failed" };
-    }
-
-    return { success: true, reservationId: result.reservationId };
-  } catch (error) {
-    console.error("Direct onboard API error:", error);
-    return { success: false, error: "Failed to call direct onboard API" };
-  }
-}
-
-async function callValidateAPI(data: {
-  signature: Hash;
-  typedData: TypedDataDefinition;
-  recipient: string;
-  inviterAddress: string;
-  apiToken: string;
-  appUrl: string;
-}): Promise<{ success: boolean; reservationId?: string; error?: string }> {
-  try {
-    const response = await fetch(`${data.appUrl}/api/invites/reserve`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${data.apiToken}`,
-      },
-      body: JSON.stringify({
-        signature: data.signature,
-        typedData: marshalTypedData(data.typedData),
-        recipient: data.recipient,
-        inviterAddress: data.inviterAddress,
-      }),
-    });
-
-    const result = await response.json();
-
-    if (!response.ok) {
-      return { success: false, error: result.error || "Validate API failed" };
-    }
-
-    return { success: true, reservationId: result.reservationId };
-  } catch (error) {
-    console.error("Validate API error:", error);
-    return { success: false, error: "Failed to call validate API" };
-  }
-}
-
-async function callConfirmAPI(data: {
-  reservationId: string;
-  mintHatTxHash: string;
-  claimSignerTxHash: string;
-  recipient: string;
-  apiToken: string;
-  appUrl: string;
-}): Promise<{ success: boolean; error?: string }> {
-  try {
-    const response = await fetch(`${data.appUrl}/api/reservations/confirm`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${data.apiToken}`,
-      },
-      body: JSON.stringify({
-        reservationId: data.reservationId,
-        mintHatTxHash: data.mintHatTxHash,
-        claimSignerTxHash: data.claimSignerTxHash,
-        recipient: data.recipient,
-      }),
-    });
-
-    const result = await response.json();
-
-    if (!response.ok) {
-      return { success: false, error: result.error || "Confirm API failed" };
-    }
-
-    return { success: true };
-  } catch (error) {
-    console.error("Confirm API error:", error);
-    return { success: false, error: "Failed to call confirm API" };
-  }
-}
-
-async function callRollbackAPI(
-  reservationId: string,
-  reason: string,
-  apiToken: string,
-  appUrl: string
-): Promise<void> {
-  try {
-    await fetch(`${appUrl}/api/reservations/rollback`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiToken}`,
-      },
-      body: JSON.stringify({ reservationId, reason }),
-    });
-  } catch (error) {
-    console.error("Failed to rollback reservation:", error);
-    // Log for manual intervention
   }
 }

@@ -2,7 +2,9 @@ import { createInvite } from "@/app/actions/invite";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { useSilkSigner } from "@/hooks/useSilkSigner";
+import { INVITE_TTL_SECONDS } from "@/lib/constants";
 import { createNetworkInviteTypedData, generateNonce } from "@/lib/eip712";
+import { formatDistanceToNow } from "date-fns";
 import { useState } from "react";
 import { useAccount } from "wagmi";
 
@@ -69,6 +71,10 @@ export function AddLeaderViaInviteLinkSection({ disabled }: InviteLinkSectionPro
     window.open(whatsappUrl, "_blank");
   };
 
+  const inviteExpiryText = formatDistanceToNow(new Date(Date.now() + INVITE_TTL_SECONDS * 1000), {
+    addSuffix: true,
+  });
+
   return (
     <div className="mt-8 pt-8 border-t border-slate-200">
       <h2 className="text-lg font-semibold mb-4">Send invite link</h2>
@@ -101,7 +107,7 @@ export function AddLeaderViaInviteLinkSection({ disabled }: InviteLinkSectionPro
         </div>
         {inviteLink && (
           <div className="text-sm text-slate-500">
-            <p>Invite link expires in 24 hours</p>
+            <p>Invite link expires in {inviteExpiryText}</p>
           </div>
         )}
       </div>

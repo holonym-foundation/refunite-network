@@ -3,6 +3,7 @@
 import { Hash, TypedDataDefinition } from "viem";
 import { marshalTypedData } from "@/lib/utils/serialize";
 import { generateWebhookSignature } from "@/lib/utils/webhook-security";
+import { sendOnboardingFailedMessage, sendOnboardingSuccessMessage } from "@/lib/slack/webhook";
 
 type AddLeaderViaSignedTypedDataResult = {
   mintHatTxHash?: string;
@@ -149,6 +150,20 @@ export async function addLeaderViaSignedTypedData(
 
     if (!confirmResult.success) {
       console.error("Failed to confirm completion:", confirmResult.error);
+
+      await sendOnboardingFailedMessage({
+        inviterAddress,
+        inviteFlow: flowType,
+        inviteCode: reservationId,
+        error: confirmResult.error || "Unknown error",
+        payload: {
+          reservationId,
+          webhookError: result.error,
+          mintHatTxHash: result.mintHatTxHash,
+          claimSignerTxHash: result.claimSignerTxHash,
+          recipient,
+        },
+      });
       // Note: Blockchain transactions succeeded, but database confirmation failed
       return {
         error: `Blockchain transactions completed successfully, but failed to update database: ${confirmResult.error}. Transaction hashes: ${result.mintHatTxHash}, ${result.claimSignerTxHash}`,
@@ -156,6 +171,13 @@ export async function addLeaderViaSignedTypedData(
         claimSignerTxHash: result.claimSignerTxHash,
       };
     }
+
+    await sendOnboardingSuccessMessage({
+      inviterAddress,
+      leaderAddress: recipient,
+      inviteCode: reservationId,
+      inviteFlow: flowType,
+    });
 
     return {
       mintHatTxHash: result.mintHatTxHash,

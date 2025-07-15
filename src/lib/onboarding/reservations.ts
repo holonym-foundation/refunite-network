@@ -43,7 +43,7 @@ const rollbackSchema = z.object({
 // --------------------------------------------------
 
 // Reservation expiry duration (in milliseconds)
-export const RESERVATION_EXPIRY_MS = 10 * 60 * 1000; // 10 minutes
+export const RESERVATION_EXPIRY_MS = 60 * 1000; // 60 seconds
 
 export async function createDirectReservation(params: {
   signature: Hash;

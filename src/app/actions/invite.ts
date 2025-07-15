@@ -2,9 +2,10 @@
 
 import { verifyNetworkInviteSignature } from "@/lib/eip712";
 import { DB } from "@/lib/database/service";
-import { marshalTypedData, unmarshalTypedData } from "@/lib/utils/serialize";
+import { unmarshalTypedData } from "@/lib/utils/serialize";
 import { randomBytes } from "crypto";
 import { getAddress, Hash } from "viem";
+import { INVITE_TTL_SECONDS } from "@/lib/constants";
 
 export type VerifyInviteResult = {
   success: boolean;
@@ -19,6 +20,8 @@ export type CreateInviteResult = {
   inviteCode?: string;
   error?: string;
 };
+
+const SIGNATURE_TTL_SECONDS = 300; // 5 minutes;
 
 function generateInviteCode(): string {
   const bytes = randomBytes(6);
@@ -66,18 +69,18 @@ export async function createInvite(
     // Extract data from the verified typed data
     const { createdAt } = typedData.message;
 
-    // Check if signature creation time is not too old (24 hours)
+    // Check if signature creation time is not too old
     const signatureTimestamp = Number(createdAt);
     const currentTimestamp = Math.floor(Date.now() / 1000);
-    if (currentTimestamp - signatureTimestamp > 86400) {
+    if (currentTimestamp - signatureTimestamp > SIGNATURE_TTL_SECONDS) {
       return { success: false, error: "Signature has expired" };
     }
 
     // Generate unique invite code
     const inviteCode = generateInviteCode();
 
-    // Create invitation using new database service
-    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+    // Create invitation
+    const expiresAt = new Date(Date.now() + INVITE_TTL_SECONDS * 1000);
 
     const invitation = await DB.createInvitation({
       invite_code: inviteCode,

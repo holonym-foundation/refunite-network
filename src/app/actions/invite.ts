@@ -1,11 +1,11 @@
 "use server";
 
-import { INVITE_TTL_SECONDS } from "@/lib/constants";
 import { verifyNetworkInviteSignature } from "@/lib/eip712";
-import { supabase, supabaseAdmin } from "@/lib/supabase/client";
-import { marshalTypedData, unmarshalTypedData } from "@/lib/utils/serialize";
+import { DB } from "@/lib/database/service";
+import { unmarshalTypedData } from "@/lib/utils/serialize";
 import { randomBytes } from "crypto";
 import { getAddress, Hash } from "viem";
+import { INVITE_TTL_SECONDS } from "@/lib/constants";
 
 export type VerifyInviteResult = {
   success: boolean;
@@ -20,6 +20,8 @@ export type CreateInviteResult = {
   inviteCode?: string;
   error?: string;
 };
+
+const SIGNATURE_TTL_SECONDS = 300; // 5 minutes;
 
 function generateInviteCode(): string {
   const bytes = randomBytes(6);
@@ -67,38 +69,42 @@ export async function createInvite(
     // Extract data from the verified typed data
     const { createdAt } = typedData.message;
 
-    // Check if signature creation time is not too old (24 hours)
+    // Check if signature creation time is not too old
     const signatureTimestamp = Number(createdAt);
     const currentTimestamp = Math.floor(Date.now() / 1000);
-    if (currentTimestamp - signatureTimestamp > 86400) {
+    if (currentTimestamp - signatureTimestamp > SIGNATURE_TTL_SECONDS) {
       return { success: false, error: "Signature has expired" };
     }
 
     // Generate unique invite code
     const inviteCode = generateInviteCode();
 
-    // Marshal BigInt values in typedData before storing
-    const marshaledTypedData = marshalTypedData(typedData);
+    // Create invitation
+    const expiresAt = new Date(Date.now() + INVITE_TTL_SECONDS * 1000);
 
-    // Store invite in database
-    const { error, data } = await supabaseAdmin
-      .from("invites")
-      .insert({
-        invite_code: inviteCode,
-        inviter_signature: signature,
-        typed_data: marshaledTypedData,
-      })
-      .select("invite_code")
-      .single();
+    const invitation = await DB.createInvitation({
+      invite_code: inviteCode,
+      flow_type: "invite",
+      inviter_address: inviterAddress,
+      recipient_address: null, // Not known yet for invite flow
+      signature,
+      typed_data: typedData,
+      nonce,
+      expires_at: expiresAt.toISOString(),
+    });
 
-    if (error) {
-      console.error("Error storing invite:", error);
-      return { success: false, error: "Failed to store invite" };
-    }
+    // Log audit event
+    await DB.logAudit({
+      entity_type: "invitation",
+      entity_id: invitation.id,
+      action: "create",
+      actor_address: inviterAddress,
+      metadata: { flow_type: "invite", invite_code: inviteCode },
+    });
 
     return {
       success: true,
-      inviteCode: data.invite_code,
+      inviteCode,
     };
   } catch (error) {
     console.error("Error creating invite:", error);
@@ -111,20 +117,17 @@ export async function createInvite(
  */
 export async function getInviteByCode(inviteCode: string) {
   try {
-    const { data, error } = await supabase
-      .from("invites")
-      .select("*")
-      .eq("invite_code", inviteCode)
-      .single();
+    const invitation = await DB.findInvitation({ invite_code: inviteCode });
 
-    if (error || !data) {
+    if (!invitation) {
       return { success: false, error: "Invalid invite code" };
     }
 
     // Unmarshal any BigInt values in typed_data
-    if (data.typed_data) {
-      data.typed_data = unmarshalTypedData(data.typed_data);
-    }
+    const data = {
+      ...invitation,
+      typed_data: unmarshalTypedData(invitation.typed_data),
+    };
 
     return { success: true, data };
   } catch (error) {
@@ -135,34 +138,37 @@ export async function getInviteByCode(inviteCode: string) {
 
 export async function verifyInvite(inviteCode: string): Promise<VerifyInviteResult> {
   try {
-    const { data, error } = await supabaseAdmin
-      .from("invites")
-      .select("*")
-      .eq("invite_code", inviteCode)
-      .single();
+    const invitation = await DB.findInvitation({ invite_code: inviteCode });
 
-    if (error || !data) {
+    if (!invitation) {
       return { success: false, error: "Invalid invite code" };
     }
 
-    const typedData = unmarshalTypedData(data.typed_data);
-
-    // Check if invite has expired
-    const signatureTimestamp = Number(typedData.message.createdAt);
-    const currentTimestamp = Math.floor(Date.now() / 1000);
-    if (currentTimestamp - signatureTimestamp > INVITE_TTL_SECONDS) {
-      return { success: false, error: "Invite has expired" };
+    // Get invitation status using view
+    const status = await DB.getInvitationStatus(invitation.id);
+    if (!status) {
+      return { success: false, error: "Invalid invite code" };
     }
 
-    // Check if invite has been used
-    if (data.used_at) {
+    // Check status
+    if (status.status === "completed") {
       return { success: false, error: "Invite has already been used" };
     }
 
+    if (status.status === "reserved") {
+      return { success: false, error: "Invite is currently reserved" };
+    }
+
+    if (status.status === "expired") {
+      return { success: false, error: "Invite has expired" };
+    }
+
+    const typedData = unmarshalTypedData(invitation.typed_data);
+
     return {
       success: true,
-      inviterAddress: typedData.message.inviterAddress,
-      signature: data.inviter_signature,
+      inviterAddress: invitation.inviter_address,
+      signature: invitation.signature,
       typedData,
     };
   } catch (error) {

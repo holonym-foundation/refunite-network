@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 import { useSafeOwner } from "@/hooks/useSafeOwner";
 import { useSilkSigner } from "@/hooks/useSilkSigner";
-import { createNetworkInviteTypedData, generateNonce } from "@/lib/eip712";
+import { createDirectOnboardTypedData, generateNonce } from "@/lib/eip712";
 import { QrCode } from "lucide-react";
 import { useState } from "react";
 import { isAddress } from "viem";
@@ -73,8 +73,9 @@ export function AddLeaderViaQRSection({ onSuccess }: AddLeaderViaQRSectionProps)
       }
 
       const nonce = generateNonce();
-      const typedData = createNetworkInviteTypedData({
+      const typedData = createDirectOnboardTypedData({
         inviterAddress: account,
+        recipient,
         nonce,
         chainId,
       });

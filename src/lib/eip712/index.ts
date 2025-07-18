@@ -16,12 +16,20 @@ export const networkInviteSchema = z.object({
   createdAt: z.bigint(),
 });
 
+export const directOnboardSchema = z.object({
+  content: z.string(),
+  inviterAddress: z.string(),
+  recipient: z.string(),
+  nonce: z.string(),
+  createdAt: z.bigint(),
+});
+
 /**
  * Domain definition for the RelayID Network
  * This provides separation between different applications using EIP-712
  */
 const DOMAIN = {
-  name: "RelayID Network",
+  name: "RelayID",
   version: "1",
   verifyingContract: "0x0000000000000000000000000000000000000000",
   // Add chainId dynamically when creating typed data
@@ -32,10 +40,20 @@ const DOMAIN = {
  * The same structure is used for both creating invites and adding leaders
  * since they are the same in the current implementation
  */
-const TYPES = {
+const INVITE_TYPES = {
   NetworkInvite: [
     { name: "content", type: "string" },
     { name: "inviterAddress", type: "address" },
+    { name: "nonce", type: "string" },
+    { name: "createdAt", type: "uint256" },
+  ],
+};
+
+const DIRECT_ONBOARD_TYPES = {
+  DirectOnboard: [
+    { name: "content", type: "string" },
+    { name: "inviterAddress", type: "address" },
+    { name: "recipient", type: "address" },
     { name: "nonce", type: "string" },
     { name: "createdAt", type: "uint256" },
   ],
@@ -71,7 +89,7 @@ export function createNetworkInviteTypedData({
   return {
     domain: domainSchema.parse(domain),
     primaryType: "NetworkInvite",
-    types: TYPES,
+    types: INVITE_TYPES,
     message: networkInviteSchema.parse(message),
   };
 }
@@ -100,4 +118,79 @@ export async function verifyNetworkInviteSignature({
     signature,
     address,
   });
+}
+
+/**
+ * Creates a typed data structure for direct onboarding
+ * Used when inviter directly onboards a specific recipient
+ */
+export function createDirectOnboardTypedData({
+  inviterAddress,
+  recipient,
+  nonce,
+  chainId,
+}: {
+  inviterAddress: Address;
+  recipient: Address;
+  nonce: string;
+  chainId: number;
+}): TypedDataDefinition {
+  const domain = {
+    ...DOMAIN,
+    chainId,
+  };
+
+  const message = {
+    content: "I'm adding another leader",
+    inviterAddress,
+    recipient,
+    nonce,
+    createdAt: BigInt(Math.floor(Date.now() / 1000)),
+  };
+
+  return {
+    domain: domainSchema.parse(domain),
+    primaryType: "DirectOnboard",
+    types: DIRECT_ONBOARD_TYPES,
+    message: directOnboardSchema.parse(message),
+  };
+}
+
+/**
+ * Verifies an EIP-712 signature for direct onboarding with enhanced security
+ */
+export async function verifyDirectOnboardSignature({
+  typedData,
+  signature,
+  address,
+  expectedRecipient,
+}: {
+  typedData: TypedDataDefinition;
+  signature: Hash;
+  address: Address;
+  expectedRecipient: Address;
+}): Promise<boolean> {
+  // 1. Verify the signature itself
+  const isValidSignature = await verifyTypedData({
+    ...typedData,
+    signature,
+    address,
+  });
+
+  if (!isValidSignature) return false;
+
+  // 2. Verify recipient in message (prevents signature reuse)
+  if (typedData.message.recipient !== expectedRecipient) {
+    return false;
+  }
+
+  // 3. Verify createdAt is recent (5-minute window)
+  const currentTime = Math.floor(Date.now() / 1000);
+  const signatureTime = Number(typedData.message.createdAt);
+
+  if (Math.abs(currentTime - signatureTime) > 300) {
+    return false;
+  }
+
+  return true;
 }

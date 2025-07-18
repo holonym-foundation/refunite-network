@@ -17,8 +17,9 @@ A Next.js application facilitating a secure and streamlined onboarding process f
     - [Installation](#installation)
     - [Running the Development Server](#running-the-development-server)
   - [Environment Variables](#environment-variables)
+  - [Local database](#local-database)
   - [Database Schema](#database-schema)
-    - [Invites Table Schema](#invites-table-schema)
+  - [Turso](#turso)
   - [Defender Integration](#defender-integration)
   - [BigInt Serialization/Deserialization](#bigint-serializationdeserialization)
   - [Troubleshooting](#troubleshooting)
@@ -174,10 +175,9 @@ These actions provide a streamlined way to handle server-side operations without
 4. Update the `.env.local` file with your own values:
 
    ```
-   # Supabase
-   NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-   SUPABASE_SERVICE_KEY=your_supabase_service_key
+   # Turso
+   TURSO_DATABASE_URL="file:local.db" -> replace this with a staging or prod deployment url
+   TURSO_AUTH_TOKEN=
 
    # Defender
    DEFENDER_WEBHOOK_URL=your_defender_webhook_url
@@ -205,37 +205,37 @@ Required environment variables:
 
 | Variable                               | Description                              | Public? |
 | -------------------------------------- | ---------------------------------------- | ------- |
-| `NEXT_PUBLIC_SUPABASE_URL`             | Supabase project URL                     | Yes     |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY`        | Supabase anonymous API key               | Yes     |
-| `SUPABASE_SERVICE_KEY`                 | Supabase service role key (admin access) | No      |
 | `DEFENDER_WEBHOOK_URL`                 | OpenZeppelin Defender webhook URL        | No      |
 | `NEXT_PUBLIC_HATS_TREE_ID`             | Hats Protocol tree ID                    | Yes     |
 | `NEXT_PUBLIC_HATS_LEADER_ID`           | Leader hat ID in Hats Protocol           | Yes     |
 | `NEXT_PUBLIC_HATS_LEADER_SAFE_ACCOUNT` | Safe account address for leaders         | Yes     |
 | `NEXT_PUBLIC_CHAIN_ID`                 | Blockchain network chain ID              | Yes     |
+| `TURSO_DATABASE_URL`                   | URL to Turso instance                    | No      |
+| `TURSO_AUTH_TOKEN`                     | Token to connect to Turso Cloud instance | No      |
 
 **Important**: `NEXT_PUBLIC_` variables are exposed to the browser. Do not store sensitive secrets with this prefix.
 
+## Local database
+
+Following the [local developement guide](https://docs.turso.tech/local-development):
+
+- `turso db shell staging-db .dump > dump.sql`
+- `cat dump.sql | sqlite3 local.db`
+
 ## Database Schema
 
-The application uses Supabase (PostgreSQL) for data storage. The main table is `invites`, created by the migration in `supabase/migrations/20250506121339_create_invites_table.sql`.
-
-### Invites Table Schema
-
-| Column              | Type      | Description                                          |
-| ------------------- | --------- | ---------------------------------------------------- |
-| `id`                | UUID      | Primary key, auto-generated                          |
-| `invite_code`       | TEXT      | Unique invite code for sharing                       |
-| `inviter_signature` | TEXT      | EIP-712 signature from the inviter                   |
-| `typed_data`        | JSONB     | Structured data that was signed (serialized)         |
-| `used_at`           | TIMESTAMP | When the invite was used (null if unused)            |
-| `used_by`           | TEXT      | Address of user who used the invite (null if unused) |
+The application uses Tursu (libSQL) for data storage. The main table is `invites`, created by running `dump.ql` for local development (which will actually run `sqlite3`). Turso we manage using their cloud dashboard.
 
 The table also has:
 
 - An index on `inviter_signature` for faster lookups
-- Row Level Security enabled
-- A policy restricting access to the service role only
+
+## Turso
+
+We maintain two databases:
+
+- `relay-id-tst`
+- `relay-id-prd`
 
 ## Defender Integration
 

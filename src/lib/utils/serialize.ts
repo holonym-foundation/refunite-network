@@ -38,20 +38,34 @@ export function unmarshalTypedData(data: any): any {
     return data;
   }
 
+  // If data is a string, parse it as JSON first
+  if (typeof data === "string") {
+    try {
+      data = JSON.parse(data);
+    } catch (error) {
+      console.error("Failed to parse typedData string:", error);
+      return data;
+    }
+  }
+
+  // Always preserve all fields and transform only what's needed
+  const result = { ...data };
+
   // Handle domain object
   if (data.domain) {
     const domain = { ...data.domain };
     if (typeof domain.chainId === "string" && /^\d+$/.test(domain.chainId)) {
       domain.chainId = Number(domain.chainId);
     }
-    return {
-      ...data,
-      domain,
-      message: data.message ? unmarshalMessage(data.message) : data.message,
-    };
+    result.domain = domain;
   }
 
-  return data;
+  // Handle message object
+  if (data.message) {
+    result.message = unmarshalMessage(data.message);
+  }
+
+  return result;
 }
 
 /**

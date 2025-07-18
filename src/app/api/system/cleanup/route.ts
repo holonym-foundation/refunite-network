@@ -2,6 +2,48 @@ import { NextRequest, NextResponse } from "next/server";
 import { validateApiToken } from "@/lib/utils/api-auth";
 import { DB } from "@/lib/database/service";
 
+async function performCleanup() {
+  // Clean up expired reservations using database service
+  const cleanedCount = await DB.cleanupExpiredReservations();
+
+  // Log audit event for cleanup
+  if (cleanedCount > 0) {
+    await DB.logAudit({
+      entity_type: "reservation",
+      entity_id: 0, // System action, no specific entity
+      action: "expire",
+      actor_address: null,
+      metadata: { cleaned_count: cleanedCount, cleanup_type: "automatic" },
+    });
+  }
+
+  console.log(`Cleaned up ${cleanedCount} expired reservations`);
+
+  return {
+    success: true,
+    cleanedCount,
+    cleanupTime: new Date().toISOString(),
+  };
+}
+
+export async function GET(request: NextRequest) {
+  // Vercel Functions triggered by a cron job on Vercel will always contain vercel-cron/1.0 as the user agent.
+  // https://vercel.com/docs/cron-jobs
+  try {
+    const userAgent = request.headers.get("user-agent");
+    if (!userAgent || !userAgent.includes("vercel-cron/1.0")) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // For cron jobs, we don't require authentication since Vercel handles security
+    const result = await performCleanup();
+    return NextResponse.json(result);
+  } catch (error) {
+    console.error("Error in /api/system/cleanup (GET):", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     // Check bearer token
@@ -16,29 +58,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Clean up expired reservations using database service
-    const cleanedCount = await DB.cleanupExpiredReservations();
-
-    // Log audit event for cleanup
-    if (cleanedCount > 0) {
-      await DB.logAudit({
-        entity_type: "reservation",
-        entity_id: 0, // System action, no specific entity
-        action: "expire",
-        actor_address: null,
-        metadata: { cleaned_count: cleanedCount, cleanup_type: "automatic" },
-      });
-    }
-
-    console.log(`Cleaned up ${cleanedCount} expired reservations`);
-
-    return NextResponse.json({
-      success: true,
-      cleanedCount,
-      cleanupTime: new Date().toISOString(),
-    });
+    const result = await performCleanup();
+    return NextResponse.json(result);
   } catch (error) {
-    console.error("Error in /api/system/cleanup:", error);
+    console.error("Error in /api/system/cleanup (POST):", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

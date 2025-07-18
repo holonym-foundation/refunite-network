@@ -7,7 +7,7 @@ export function NetworkTag() {
   const chainId = useChainId();
 
   // Only show in development and preview builds, not in production
-  if (process.env.VERCEL_ENV === "production") {
+  if (process.env.NEXT_PUBLIC_VERCEL_ENV === "production") {
     return null;
   }
 

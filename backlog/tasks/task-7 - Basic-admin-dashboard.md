@@ -1,9 +1,10 @@
 ---
 id: task-7
 title: Basic admin dashboard
-status: To Do
+status: Done
 assignee: []
 created_date: '2025-07-22'
+updated_date: '2025-07-22'
 labels: []
 dependencies: []
 ---

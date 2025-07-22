@@ -1,5 +1,6 @@
 import { DeviceInfo } from "@/lib/database/types";
 import { SLACK_WEBHOOK_URL } from "@/lib/constants";
+import { DB } from "@/lib/database/service";
 
 export type SlackWebhookMessage = {
   text: string;
@@ -35,131 +36,219 @@ export interface InviteCreatedMessageProps {
   deviceInfo?: Partial<DeviceInfo>;
 }
 
-const buildInviteCreatedMessage = (props: InviteCreatedMessageProps): SlackWebhookMessage => {
+// --- Refactored Slack message builders for Block Kit best practices, concise device info, and compact metrics line ---
+
+function getDeviceInfoLine(deviceInfo?: Partial<DeviceInfo>) {
+  if (!deviceInfo) return null;
+  const deviceType = deviceInfo.deviceType || "-";
+  const os = deviceInfo.os || "-";
+  const browser = deviceInfo.browser || "-";
+  return `${deviceType} | ${os} | ${browser}`;
+}
+
+// Add metrics line to all message builders
+interface SlackMetrics {
+  totalInvites: number;
+  successfulOnboardings: number;
+  reservedInvites: number;
+}
+
+const buildInviteCreatedMessage = (
+  props: InviteCreatedMessageProps & SlackMetrics
+): SlackWebhookMessage => {
+  const blocks: any[] = [
+    // Header
+    {
+      type: "header",
+      text: {
+        type: "plain_text",
+        text: "Invite Created",
+      },
+    },
+    { type: "divider" },
+    // Key info fields
+    {
+      type: "section",
+      fields: [
+        { type: "mrkdwn", text: `*By*\n\`${props.inviterAddress}\`` },
+        { type: "mrkdwn", text: `*Code*\n\`${props.inviteCode}\`` },
+      ],
+    },
+    // Metrics line
+    {
+      type: "section",
+      text: {
+        type: "mrkdwn",
+        text: `📨 ${props.totalInvites}   ✅ ${props.successfulOnboardings}   ⏳ ${props.reservedInvites}`,
+      },
+    },
+  ];
+  // Device info single line
+  const deviceInfoLine = getDeviceInfoLine(props.deviceInfo);
+  if (deviceInfoLine) {
+    blocks.push({
+      type: "section",
+      text: { type: "mrkdwn", text: deviceInfoLine },
+    });
+  }
   return {
     text: "Invite created",
-    blocks: [
-      {
-        type: "section",
-        text: {
-          type: "mrkdwn",
-          text: `*Invite created by account*\n \`${props.inviterAddress}\``,
-        },
-      },
-      {
-        type: "section",
-        text: {
-          type: "mrkdwn",
-          text: `*Invite code*\n \`${props.inviteCode}\``,
-        },
-      },
-      {
-        type: "section",
-        text: {
-          type: "mrkdwn",
-          text: `*Device info*\n \`${JSON.stringify(props.deviceInfo)}\``,
-        },
-      },
-    ],
+    blocks,
   };
 };
 
 const buildOnboardingSuccessMessage = (
-  props: OnboardingSuccessMessageProps
+  props: OnboardingSuccessMessageProps & SlackMetrics
 ): SlackWebhookMessage => {
+  const blocks: any[] = [
+    // Header
+    {
+      type: "header",
+      text: {
+        type: "plain_text",
+        text: "Onboarding Success",
+      },
+    },
+    { type: "divider" },
+    // Key info fields
+    {
+      type: "section",
+      fields: [
+        { type: "mrkdwn", text: `*New Leader*\n\`${props.leaderAddress}\`` },
+        { type: "mrkdwn", text: `*Invited by*\n\`${props.inviterAddress}\`` },
+        {
+          type: "mrkdwn",
+          text: `*Flow*\n${props.inviteFlow === "direct" ? "Direct" : "Invite Link"}`,
+        },
+        { type: "mrkdwn", text: `*Code*\n\`${props.inviteCode}\`` },
+      ],
+    },
+    // Metrics line
+    {
+      type: "section",
+      text: {
+        type: "mrkdwn",
+        text: `📨 ${props.totalInvites}   ✅ ${props.successfulOnboardings}   ⏳ ${props.reservedInvites}`,
+      },
+    },
+  ];
+  // Device info single line
+  const deviceInfoLine = getDeviceInfoLine(props.deviceInfo);
+  if (deviceInfoLine) {
+    blocks.push({
+      type: "section",
+      text: { type: "mrkdwn", text: deviceInfoLine },
+    });
+  }
   return {
     text: "Onboarding success",
-    blocks: [
-      {
-        type: "section",
-        text: {
-          type: "mrkdwn",
-          text: `*New leader account*\n \`${props.leaderAddress}\``,
-        },
-      },
-      {
-        type: "section",
-        text: {
-          type: "mrkdwn",
-          text: `*Invite created by account*\n \`${props.inviterAddress}\``,
-        },
-      },
-      {
-        type: "section",
-        text: {
-          type: "mrkdwn",
-          text: `*Invite flow: ${props.inviteFlow === "direct" ? "direct" : "invite link"}*\n \`${props.inviteCode}\``,
-        },
-      },
-      {
-        type: "section",
-        text: {
-          type: "mrkdwn",
-          text: `*Device info*\n \`${JSON.stringify(props.deviceInfo)}\``,
-        },
-      },
-    ],
+    blocks,
   };
 };
 
-const buildOnboardingFailedMessage = (props: OnboardingFailedMessageProps): SlackWebhookMessage => {
+const buildOnboardingFailedMessage = (
+  props: OnboardingFailedMessageProps & SlackMetrics
+): SlackWebhookMessage => {
+  const blocks: any[] = [
+    // Header
+    {
+      type: "header",
+      text: {
+        type: "plain_text",
+        text: "Onboarding Failed",
+      },
+    },
+    { type: "divider" },
+    // Error and key info fields
+    {
+      type: "section",
+      fields: [
+        { type: "mrkdwn", text: `*Error*\n\`${props.error}\`` },
+        props.inviterAddress
+          ? { type: "mrkdwn", text: `*Invited by*\n\`${props.inviterAddress}\`` }
+          : undefined,
+        {
+          type: "mrkdwn",
+          text: `*Flow*\n${props.inviteFlow === "direct" ? "Direct" : "Invite Link"}`,
+        },
+        { type: "mrkdwn", text: `*Code*\n\`${props.inviteCode}\`` },
+      ].filter(Boolean),
+    },
+    // Metrics line
+    {
+      type: "section",
+      text: {
+        type: "mrkdwn",
+        text: `📨 ${props.totalInvites}   ✅ ${props.successfulOnboardings}   ⏳ ${props.reservedInvites}`,
+      },
+    },
+  ];
+  // Payload (optional)
+  if (props.payload) {
+    blocks.push({
+      type: "section",
+      text: {
+        type: "mrkdwn",
+        text: `*Payload:*\n\`${JSON.stringify(props.payload)}\``,
+      },
+    });
+  }
+  // Device info single line
+  const deviceInfoLine = getDeviceInfoLine(props.deviceInfo);
+  if (deviceInfoLine) {
+    blocks.push({
+      type: "section",
+      text: { type: "mrkdwn", text: deviceInfoLine },
+    });
+  }
   return {
     text: "Onboarding failed",
-    blocks: [
-      {
-        type: "section",
-        text: {
-          type: "mrkdwn",
-          text: `*Error*\n \`${props.error}\``,
-        },
-      },
-      {
-        type: "section",
-        text: {
-          type: "mrkdwn",
-          text: `*Invite created by account*\n \`${props.inviterAddress}\``,
-        },
-      },
-      {
-        type: "section",
-        text: {
-          type: "mrkdwn",
-          text: `*Invite flow: ${props.inviteFlow === "direct" ? "direct" : "invite link"}*\n \`${props.inviteCode}\``,
-        },
-      },
-      {
-        type: "section",
-        text: {
-          type: "mrkdwn",
-          text: `*Payload*\n \`${JSON.stringify(props.payload)}\``,
-        },
-      },
-      {
-        type: "section",
-        text: {
-          type: "mrkdwn",
-          text: `*Device info*\n \`${JSON.stringify(props.deviceInfo)}\``,
-        },
-      },
-    ],
+    blocks,
   };
 };
 
 const sendInviteCreatedMessage = async (props: InviteCreatedMessageProps) => {
-  const message = buildInviteCreatedMessage(props);
-
+  const [totalInvites, successfulOnboardings, reservedInvites] = await Promise.all([
+    DB.countInvitations(),
+    DB.countCompletions(),
+    DB.countReservedInvites(),
+  ]);
+  const message = buildInviteCreatedMessage({
+    ...props,
+    totalInvites,
+    successfulOnboardings,
+    reservedInvites,
+  });
   await sendMessageToSlack(message);
 };
 
 const sendOnboardingSuccessMessage = async (props: OnboardingSuccessMessageProps) => {
-  const message = buildOnboardingSuccessMessage(props);
-
+  const [totalInvites, successfulOnboardings, reservedInvites] = await Promise.all([
+    DB.countInvitations(),
+    DB.countCompletions(),
+    DB.countReservedInvites(),
+  ]);
+  const message = buildOnboardingSuccessMessage({
+    ...props,
+    totalInvites,
+    successfulOnboardings,
+    reservedInvites,
+  });
   await sendMessageToSlack(message);
 };
 
 const sendOnboardingFailedMessage = async (props: OnboardingFailedMessageProps) => {
-  const message = buildOnboardingFailedMessage(props);
-
+  const [totalInvites, successfulOnboardings, reservedInvites] = await Promise.all([
+    DB.countInvitations(),
+    DB.countCompletions(),
+    DB.countReservedInvites(),
+  ]);
+  const message = buildOnboardingFailedMessage({
+    ...props,
+    totalInvites,
+    successfulOnboardings,
+    reservedInvites,
+  });
   await sendMessageToSlack(message);
 };
 

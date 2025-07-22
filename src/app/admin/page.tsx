@@ -89,7 +89,6 @@ export default function AdminDashboard() {
           <Suspense
             fallback={<span className="font-mono text-yellow-500">Status: Loading...</span>}
           >
-            {/* @ts-expect-error Async Server Component */}
             <HealthStatus />
           </Suspense>
         </CardContent>
@@ -127,7 +126,6 @@ export default function AdminDashboard() {
               </ul>
             }
           >
-            {/* @ts-expect-error Async Server Component */}
             <Metrics />
           </Suspense>
         </CardContent>

@@ -1,0 +1,20 @@
+---
+id: task-001
+title: >-
+  Make explicit invite link can only be used to onboard one leader into the
+  network
+status: To Do
+assignee: []
+created_date: '2025-07-22'
+updated_date: '2025-07-22'
+labels: []
+dependencies: []
+---
+
+## Description
+
+We have a flow where we onboard users via an invite link. Onboarded users can generate an invite link and share them with other users so they can be onboarded as well. Reservations will be reserved when a user triggers the onboarding via the invite link, to support faulty internet connections.
+
+When a user generates an invite link, we should reming them that the linked can only be used for 1 succesful onboarding.
+
+When a user accepts and invite link, we should show them that we reserved this inviteation for them for the defined reservation time.

@@ -1,9 +1,9 @@
 import { SILK_METHOD } from "@silk-wallet/silk-interface-core";
-import { initSilk } from "@silk-wallet/silk-wallet-sdk";
 import {
-  type InitSilkOptions,
+  InitSilkOptions,
+  initSilk,
   SilkEthereumProviderInterface,
-} from "@silk-wallet/silk-wallet-sdk/dist/lib/provider/types";
+} from "@silk-wallet/silk-wallet-sdk";
 import { ChainNotConfiguredError, createConnector } from "@wagmi/core";
 import { Chain, getAddress, SwitchChainError, UserRejectedRequestError } from "viem";
 

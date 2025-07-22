@@ -3,10 +3,10 @@ id: task-001
 title: >-
   Make explicit invite link can only be used to onboard one leader into the
   network
-status: To Do
+status: Done
 assignee: []
-created_date: "2025-07-22"
-updated_date: "2025-07-22"
+created_date: '2025-07-22'
+updated_date: '2025-07-22'
 labels: []
 dependencies: []
 ---

@@ -100,6 +100,9 @@ const en = {
     prompts: {
       loginToAdd: "Please log in to add a leader.",
       two: "two",
+      singleUseInvite: "This invite link can only be used for one successful onboarding.",
+      reservationInfo:
+        "When a user opens this invite link, it will be reserved for them for a limited time.",
     },
     toasts: {
       successAdded: "Successfully added leader ",
@@ -122,6 +125,9 @@ const en = {
       accept: "Please accept the invite to join the Relay Network as a leader.",
       processing: "Processing...",
       acceptInvite: "Accept Invite",
+      reserved:
+        "This invite is now reserved for you. Complete onboarding within the reservation time to claim your spot.",
+      singleUse: "This invite link can only be used once.",
     },
     toasts: {
       errorAccepting: "Error accepting invite:",

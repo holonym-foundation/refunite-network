@@ -195,6 +195,43 @@ export class DB {
   }
 
   // =====================================================
+  // DASHBOARD METRICS
+  // =====================================================
+
+  /**
+   * Count of successful onboardings (completions)
+   */
+  static async countCompletions(): Promise<number> {
+    const result = await client.execute({
+      sql: "SELECT COUNT(*) as count FROM invitations WHERE recipient_address IS NOT NULL",
+      args: [],
+    });
+    return Number(result.rows[0]?.count ?? 0);
+  }
+
+  /**
+   * Count of reserved invites (active reservations)
+   */
+  static async countReservedInvites(): Promise<number> {
+    const result = await client.execute({
+      sql: "SELECT COUNT(*) as count FROM reservations WHERE released_at IS NULL",
+      args: [],
+    });
+    return Number(result.rows[0]?.count ?? 0);
+  }
+
+  /**
+   * Count of total invites
+   */
+  static async countInvitations(): Promise<number> {
+    const result = await client.execute({
+      sql: "SELECT COUNT(*) as count FROM invitations",
+      args: [],
+    });
+    return Number(result.rows[0]?.count ?? 0);
+  }
+
+  // =====================================================
   // TRANSACTION SUPPORT
   // =====================================================
 

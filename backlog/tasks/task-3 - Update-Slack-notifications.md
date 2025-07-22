@@ -1,9 +1,10 @@
 ---
 id: task-3
 title: Update Slack notifications
-status: To Do
+status: Done
 assignee: []
-created_date: "2025-07-22"
+created_date: '2025-07-22'
+updated_date: '2025-07-22'
 labels: []
 dependencies: []
 ---

@@ -207,6 +207,50 @@ const buildOnboardingFailedMessage = (
   };
 };
 
+interface FeedbackMessageProps {
+  sentiment: "up" | "down" | null;
+  feedback: string;
+  user: string;
+  page: string;
+  deviceInfo?: Partial<DeviceInfo>;
+}
+
+function buildFeedbackMessage(props: FeedbackMessageProps): SlackWebhookMessage {
+  const sentimentEmoji = props.sentiment === "up" ? "👍" : props.sentiment === "down" ? "👎" : "";
+  const deviceInfoLine = getDeviceInfoLine(props.deviceInfo);
+  const blocks: any[] = [
+    {
+      type: "header",
+      text: { type: "plain_text", text: "User Feedback" },
+    },
+    { type: "divider" },
+    {
+      type: "section",
+      fields: [
+        { type: "mrkdwn", text: `*Sentiment*\n${sentimentEmoji}` },
+        { type: "mrkdwn", text: `*User*\n${props.user}` },
+        { type: "mrkdwn", text: `*Page*\n${props.page}` },
+        deviceInfoLine ? { type: "mrkdwn", text: `*Device*\n${deviceInfoLine}` } : undefined,
+      ].filter(Boolean),
+    },
+  ];
+  if (props.feedback) {
+    blocks.push({
+      type: "section",
+      text: { type: "mrkdwn", text: `*Feedback*\n${props.feedback}` },
+    });
+  }
+  return {
+    text: "User Feedback",
+    blocks,
+  };
+}
+
+export async function sendFeedbackMessage(props: FeedbackMessageProps) {
+  const message = buildFeedbackMessage(props);
+  await sendMessageToSlack(message);
+}
+
 const sendInviteCreatedMessage = async (props: InviteCreatedMessageProps) => {
   const [totalInvites, successfulOnboardings, reservedInvites] = await Promise.all([
     DB.countInvitations(),

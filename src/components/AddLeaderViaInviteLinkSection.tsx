@@ -72,7 +72,7 @@ export function AddLeaderViaInviteLinkSection({ disabled }: InviteLinkSectionPro
 
   const handleShareWhatsApp = () => {
     if (!inviteLink) return;
-    const message = `Join me on the RelayId Network! Use this invite link: ${inviteLink}`;
+    const message = `Join me on the RelayID Network! RelayID is a decentralized identity system that gives refugees control over their personal data while unlocking access to critical resources like aid, jobs, and financial services. Use this invite link to join: ${inviteLink}`;
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, "_blank");
   };

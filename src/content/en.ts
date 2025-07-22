@@ -116,6 +116,7 @@ const en = {
       verifying: "Verifying invite...",
       invalid: "Invalid Invite",
       accept: "Accept Invite",
+      alreadyOnboarded: "Already Onboarded",
     },
     prompts: {
       onboarded: "You have been successfully onboarded as a leader!",
@@ -128,6 +129,9 @@ const en = {
       reserved:
         "This invite is now reserved for you. Complete onboarding within the reservation time to claim your spot.",
       singleUse: "This invite link can only be used once.",
+      alreadyOnboarded:
+        "The connected account is already onboarded and cannot use this invite link.",
+      checkingWalletStatus: "Checking account status…",
     },
     toasts: {
       errorAccepting: "Error accepting invite:",

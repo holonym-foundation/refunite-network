@@ -7,12 +7,12 @@ import { useAccount } from "wagmi";
 
 import { ConnectButton } from "@/components/ConnectButton";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/components/ui/use-toast";
 import { InfoText } from "@/components/ui/InfoText";
 import { OnboardingProgress, OnboardingStep } from "@/components/OnboardingProgress";
+import { useToast } from "@/components/ui/use-toast";
 
 import { addLeaderViaSignedTypedData } from "@/app/actions/defender";
-import { verifyInvite } from "@/app/actions/invite";
+import { isWalletOnboarded, verifyInvite } from "@/app/actions/invite";
 import en from "@/content/en";
 import { Hash } from "viem";
 
@@ -26,6 +26,8 @@ export default function InvitePage() {
   const [isValid, setIsValid] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [isAlreadyOnboarded, setIsAlreadyOnboarded] = useState<boolean>(false);
+  const [checkingOnboarded, setCheckingOnboarded] = useState<boolean>(false);
 
   const onboardingSteps: OnboardingStep[] = [
     {
@@ -59,6 +61,17 @@ export default function InvitePage() {
 
     verifyInviteCode();
   }, [code]);
+
+  useEffect(() => {
+    if (!address) {
+      setIsAlreadyOnboarded(false);
+      return;
+    }
+    setCheckingOnboarded(true);
+    isWalletOnboarded(address)
+      .then(setIsAlreadyOnboarded)
+      .finally(() => setCheckingOnboarded(false));
+  }, [address]);
 
   const handleAcceptInvite = async () => {
     if (!address) return;
@@ -128,6 +141,41 @@ export default function InvitePage() {
     );
   }
 
+  if (!isConnected) {
+    return (
+      <div className="min-h-screen py-0 sm:py-8 px-0 sm:px-6 md:px-8">
+        <div className="max-w-3xl mx-0 sm:mx-auto">
+          <div className="bg-white p-4 pb-16 sm:p-8 sm:rounded-xl sm:border sm:border-slate-300">
+            <div className="text-center">
+              <h1 className="text-2xl font-semibold mb-4">{en.invitePage.headings.accept}</h1>
+              <p className="text-muted-foreground mb-4">{en.invitePage.prompts.login}</p>
+              <div className="flex justify-center">
+                <ConnectButton />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Check first if the user is already onboarded
+  if (checkingOnboarded) {
+    return (
+      <div className="min-h-screen py-0 sm:py-8 px-0 sm:px-6 md:px-8">
+        <div className="max-w-3xl mx-0 sm:mx-auto">
+          <div className="bg-white p-4 pb-16 sm:p-8 sm:rounded-xl sm:border sm:border-slate-300">
+            <div className="text-center">
+              <h1 className="text-2xl font-semibold mb-4">
+                {en.invitePage.prompts.checkingWalletStatus}
+              </h1>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (isVerifying) {
     return (
       <div className="min-h-screen py-0 sm:py-8 px-0 sm:px-6 md:px-8">
@@ -157,17 +205,19 @@ export default function InvitePage() {
     );
   }
 
-  if (!isConnected) {
+  if (isAlreadyOnboarded) {
     return (
       <div className="min-h-screen py-0 sm:py-8 px-0 sm:px-6 md:px-8">
         <div className="max-w-3xl mx-0 sm:mx-auto">
           <div className="bg-white p-4 pb-16 sm:p-8 sm:rounded-xl sm:border sm:border-slate-300">
             <div className="text-center">
-              <h1 className="text-2xl font-semibold mb-4">{en.invitePage.headings.accept}</h1>
-              <p className="text-muted-foreground mb-4">{en.invitePage.prompts.login}</p>
-              <div className="flex justify-center">
-                <ConnectButton />
-              </div>
+              <h1 className="text-2xl font-semibold mb-4">
+                {en.invitePage.headings.alreadyOnboarded}
+              </h1>
+              <p className="text-muted-foreground mb-6">{en.invitePage.prompts.alreadyOnboarded}</p>
+              <Button asChild>
+                <a href={`/`}>{en.invitePage.prompts.viewAccount}</a>
+              </Button>
             </div>
           </div>
         </div>

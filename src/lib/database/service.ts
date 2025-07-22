@@ -128,6 +128,14 @@ export class DB {
     return result.rows[0] as unknown as Completion;
   }
 
+  static async isAddressOnboarded(address: string): Promise<boolean> {
+    const result = await client.execute({
+      sql: `SELECT 1 FROM completions WHERE LOWER(recipient_address) = LOWER(?) LIMIT 1`,
+      args: [address],
+    });
+    return result.rows.length > 0;
+  }
+
   // =====================================================
   // SECURITY EVENTS
   // =====================================================

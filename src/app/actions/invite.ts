@@ -6,6 +6,7 @@ import { unmarshalTypedData } from "@/lib/utils/serialize";
 import { randomBytes } from "crypto";
 import { getAddress, Hash } from "viem";
 import { INVITE_TTL_SECONDS } from "@/lib/constants";
+import { DeviceInfo } from "@/lib/utils/device-info";
 
 export type VerifyInviteResult = {
   success: boolean;
@@ -40,7 +41,8 @@ export async function createInvite(
   inviterAddress: string,
   signature: string,
   nonce: string,
-  typedData: any
+  typedData: any,
+  deviceInfo?: Partial<DeviceInfo>
 ): Promise<CreateInviteResult> {
   try {
     if (!inviterAddress || !signature || !nonce || !typedData) {
@@ -93,14 +95,17 @@ export async function createInvite(
       expires_at: expiresAt.toISOString(),
     });
 
-    // Log audit event
-    await DB.logAudit({
-      entity_type: "invitation",
-      entity_id: invitation.id,
-      action: "create",
-      actor_address: inviterAddress,
-      metadata: { flow_type: "invite", invite_code: inviteCode },
-    });
+    // Log audit event with device info
+    await DB.logAuditWithDeviceInfo(
+      {
+        entity_type: "invitation",
+        entity_id: invitation.id,
+        action: "create",
+        actor_address: inviterAddress,
+        metadata: { flow_type: "invite", invite_code: inviteCode },
+      },
+      deviceInfo
+    );
 
     return {
       success: true,

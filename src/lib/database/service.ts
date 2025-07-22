@@ -1,16 +1,18 @@
 import client from "@/client/turso";
 import { marshalTypedData } from "@/lib/utils/serialize";
 import {
-  Invitation,
-  Reservation,
-  Completion,
   AuditLogEntry,
-  SecurityEvent,
+  AuditLogMetadata,
+  Completion,
+  CreateCompletionData,
   CreateInvitationData,
   CreateReservationData,
-  CreateCompletionData,
+  DeviceInfo,
   FindInvitationWhere,
+  Invitation,
   InvitationStatus,
+  Reservation,
+  SecurityEvent,
 } from "./types";
 
 export class DB {
@@ -159,6 +161,18 @@ export class DB {
     });
   }
 
+  static async logSecurityEventWithDeviceInfo(
+    event: SecurityEvent,
+    deviceInfo?: Partial<DeviceInfo>
+  ): Promise<void> {
+    const enhancedMetadata: AuditLogMetadata = {
+      ...event.metadata,
+      deviceInfo,
+    };
+
+    await this.logSecurityEvent({ ...event, metadata: enhancedMetadata });
+  }
+
   // =====================================================
   // AUDIT LOGGING
   // =====================================================
@@ -176,6 +190,29 @@ export class DB {
         JSON.stringify(entry.metadata),
       ],
     });
+  }
+
+  /**
+   * Log audit entry with device information automatically included
+   * @param entry Basic audit log entry
+   * @param userAgent Optional user agent string for server-side device detection
+   * @param ipAddress Optional IP address to include in metadata
+   */
+  static async logAuditWithDeviceInfo(
+    entry: AuditLogEntry,
+    deviceInfo?: Partial<DeviceInfo>
+  ): Promise<void> {
+    const enhancedMetadata: AuditLogMetadata = {
+      ...entry.metadata,
+      deviceInfo,
+    };
+
+    const enhancedEntry: AuditLogEntry = {
+      ...entry,
+      metadata: enhancedMetadata,
+    };
+
+    await this.logAudit(enhancedEntry);
   }
 
   // =====================================================

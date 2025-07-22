@@ -9,6 +9,7 @@ import { useState } from "react";
 import { useAccount } from "wagmi";
 import en from "@/content/en";
 import { InfoText } from "@/components/ui/InfoText";
+import { getAuditDeviceInfo } from "@/lib/utils/device-info";
 
 interface InviteLinkSectionProps {
   disabled?: boolean;
@@ -33,7 +34,10 @@ export function AddLeaderViaInviteLinkSection({ disabled }: InviteLinkSectionPro
       });
       const signature = await signTypedData(typedData);
 
-      const result = await createInvite(account, signature, nonce, typedData);
+      // Get client request info for audit logging
+      const deviceInfo = getAuditDeviceInfo();
+
+      const result = await createInvite(account, signature, nonce, typedData, deviceInfo);
 
       if (!result.success) {
         throw new Error(result.error || "Failed to generate invite");

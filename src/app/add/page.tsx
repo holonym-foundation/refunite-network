@@ -6,6 +6,8 @@ import { useAccount } from "wagmi";
 
 import { ConnectButton } from "@/components/ConnectButton";
 import { PermissionBadge } from "@/components/PermissionBadge";
+import { InfoText } from "@/components/ui/InfoText";
+import { Container } from "@/components/ui/Container";
 
 import { AddLeaderViaInviteLinkSection } from "@/components/AddLeaderViaInviteLinkSection";
 import { AddLeaderViaQRSection } from "@/components/AddLeaderViaQRSection";
@@ -20,21 +22,25 @@ function AddLeaderForm() {
 
   if (!isConnected) {
     return (
-      <div className="min-h-screen py-0 sm:py-8 px-0 sm:px-6 md:px-8">
-        <div className="max-w-3xl mx-0 sm:mx-auto">
-          <div className="bg-white p-4 pb-16 sm:p-8 sm:rounded-xl sm:border sm:border-slate-300">
-            <div className="text-center">
-              <h1 className="text-2xl font-semibold mb-4">
-                {en.addPage.headings.addLeaderToNetwork}
-              </h1>
-              <p className="text-base">{en.addPage.prompts.loginToAdd}</p>
-              <div className="flex justify-center mt-8">
-                <ConnectButton />
-              </div>
-            </div>
-          </div>
+      <Container>
+        <h1 className="text-2xl font-semibold mb-4">{en.addPage.headings.addLeaderToNetwork}</h1>
+        <p className="text-base">{en.addPage.prompts.loginToAdd}</p>
+        <div className="flex justify-center mt-8">
+          <ConnectButton />
         </div>
-      </div>
+      </Container>
+    );
+  }
+
+  if (!isSafeLoading && !isMultisigOwner) {
+    return (
+      <Container>
+        <InfoText
+          heading={en.common.notAllowed}
+          message={en.addPage.prompts.notAllowed + "\n" + en.addPage.prompts.getBadge}
+          variant="warning"
+        />
+      </Container>
     );
   }
 
@@ -87,13 +93,6 @@ function AddLeaderForm() {
               <AddLeaderViaQRSection onSuccess={() => setShowCelebration(true)} />
               <AddLeaderViaInviteLinkSection disabled={!isMultisigOwner} />
             </>
-          )}
-
-          {!isSafeLoading && !isMultisigOwner && (
-            <div className="text-center p-4 space-y-2">
-              <p className="text-base">You are not allowed to add leaders to the network.</p>
-              <p className="text-base">Get your leadership badge from another leader</p>
-            </div>
           )}
         </div>
       </div>

@@ -15,16 +15,16 @@ export const InfoText = React.forwardRef<HTMLDivElement, InfoTextProps>(
     let variantClass = "";
     switch (variant) {
       case "warning":
-        icon = <AlertTriangle className="h-5 w-5 text-yellow-600 mr-2 shrink-0" />;
+        icon = <AlertTriangle className="h-8 w-8 text-yellow-600 mr-2 shrink-0" />;
         variantClass = "bg-yellow-50 border-yellow-200 text-yellow-800";
         break;
       case "progress":
-        icon = <Loader2 className="h-5 w-5 text-blue-500 animate-spin mr-2 shrink-0" />;
+        icon = <Loader2 className="h-8 w-8 text-blue-500 animate-spin mr-2 shrink-0" />;
         variantClass = "bg-blue-50 border-blue-200 text-blue-700";
         break;
       case "info":
       default:
-        icon = <InfoIcon className="h-5 w-5 text-blue-500 mr-2 shrink-0" />;
+        icon = <InfoIcon className="h-8 w-8 text-blue-500 mr-2 shrink-0" />;
         variantClass = "bg-slate-50 border-slate-200 text-slate-700";
         break;
     }
@@ -32,7 +32,7 @@ export const InfoText = React.forwardRef<HTMLDivElement, InfoTextProps>(
       <div
         ref={ref}
         className={cn(
-          "flex items-start rounded-lg p-4 text-base leading-relaxed border whitespace-pre-line",
+          "flex items-center justify-center rounded-lg p-4 text-center leading-relaxed border whitespace-pre-line",
           variantClass,
           className
         )}

@@ -103,6 +103,8 @@ const en = {
       singleUseInvite: "This invite link can only be used for one successful onboarding.",
       reservationInfo:
         "When a user opens this invite link, it will be reserved for them for a limited time.",
+      notAllowed: "You are not allowed to add leaders to the network.",
+      getBadge: "Get your leadership badge from another leader.",
     },
     toasts: {
       successAdded: "Successfully added leader ",

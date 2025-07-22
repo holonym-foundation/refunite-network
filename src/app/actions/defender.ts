@@ -7,7 +7,7 @@ import {
   rollbackReservation,
 } from "@/lib/onboarding/reservations";
 import { sendOnboardingFailedMessage, sendOnboardingSuccessMessage } from "@/lib/slack/webhook";
-import { DeviceInfo } from "@/lib/utils/device-info";
+import { DeviceInfo } from "@/lib/database/types";
 import { marshalTypedData } from "@/lib/utils/serialize";
 import { generateWebhookSignature } from "@/lib/utils/webhook-security";
 import { Hash, TypedDataDefinition } from "viem";

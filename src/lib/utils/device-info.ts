@@ -1,42 +1,10 @@
 import { UAParser } from "ua-parser-js";
+import { DeviceInfo } from "../database/types";
 
 /**
  * Device information collection utility
  * Works on both client-side and server-side environments
  */
-
-export interface DeviceInfo {
-  // Basic device identification
-  deviceType: string;
-  platform: string;
-
-  // Browser information
-  browser: string;
-  browserVersion: string;
-  userAgent: string;
-
-  // Display information
-  screenWidth?: number;
-  screenHeight?: number;
-  screenResolution?: string;
-
-  // System information
-  os: string;
-  osVersion: string;
-  language: string;
-  timezone: string;
-
-  // Connection information (if available)
-  connectionType?: string;
-
-  // Device capabilities (if available)
-  deviceMemory?: number;
-  hardwareConcurrency?: number;
-
-  // Collection metadata
-  collectedAt: string;
-  environment: "client" | "server";
-}
 
 function mapUAParserToDeviceInfo(
   result: UAParser.IResult,

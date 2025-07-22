@@ -1,5 +1,5 @@
-import { SLACK_WEBHOOK_URL } from "../constants";
-import { DeviceInfo } from "../utils/device-info";
+import { DeviceInfo } from "@/lib/database/types";
+import { SLACK_WEBHOOK_URL } from "@/lib/constants";
 
 export type SlackWebhookMessage = {
   text: string;

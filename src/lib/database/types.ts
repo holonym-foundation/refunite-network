@@ -2,8 +2,8 @@
 
 // Device information for audit logs
 export interface DeviceInfo {
-  deviceType: "mobile" | "desktop" | "tablet" | "unknown";
-  platform: "iOS" | "Android" | "Windows" | "macOS" | "Linux" | "unknown";
+  deviceType: string;
+  platform: string;
   browser: string;
   browserVersion: string;
   userAgent: string;
@@ -14,7 +14,7 @@ export interface DeviceInfo {
   osVersion: string;
   language: string;
   timezone: string;
-  connectionType?: "wifi" | "cellular" | "ethernet" | "unknown";
+  connectionType?: string;
   deviceMemory?: number;
   hardwareConcurrency?: number;
   collectedAt: string;

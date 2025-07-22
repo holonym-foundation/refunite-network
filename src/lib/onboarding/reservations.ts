@@ -5,7 +5,7 @@ import { z } from "zod";
 import { DB } from "@/lib/database/service";
 import { verifyDirectOnboardSignature, verifyNetworkInviteSignature } from "@/lib/eip712";
 import { unmarshalTypedData } from "@/lib/utils/serialize";
-import { DeviceInfo } from "../utils/device-info";
+import { DeviceInfo } from "@/lib/database/types";
 
 // --------------------------------------------------
 // Zod Schemas (shared)

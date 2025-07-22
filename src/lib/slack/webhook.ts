@@ -1,4 +1,5 @@
 import { SLACK_WEBHOOK_URL } from "../constants";
+import { DeviceInfo } from "../utils/device-info";
 
 export type SlackWebhookMessage = {
   text: string;
@@ -16,6 +17,7 @@ export interface OnboardingSuccessMessageProps {
   leaderAddress: string;
   inviteCode: string;
   inviteFlow: "direct" | "invite";
+  deviceInfo?: Partial<DeviceInfo>;
 }
 
 export interface OnboardingFailedMessageProps {
@@ -24,7 +26,43 @@ export interface OnboardingFailedMessageProps {
   inviteCode: string;
   error: string;
   payload: Record<string, unknown>;
+  deviceInfo?: Partial<DeviceInfo>;
 }
+
+export interface InviteCreatedMessageProps {
+  inviterAddress: string;
+  inviteCode: string;
+  deviceInfo?: Partial<DeviceInfo>;
+}
+
+const buildInviteCreatedMessage = (props: InviteCreatedMessageProps): SlackWebhookMessage => {
+  return {
+    text: "Invite created",
+    blocks: [
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: `*Invite created by account*\n \`${props.inviterAddress}\``,
+        },
+      },
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: `*Invite code*\n \`${props.inviteCode}\``,
+        },
+      },
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: `*Device info*\n \`${JSON.stringify(props.deviceInfo)}\``,
+        },
+      },
+    ],
+  };
+};
 
 const buildOnboardingSuccessMessage = (
   props: OnboardingSuccessMessageProps
@@ -51,6 +89,13 @@ const buildOnboardingSuccessMessage = (
         text: {
           type: "mrkdwn",
           text: `*Invite flow: ${props.inviteFlow === "direct" ? "direct" : "invite link"}*\n \`${props.inviteCode}\``,
+        },
+      },
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: `*Device info*\n \`${JSON.stringify(props.deviceInfo)}\``,
         },
       },
     ],
@@ -89,8 +134,21 @@ const buildOnboardingFailedMessage = (props: OnboardingFailedMessageProps): Slac
           text: `*Payload*\n \`${JSON.stringify(props.payload)}\``,
         },
       },
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: `*Device info*\n \`${JSON.stringify(props.deviceInfo)}\``,
+        },
+      },
     ],
   };
+};
+
+const sendInviteCreatedMessage = async (props: InviteCreatedMessageProps) => {
+  const message = buildInviteCreatedMessage(props);
+
+  await sendMessageToSlack(message);
 };
 
 const sendOnboardingSuccessMessage = async (props: OnboardingSuccessMessageProps) => {
@@ -125,4 +183,4 @@ const sendMessageToSlack = async (message: SlackWebhookMessage) => {
   }
 };
 
-export { sendOnboardingSuccessMessage, sendOnboardingFailedMessage };
+export { sendOnboardingSuccessMessage, sendOnboardingFailedMessage, sendInviteCreatedMessage };

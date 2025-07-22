@@ -106,4 +106,7 @@ We have an audit log system set up in Turso.
 3. **API Routes:**
    - Server receive device info from the client during a call
 
+4. **Webhooks:**
+   - The Slack webhook calls were update to share device info on certain events
+
 All audit log entries now include device information derived from the user agent string, providing comprehensive device context for security and audit purposes.

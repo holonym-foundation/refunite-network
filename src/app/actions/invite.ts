@@ -1,12 +1,13 @@
 "use server";
 
-import { verifyNetworkInviteSignature } from "@/lib/eip712";
+import { INVITE_TTL_SECONDS } from "@/lib/constants";
 import { DB } from "@/lib/database/service";
+import { verifyNetworkInviteSignature } from "@/lib/eip712";
+import { sendInviteCreatedMessage } from "@/lib/slack/webhook";
+import { DeviceInfo } from "@/lib/utils/device-info";
 import { unmarshalTypedData } from "@/lib/utils/serialize";
 import { randomBytes } from "crypto";
 import { getAddress, Hash } from "viem";
-import { INVITE_TTL_SECONDS } from "@/lib/constants";
-import { DeviceInfo } from "@/lib/utils/device-info";
 
 export type VerifyInviteResult = {
   success: boolean;
@@ -106,6 +107,12 @@ export async function createInvite(
       },
       deviceInfo
     );
+
+    await sendInviteCreatedMessage({
+      inviterAddress,
+      inviteCode,
+      deviceInfo,
+    });
 
     return {
       success: true,

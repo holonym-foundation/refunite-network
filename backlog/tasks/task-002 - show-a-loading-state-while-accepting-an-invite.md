@@ -1,7 +1,7 @@
 ---
 id: task-002
 title: show a loading state while accepting an invite
-status: To Do
+status: In Progress
 assignee: []
 created_date: '2025-07-22'
 updated_date: '2025-07-22'

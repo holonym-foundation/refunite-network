@@ -1,1 +1,1 @@
-echo "running husky"
+pnpm test

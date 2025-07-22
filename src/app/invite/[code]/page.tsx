@@ -15,6 +15,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { addLeaderViaSignedTypedData } from "@/app/actions/defender";
 import { isWalletOnboarded, verifyInvite } from "@/app/actions/invite";
 import en from "@/content/en";
+import { getAuditDeviceInfo } from "@/lib/utils/device-info";
 import { Hash } from "viem";
 
 export default function InvitePage() {
@@ -86,10 +87,14 @@ export default function InvitePage() {
         throw new Error(verifyResult.error || "Invalid invite");
       }
       setOnboardingStage(1); // Awaiting confirmation
+
+      // Get client request info for audit logging
+      const deviceInfo = getAuditDeviceInfo();
       const onboardResult = await addLeaderViaSignedTypedData(
         address,
         verifyResult.typedData,
-        verifyResult.signature as Hash
+        verifyResult.signature as Hash,
+        deviceInfo
       );
       if (onboardResult.error) {
         throw onboardResult.error;

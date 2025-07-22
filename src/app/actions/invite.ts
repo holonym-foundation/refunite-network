@@ -1,11 +1,13 @@
 "use server";
 
-import { verifyNetworkInviteSignature } from "@/lib/eip712";
+import { INVITE_TTL_SECONDS } from "@/lib/constants";
 import { DB } from "@/lib/database/service";
+import { DeviceInfo } from "@/lib/database/types";
+import { verifyNetworkInviteSignature } from "@/lib/eip712";
+import { sendInviteCreatedMessage } from "@/lib/slack/webhook";
 import { unmarshalTypedData } from "@/lib/utils/serialize";
 import { randomBytes } from "crypto";
 import { getAddress, Hash } from "viem";
-import { INVITE_TTL_SECONDS } from "@/lib/constants";
 
 export type VerifyInviteResult = {
   success: boolean;
@@ -40,7 +42,8 @@ export async function createInvite(
   inviterAddress: string,
   signature: string,
   nonce: string,
-  typedData: any
+  typedData: any,
+  deviceInfo?: Partial<DeviceInfo>
 ): Promise<CreateInviteResult> {
   try {
     if (!inviterAddress || !signature || !nonce || !typedData) {
@@ -93,13 +96,22 @@ export async function createInvite(
       expires_at: expiresAt.toISOString(),
     });
 
-    // Log audit event
-    await DB.logAudit({
-      entity_type: "invitation",
-      entity_id: invitation.id,
-      action: "create",
-      actor_address: inviterAddress,
-      metadata: { flow_type: "invite", invite_code: inviteCode },
+    // Log audit event with device info
+    await DB.logAuditWithDeviceInfo(
+      {
+        entity_type: "invitation",
+        entity_id: invitation.id,
+        action: "create",
+        actor_address: inviterAddress,
+        metadata: { flow_type: "invite", invite_code: inviteCode },
+      },
+      deviceInfo
+    );
+
+    await sendInviteCreatedMessage({
+      inviterAddress,
+      inviteCode,
+      deviceInfo,
     });
 
     return {

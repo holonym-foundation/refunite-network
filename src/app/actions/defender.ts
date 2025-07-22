@@ -1,15 +1,16 @@
 "use server";
 
-import { Hash, TypedDataDefinition } from "viem";
-import { marshalTypedData } from "@/lib/utils/serialize";
-import { generateWebhookSignature } from "@/lib/utils/webhook-security";
-import { sendOnboardingFailedMessage, sendOnboardingSuccessMessage } from "@/lib/slack/webhook";
 import {
+  confirmReservation,
   createDirectReservation,
   reserveInvite,
-  confirmReservation,
   rollbackReservation,
 } from "@/lib/onboarding/reservations";
+import { sendOnboardingFailedMessage, sendOnboardingSuccessMessage } from "@/lib/slack/webhook";
+import { DeviceInfo } from "@/lib/database/types";
+import { marshalTypedData } from "@/lib/utils/serialize";
+import { generateWebhookSignature } from "@/lib/utils/webhook-security";
+import { Hash, TypedDataDefinition } from "viem";
 
 type AddLeaderViaSignedTypedDataResult = {
   mintHatTxHash?: string;
@@ -20,7 +21,8 @@ type AddLeaderViaSignedTypedDataResult = {
 export async function addLeaderViaSignedTypedData(
   recipient: string,
   typedData: TypedDataDefinition,
-  signature: Hash
+  signature: Hash,
+  deviceInfo?: Partial<DeviceInfo>
 ): Promise<AddLeaderViaSignedTypedDataResult> {
   try {
     // Input validation
@@ -57,6 +59,7 @@ export async function addLeaderViaSignedTypedData(
       typedData,
       recipient,
       inviterAddress,
+      deviceInfo,
     };
 
     if (flowType === "direct") {
@@ -119,7 +122,7 @@ export async function addLeaderViaSignedTypedData(
 
     if (!response.ok) {
       // Rollback reservation on Defender failure
-      await rollbackReservation({ reservationId, reason: "blockchain_failure" });
+      await rollbackReservation({ reservationId, reason: "blockchain_failure", deviceInfo });
       throw new Error(`Defender webhook error: ${response.status}`);
     }
 
@@ -128,7 +131,7 @@ export async function addLeaderViaSignedTypedData(
 
     if (result.error) {
       // Rollback reservation on transaction failure
-      await rollbackReservation({ reservationId, reason: "blockchain_failure" });
+      await rollbackReservation({ reservationId, reason: "blockchain_failure", deviceInfo });
       throw new Error(result.error);
     }
 
@@ -150,6 +153,7 @@ export async function addLeaderViaSignedTypedData(
       mintHatTxHash: result.mintHatTxHash,
       claimSignerTxHash: result.claimSignerTxHash,
       recipient,
+      deviceInfo,
     });
 
     if (!confirmResult.success) {

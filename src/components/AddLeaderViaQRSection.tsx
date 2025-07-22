@@ -7,6 +7,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { useSafeOwner } from "@/hooks/useSafeOwner";
 import { useSilkSigner } from "@/hooks/useSilkSigner";
 import { createDirectOnboardTypedData, generateNonce } from "@/lib/eip712";
+import { getClientDeviceInfo } from "@/lib/utils/device-info";
 import { QrCode } from "lucide-react";
 import { useState } from "react";
 import { isAddress } from "viem";
@@ -80,7 +81,8 @@ export function AddLeaderViaQRSection({ onSuccess }: AddLeaderViaQRSectionProps)
         chainId,
       });
       const signature = await signTypedData(typedData);
-      const result = await addLeaderViaSignedTypedData(recipient, typedData, signature);
+      const deviceInfo = getClientDeviceInfo();
+      const result = await addLeaderViaSignedTypedData(recipient, typedData, signature, deviceInfo);
 
       if (result.error) {
         throw new Error(result.error);

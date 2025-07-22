@@ -1,5 +1,33 @@
 // Database entity types matching our normalized schema
 
+// Device information for audit logs
+export interface DeviceInfo {
+  deviceType: string;
+  platform: string;
+  browser: string;
+  browserVersion: string;
+  userAgent: string;
+  screenWidth?: number;
+  screenHeight?: number;
+  screenResolution?: string;
+  os: string;
+  osVersion: string;
+  language: string;
+  timezone: string;
+  connectionType?: string;
+  deviceMemory?: number;
+  hardwareConcurrency?: number;
+  collectedAt: string;
+  environment: "client" | "server";
+}
+
+// Audit log metadata structure
+export interface AuditLogMetadata {
+  deviceInfo?: Partial<DeviceInfo>;
+  ipAddress?: string;
+  [key: string]: any; // Allow additional metadata
+}
+
 export interface Invitation {
   id: number;
   invite_code: string | null;
@@ -40,7 +68,7 @@ export interface AuditLogEntry {
   entity_id: number;
   action: "create" | "reserve" | "complete" | "expire" | "rollback";
   actor_address: string | null;
-  metadata: any;
+  metadata: AuditLogMetadata;
   timestamp?: string;
 }
 

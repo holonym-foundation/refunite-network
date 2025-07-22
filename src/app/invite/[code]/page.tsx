@@ -9,23 +9,42 @@ import { ConnectButton } from "@/components/ConnectButton";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { InfoText } from "@/components/ui/InfoText";
+import { OnboardingProgress, OnboardingStep } from "@/components/OnboardingProgress";
 
 import { addLeaderViaSignedTypedData } from "@/app/actions/defender";
 import { verifyInvite } from "@/app/actions/invite";
 import en from "@/content/en";
-import { Hash } from "viem/_types/types/misc";
+import { Hash } from "viem";
 
 export default function InvitePage() {
   const { code } = useParams();
   const { address, isConnected } = useAccount();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [onboardingStage, setOnboardingStage] = useState<number>(0); // 0: Starting, 1: Awaiting, 2: Completed
   const [isVerifying, setIsVerifying] = useState(true);
   const [isValid, setIsValid] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
 
+  const onboardingSteps: OnboardingStep[] = [
+    {
+      title: "Starting onboarding",
+      description: "Starting onboarding...",
+    },
+    {
+      title: "Awaiting confirmation",
+      description: "Awaiting confirmation from the network...",
+    },
+    {
+      title: "Completed",
+      description: "Onboarding completed!",
+    },
+  ];
+
   useEffect(() => {
+    // Reset onboarding stage if code changes
+    setOnboardingStage(0);
     const verifyInviteCode = async () => {
       try {
         const result = await verifyInvite(code as string);
@@ -43,25 +62,25 @@ export default function InvitePage() {
 
   const handleAcceptInvite = async () => {
     if (!address) return;
-
     setIsLoading(true);
+    setOnboardingStage(0); // Explicitly set to starting
     try {
+      setOnboardingStage(0); // Starting onboarding
       // Get the verified invite details
       const verifyResult = await verifyInvite(code as string);
       if (!verifyResult.success || !verifyResult.signature || !verifyResult.typedData) {
         throw new Error(verifyResult.error || "Invalid invite");
       }
-
+      setOnboardingStage(1); // Awaiting confirmation
       const onboardResult = await addLeaderViaSignedTypedData(
         address,
         verifyResult.typedData,
         verifyResult.signature as Hash
       );
-
       if (onboardResult.error) {
         throw onboardResult.error;
       }
-
+      setOnboardingStage(2); // Completed
       setIsSuccess(true);
     } catch (error) {
       console.error("Error accepting invite:", error);
@@ -70,6 +89,7 @@ export default function InvitePage() {
         title: en.common.error,
         description: error instanceof Error ? error.message : "Failed to accept invite",
       });
+      setOnboardingStage(0); // Reset to starting on error
     } finally {
       setIsLoading(false);
     }
@@ -162,9 +182,14 @@ export default function InvitePage() {
         <div className="bg-white p-4 pb-16 sm:p-8 sm:rounded-xl sm:border sm:border-slate-300">
           <div className="text-center">
             <h1 className="text-2xl font-semibold mb-4">{en.invitePage.headings.accept}</h1>
-            {isLoading ? (
-              <InfoText className="mb-4">{en.invitePage.prompts.reserved}</InfoText>
-            ) : (
+            {/* Onboarding progress stepper with step descriptions */}
+            {(isLoading || onboardingStage > 0) && (
+              <div className="mb-6 flex justify-center">
+                <OnboardingProgress steps={onboardingSteps} currentStep={onboardingStage} />
+              </div>
+            )}
+            {/* Only show info text if not loading/onboarding */}
+            {!(isLoading || onboardingStage > 0) && (
               <InfoText className="mb-4">{en.invitePage.prompts.accept}</InfoText>
             )}
             <Button onClick={handleAcceptInvite} disabled={isLoading} className="w-full sm:w-auto">

@@ -13,7 +13,7 @@ export const silkConfig: InitSilkOptions = {
     entryTitle: "Welcome to RelayID",
   },
   config: {
-    // authenticationMethods: ["wallet"], //'email' | 'wallet' | 'phone' | 'social';
+    authenticationMethods: ["email", "social"], //'email' | 'wallet' | 'phone' | 'social';
     allowedSocials: ["google"], //'apple' | 'coinbase' | 'discord' | 'github' | 'google' | 'linkedin' | 'orcid' | 'twitter';
     styles: {
       darkMode: false,

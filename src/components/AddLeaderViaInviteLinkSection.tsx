@@ -7,6 +7,8 @@ import { createNetworkInviteTypedData, generateNonce } from "@/lib/eip712";
 import { formatDistanceToNow } from "date-fns";
 import { useState } from "react";
 import { useAccount } from "wagmi";
+import en from "@/content/en";
+import { InfoText } from "@/components/ui/InfoText";
 
 interface InviteLinkSectionProps {
   disabled?: boolean;
@@ -105,6 +107,7 @@ export function AddLeaderViaInviteLinkSection({ disabled }: InviteLinkSectionPro
             </>
           )}
         </div>
+        <InfoText className="mt-2 text-sm">{en.addPage.prompts.singleUseInvite}</InfoText>
         {inviteLink && (
           <div className="text-sm text-slate-500">
             <p>Invite link expires in {inviteExpiryText}</p>

@@ -8,6 +8,7 @@ import { useAccount } from "wagmi";
 import { ConnectButton } from "@/components/ConnectButton";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
+import { InfoText } from "@/components/ui/InfoText";
 
 import { addLeaderViaSignedTypedData } from "@/app/actions/defender";
 import { verifyInvite } from "@/app/actions/invite";
@@ -154,13 +155,18 @@ export default function InvitePage() {
     );
   }
 
+  // Main accept UI
   return (
     <div className="min-h-screen py-0 sm:py-8 px-0 sm:px-6 md:px-8">
       <div className="max-w-3xl mx-0 sm:mx-auto">
         <div className="bg-white p-4 pb-16 sm:p-8 sm:rounded-xl sm:border sm:border-slate-300">
           <div className="text-center">
             <h1 className="text-2xl font-semibold mb-4">{en.invitePage.headings.accept}</h1>
-            <p className="text-muted-foreground mb-8">{en.invitePage.prompts.accept}</p>
+            {isLoading ? (
+              <InfoText className="mb-4">{en.invitePage.prompts.reserved}</InfoText>
+            ) : (
+              <InfoText className="mb-4">{en.invitePage.prompts.accept}</InfoText>
+            )}
             <Button onClick={handleAcceptInvite} disabled={isLoading} className="w-full sm:w-auto">
               {isLoading ? (
                 <div className="flex items-center gap-2">

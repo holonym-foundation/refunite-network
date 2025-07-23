@@ -1,6 +1,7 @@
 "use client";
 import { UserRejectedRequestError } from "viem";
 import { useAccount, useConnect, useDisconnect } from "wagmi";
+import { useEffect, useState } from "react";
 
 // Add type declaration for window.silk
 declare global {
@@ -22,8 +23,13 @@ import silk from "@/wagmi/silk-connector";
 export function ConnectButton() {
   const { connect, error, isError, connectors } = useConnect();
   const { disconnect } = useDisconnect();
-  const account = useAccount();
+  const { address, isConnecting } = useAccount();
   const { toast } = useToast();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const formatAddress = (address: string) => {
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
@@ -69,24 +75,46 @@ export function ConnectButton() {
     });
   };
 
+  // Prevent hydration mismatch by not rendering until mounted
+  if (!mounted) {
+    return (
+      <div className="flex items-center gap-2">
+        <Button disabled variant="outline">
+          <div className="h-4 w-12 bg-muted animate-pulse rounded" />
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className="flex items-center gap-2">
-      {!account.address ? (
+      {!address ? (
         <div className="flex items-center gap-2">
-          <Button onClick={handleConnect}>{en.common.login}</Button>
+          <Button onClick={handleConnect} disabled={isConnecting}>
+            {isConnecting ? (
+              <div className="flex items-center gap-2">
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                {en.common.loggingIn}
+              </div>
+            ) : (
+              en.common.login
+            )}
+          </Button>
         </div>
       ) : (
         <div className="flex items-center gap-2 flex-row lg:flex-row-reverse">
-          <Button onClick={handleDisconnect}>{en.common.logout}</Button>
+          <Button onClick={handleDisconnect}>
+            {en.common.logout}
+          </Button>
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
                   variant="ghost"
                   className="font-mono text-muted-foreground text-sm sm:text-xs"
-                  onClick={() => copyAddress(account.address!)}
+                  onClick={() => copyAddress(address)}
                 >
-                  {formatAddress(account.address)}
+                  {formatAddress(address)}
                 </Button>
               </TooltipTrigger>
               <TooltipContent>

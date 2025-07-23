@@ -138,7 +138,7 @@ const en = {
       alreadyOnboarded:
         "The connected account is already onboarded and cannot use this invite link.",
       checkingWalletStatus: "Checking account status…",
-      expired: "This invite link has expired. Please request a new invite from another leader.",
+      expired: "Please request a new invite from another leader.",
       used: "This invite has already been used.",
       error: "Something went wrong. Please try again later.",
     },

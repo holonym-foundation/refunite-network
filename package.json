@@ -13,15 +13,7 @@
     "test": "vitest",
     "prepare": "husky",
     "lint-staged": "lint-staged",
-    "check-types": "tsc --noEmit",
-    "supabase:start": "pnpx supabase start",
-    "supabase:stop": "pnpx supabase stop",
-    "supabase:status": "pnpx supabase status",
-    "supabase:db:push": "pnpx supabase db push",
-    "supabase:db:reset": "pnpx supabase db reset",
-    "supabase:db:migrate": "pnpx supabase db migrate",
-    "supabase:db:types": "pnpx supabase gen types typescript --local > src/lib/supabase/types.ts",
-    "setup:local": "pnpm supabase:start && pnpm supabase:db:reset"
+    "check-types": "tsc --noEmit"
   },
   "dependencies": {
     "@hatsprotocol/sdk-v1-core": "^0.12.4",
@@ -46,7 +38,6 @@
     "@safe-global/types-kit": "^2.0.1",
     "@silk-wallet/silk-interface-core": "^0.4.2",
     "@silk-wallet/silk-wallet-sdk": "^0.7.1",
-    "@supabase/supabase-js": "^2.50.0",
     "@tanstack/react-query": "^5.81.2",
     "@types/node": "^20.16.12",
     "@types/react-dom": "^18.3.1",
@@ -92,7 +83,6 @@
     "jsdom": "^26.1.0",
     "lint-staged": "^15.5.1",
     "prettier": "^3.2.5",
-    "supabase": "^2.26.9",
     "vitest": "^3.2.4"
   },
   "lint-staged": {

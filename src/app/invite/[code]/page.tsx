@@ -22,7 +22,7 @@ import { getInviteErrorCopy } from "@/lib/utils";
 
 export default function InvitePage() {
   const { code } = useParams();
-  const { address } = useAccount();
+  const { address, isConnecting } = useAccount();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [onboardingStage, setOnboardingStage] = useState<number>(0); // 0: Starting, 1: Awaiting, 2: Completed
@@ -145,7 +145,7 @@ export default function InvitePage() {
     );
   }
 
-  if (!address) {
+  if (!address || !isConnecting) {
     // No account connected: only verify invite
     if (isVerifying)
       return (

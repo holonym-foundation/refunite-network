@@ -17,6 +17,7 @@ import { isWalletOnboarded, verifyInvite } from "@/app/actions/invite";
 import en from "@/content/en";
 import { getAuditDeviceInfo } from "@/lib/utils/device-info";
 import { Hash } from "viem";
+import { getInviteErrorCopy } from "@/lib/utils";
 
 export default function InvitePage() {
   const { code } = useParams();
@@ -155,16 +156,14 @@ export default function InvitePage() {
           />
         </Container>
       );
-    if (!isValid)
+    if (!isValid) {
+      const { heading, message } = getInviteErrorCopy(error);
       return (
         <Container>
-          <InfoText
-            heading={en.invitePage.headings.invalid}
-            message={error || en.invitePage.prompts.invalid}
-            variant="warning"
-          />
+          <InfoText heading={heading} message={message} variant="warning" />
         </Container>
       );
+    }
     // Show prompt to connect wallet and accept invite
     return (
       <Container>
@@ -215,16 +214,14 @@ export default function InvitePage() {
         />
       </Container>
     );
-  if (!isValid)
+  if (!isValid) {
+    const { heading, message } = getInviteErrorCopy(error);
     return (
       <Container>
-        <InfoText
-          heading={en.invitePage.headings.invalid}
-          message={error || en.invitePage.prompts.invalid}
-          variant="warning"
-        />
+        <InfoText heading={heading} message={message} variant="warning" />
       </Container>
     );
+  }
 
   // Default: show main accept invite UI
   return (

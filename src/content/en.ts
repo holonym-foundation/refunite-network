@@ -119,6 +119,10 @@ const en = {
       invalid: "Invalid Invite",
       accept: "Accept Invite",
       alreadyOnboarded: "Already Onboarded",
+      expired: "Invite Expired",
+      used: "Invite Already Used",
+      reserved: "Invite In Use",
+      error: "Error",
     },
     prompts: {
       onboarded: "You have been successfully onboarded as a leader!",
@@ -129,11 +133,14 @@ const en = {
       processing: "Processing...",
       acceptInvite: "Accept Invite",
       reserved:
-        "This invite is now reserved for you. Complete onboarding within the reservation time to claim your spot.",
+        "This invite is currently being used. Please try again later or request a new invite.",
       singleUse: "This invite link can only be used once.",
       alreadyOnboarded:
         "The connected account is already onboarded and cannot use this invite link.",
       checkingWalletStatus: "Checking account status…",
+      expired: "This invite link has expired. Please request a new invite from another leader.",
+      used: "This invite has already been used.",
+      error: "Something went wrong. Please try again later.",
     },
     toasts: {
       errorAccepting: "Error accepting invite:",

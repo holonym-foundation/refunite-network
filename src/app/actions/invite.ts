@@ -1,6 +1,7 @@
 "use server";
 
 import { INVITE_TTL_SECONDS } from "@/lib/constants";
+import { utcAddSeconds, utcNow } from "@/lib/utils/date";
 import { DB } from "@/lib/database/service";
 import { DeviceInfo } from "@/lib/database/types";
 import { verifyNetworkInviteSignature } from "@/lib/eip712";
@@ -15,6 +16,8 @@ export type VerifyInviteResult = {
   inviterAddress?: string;
   signature?: string;
   typedData?: any;
+  expiresAt?: string;
+  isExpired?: boolean;
 };
 
 export type CreateInviteResult = {
@@ -82,8 +85,8 @@ export async function createInvite(
     // Generate unique invite code
     const inviteCode = generateInviteCode();
 
-    // Create invitation
-    const expiresAt = new Date(Date.now() + INVITE_TTL_SECONDS * 1000);
+    // Create invitation with UTC timestamp
+    const expiresAt = utcAddSeconds(INVITE_TTL_SECONDS);
 
     const invitation = await DB.createInvitation({
       invite_code: inviteCode,
@@ -162,17 +165,36 @@ export async function verifyInvite(inviteCode: string): Promise<VerifyInviteResu
       return { success: false, error: "Invalid invite code" };
     }
 
-    // Check status
+    const expiresAt = invitation.expires_at;
+    const isExpired = utcNow() > new Date(expiresAt);
+
+    // Check expiry first (application-level check)
+    if (isExpired) {
+      return {
+        success: false,
+        error: "Invite has expired",
+        expiresAt,
+        isExpired: true,
+      };
+    }
+
+    // Check database status
     if (status.status === "completed") {
-      return { success: false, error: "Invite has already been used" };
+      return {
+        success: false,
+        error: "Invite has already been used",
+        expiresAt,
+        isExpired: false,
+      };
     }
 
     if (status.status === "reserved") {
-      return { success: false, error: "Invite is currently reserved" };
-    }
-
-    if (status.status === "expired") {
-      return { success: false, error: "Invite has expired" };
+      return {
+        success: false,
+        error: "Invite is currently reserved",
+        expiresAt,
+        isExpired: false,
+      };
     }
 
     const typedData = unmarshalTypedData(invitation.typed_data);
@@ -182,14 +204,11 @@ export async function verifyInvite(inviteCode: string): Promise<VerifyInviteResu
       inviterAddress: invitation.inviter_address,
       signature: invitation.signature,
       typedData,
+      expiresAt,
+      isExpired: false,
     };
   } catch (error) {
     console.error("Error in verifyInvite:", error);
     return { success: false, error: "An unexpected error occurred" };
   }
-}
-
-export async function isWalletOnboarded(address: string): Promise<boolean> {
-  if (!address) return false;
-  return DB.isAddressOnboarded(address);
 }

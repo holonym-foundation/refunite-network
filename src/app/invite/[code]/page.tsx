@@ -13,8 +13,9 @@ import { InfoText } from "@/components/ui/InfoText";
 import { useToast } from "@/components/ui/use-toast";
 
 import { addLeaderViaSignedTypedData } from "@/app/actions/defender";
-import { isWalletOnboarded, verifyInvite } from "@/app/actions/invite";
+import { verifyInvite, VerifyInviteResult } from "@/app/actions/invite";
 import en from "@/content/en";
+import { useIsWearerOfHat } from "@/hooks/useIsWearerOfHat";
 import { getAuditDeviceInfo } from "@/lib/utils/device-info";
 import { Hash } from "viem";
 import { getInviteErrorCopy } from "@/lib/utils";
@@ -25,12 +26,16 @@ export default function InvitePage() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [onboardingStage, setOnboardingStage] = useState<number>(0); // 0: Starting, 1: Awaiting, 2: Completed
-  const [isVerifying, setIsVerifying] = useState(true);
-  const [isValid, setIsValid] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [verificationResult, setVerificationResult] = useState<VerifyInviteResult | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
-  const [isAlreadyOnboarded, setIsAlreadyOnboarded] = useState<boolean>(false);
-  const [checkingOnboarded, setCheckingOnboarded] = useState<boolean>(false);
+
+  const { hasHat, isLoading: isHatLoading } = useIsWearerOfHat();
+
+  // Derived state from verification result
+  const isVerifying = verificationResult === null;
+  const isValid = verificationResult?.success || false;
+  const error = verificationResult?.error || null;
+  const expiresAt = verificationResult?.expiresAt || null;
 
   const onboardingSteps: OnboardingStep[] = [
     {
@@ -48,58 +53,54 @@ export default function InvitePage() {
   ];
 
   useEffect(() => {
-    // Reset onboarding stage if code changes
+    // Reset state when code changes
     setOnboardingStage(0);
+    setVerificationResult(null);
+
     const verifyInviteCode = async () => {
       try {
         const result = await verifyInvite(code as string);
-        setIsValid(result.success);
-        setError(result.error || null);
+        setVerificationResult(result);
       } catch (err) {
-        setError("Failed to verify invite");
-      } finally {
-        setIsVerifying(false);
+        setVerificationResult({
+          success: false,
+          error: "Failed to verify invite",
+        });
       }
     };
 
     verifyInviteCode();
   }, [code]);
 
-  useEffect(() => {
-    if (!address) {
-      setIsAlreadyOnboarded(false);
+  const handleAcceptInvite = async () => {
+    if (
+      !address ||
+      !verificationResult?.success ||
+      !verificationResult.signature ||
+      !verificationResult.typedData
+    ) {
       return;
     }
-    setCheckingOnboarded(true);
-    isWalletOnboarded(address)
-      .then(setIsAlreadyOnboarded)
-      .finally(() => setCheckingOnboarded(false));
-  }, [address]);
 
-  const handleAcceptInvite = async () => {
-    if (!address) return;
     setIsLoading(true);
-    setOnboardingStage(0); // Explicitly set to starting
+    setOnboardingStage(0);
+
     try {
-      setOnboardingStage(0); // Starting onboarding
-      // Get the verified invite details
-      const verifyResult = await verifyInvite(code as string);
-      if (!verifyResult.success || !verifyResult.signature || !verifyResult.typedData) {
-        throw new Error(verifyResult.error || "Invalid invite");
-      }
       setOnboardingStage(1); // Awaiting confirmation
 
       // Get client request info for audit logging
       const deviceInfo = getAuditDeviceInfo();
       const onboardResult = await addLeaderViaSignedTypedData(
         address,
-        verifyResult.typedData,
-        verifyResult.signature as Hash,
+        verificationResult.typedData,
+        verificationResult.signature as Hash,
         deviceInfo
       );
+
       if (onboardResult.error) {
         throw onboardResult.error;
       }
+
       setOnboardingStage(2); // Completed
       setIsSuccess(true);
     } catch (error) {
@@ -171,13 +172,20 @@ export default function InvitePage() {
           <InfoText heading="Log in to accept invite" variant="info" className="mb-4">
             Please log in to the RelayID network to accept this invite.
           </InfoText>
+          {expiresAt && (
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-center">
+              <p className="text-sm text-blue-800">
+                <strong>Expires:</strong> {new Date(expiresAt).toLocaleString()}
+              </p>
+            </div>
+          )}
           <ConnectButton />
         </div>
       </Container>
     );
   }
 
-  if (checkingOnboarded) {
+  if (isHatLoading) {
     // Account connected, checking onboarding status
     return (
       <Container>
@@ -190,7 +198,7 @@ export default function InvitePage() {
     );
   }
 
-  if (isAlreadyOnboarded) {
+  if (hasHat === true) {
     // Account is already onboarded
     return (
       <Container>
@@ -235,7 +243,16 @@ export default function InvitePage() {
       )}
       {/* Info text for accept prompt */}
       {!(isLoading || onboardingStage > 0) && (
-        <InfoText className="mb-4">{en.invitePage.prompts.accept}</InfoText>
+        <>
+          <InfoText className="mb-4">{en.invitePage.prompts.accept}</InfoText>
+          {expiresAt && (
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-sm text-blue-800">
+                <strong>Expires:</strong> {new Date(expiresAt).toLocaleString()}
+              </p>
+            </div>
+          )}
+        </>
       )}
       <Button onClick={handleAcceptInvite} disabled={isLoading} className="w-full sm:w-auto">
         {isLoading ? (

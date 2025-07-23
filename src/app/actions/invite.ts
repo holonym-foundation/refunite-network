@@ -188,8 +188,3 @@ export async function verifyInvite(inviteCode: string): Promise<VerifyInviteResu
     return { success: false, error: "An unexpected error occurred" };
   }
 }
-
-export async function isWalletOnboarded(address: string): Promise<boolean> {
-  if (!address) return false;
-  return DB.isAddressOnboarded(address);
-}

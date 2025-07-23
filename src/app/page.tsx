@@ -1,7 +1,6 @@
 "use client";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense } from "react";
 
-import { readContract } from "@wagmi/core";
 import Link from "next/link";
 import { useAccount } from "wagmi";
 
@@ -13,41 +12,11 @@ import { Container } from "@/components/ui/Container";
 import { InfoText } from "@/components/ui/InfoText";
 
 import en from "@/content/en";
-import { HATS_CONTRACT_ADDRESS, LEADER_HAT_ID } from "@/lib/constants";
-import { abi as HatsAbi } from "@/lib/hatsAbi";
-import { wagmiConfig } from "@/wagmi/config";
+import { useIsWearerOfHat } from "@/hooks/useIsWearerOfHat";
 
 function AccountPage() {
   const { address, isConnected, chainId } = useAccount();
-  const [hasHat, setHasHat] = useState<boolean | null>(null);
-  const [isHatLoading, setIsHatLoading] = useState<boolean>(false);
-  const [isHatError, setIsHatError] = useState<boolean>(false);
-  const hatsContractAddress = HATS_CONTRACT_ADDRESS;
-  const hatsId = BigInt(LEADER_HAT_ID || "0");
-
-  useEffect(() => {
-    const checkHat = async () => {
-      if (address) {
-        setIsHatLoading(true);
-        try {
-          const rawHatData = await readContract(wagmiConfig, {
-            address: hatsContractAddress,
-            abi: HatsAbi,
-            functionName: "isWearerOfHat",
-            args: [address, hatsId],
-            chainId: chainId,
-          });
-          setHasHat(rawHatData); // active flag of hat
-        } catch (error) {
-          console.error("Error checking hat status:", error);
-          setIsHatError(true);
-        } finally {
-          setIsHatLoading(false);
-        }
-      }
-    };
-    checkHat();
-  }, [address, hatsId, hatsContractAddress, chainId]);
+  const { hasHat, isLoading: isHatLoading, error: isHatError } = useIsWearerOfHat();
 
   // Not connected state
   if (!isConnected) {

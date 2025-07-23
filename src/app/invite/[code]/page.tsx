@@ -13,8 +13,9 @@ import { InfoText } from "@/components/ui/InfoText";
 import { useToast } from "@/components/ui/use-toast";
 
 import { addLeaderViaSignedTypedData } from "@/app/actions/defender";
-import { isWalletOnboarded, verifyInvite } from "@/app/actions/invite";
+import { verifyInvite } from "@/app/actions/invite";
 import en from "@/content/en";
+import { useIsWearerOfHat } from "@/hooks/useIsWearerOfHat";
 import { getAuditDeviceInfo } from "@/lib/utils/device-info";
 import { Hash } from "viem";
 import { getInviteErrorCopy } from "@/lib/utils";
@@ -29,8 +30,8 @@ export default function InvitePage() {
   const [isValid, setIsValid] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
-  const [isAlreadyOnboarded, setIsAlreadyOnboarded] = useState<boolean>(false);
-  const [checkingOnboarded, setCheckingOnboarded] = useState<boolean>(false);
+
+  const { hasHat, isLoading: isHatLoading } = useIsWearerOfHat();
 
   const onboardingSteps: OnboardingStep[] = [
     {
@@ -65,16 +66,7 @@ export default function InvitePage() {
     verifyInviteCode();
   }, [code]);
 
-  useEffect(() => {
-    if (!address) {
-      setIsAlreadyOnboarded(false);
-      return;
-    }
-    setCheckingOnboarded(true);
-    isWalletOnboarded(address)
-      .then(setIsAlreadyOnboarded)
-      .finally(() => setCheckingOnboarded(false));
-  }, [address]);
+
 
   const handleAcceptInvite = async () => {
     if (!address) return;
@@ -177,7 +169,7 @@ export default function InvitePage() {
     );
   }
 
-  if (checkingOnboarded) {
+  if (isHatLoading) {
     // Account connected, checking onboarding status
     return (
       <Container>
@@ -190,7 +182,7 @@ export default function InvitePage() {
     );
   }
 
-  if (isAlreadyOnboarded) {
+  if (hasHat === true) {
     // Account is already onboarded
     return (
       <Container>

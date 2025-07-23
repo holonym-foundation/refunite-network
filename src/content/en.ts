@@ -7,6 +7,7 @@ const en = {
     unknown: "Unknown",
     login: "Login",
     logout: "Logout",
+    loggingIn: "Logging in...",
     clickToCopyAddress: "Click to copy your RelayID",
     addressCopied: "RelayID copied to clipboard",
     accountDisconnected: "Account disconnected",

@@ -12,13 +12,13 @@ import { Container } from "@/components/ui/Container";
 import { InfoText } from "@/components/ui/InfoText";
 import { useToast } from "@/components/ui/use-toast";
 
-import { addLeaderViaSignedTypedData } from "@/app/actions/defender";
 import { verifyInvite, VerifyInviteResult } from "@/app/actions/invite";
 import en from "@/content/en";
 import { useIsWearerOfHat } from "@/hooks/useIsWearerOfHat";
-import { getAuditDeviceInfo } from "@/lib/utils/device-info";
-import { Hash } from "viem";
 import { getInviteErrorCopy } from "@/lib/utils";
+import { getAuditDeviceInfo } from "@/lib/utils/device-info";
+import { marshalTypedData } from "@/lib/utils/serialize";
+import { Hash } from "viem";
 
 export default function InvitePage() {
   const { code } = useParams();
@@ -90,15 +90,21 @@ export default function InvitePage() {
 
       // Get client request info for audit logging
       const deviceInfo = getAuditDeviceInfo();
-      const onboardResult = await addLeaderViaSignedTypedData(
-        address,
-        verificationResult.typedData,
-        verificationResult.signature as Hash,
-        deviceInfo
-      );
 
-      if (onboardResult.error) {
-        throw onboardResult.error;
+      // TODO: recipient is a misnomer here
+      const onboardResult = await fetch("/api/onboarding/invite", {
+        method: "POST",
+        body: JSON.stringify({
+          recipient: address,
+          typedData: marshalTypedData(verificationResult.typedData),
+          signature: verificationResult.signature as Hash,
+          deviceInfo,
+        }),
+      });
+      const data = await onboardResult.json();
+
+      if (data.error) {
+        throw new Error(data.error);
       }
 
       setOnboardingStage(2); // Completed

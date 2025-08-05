@@ -1,41 +1,30 @@
 "use client";
 
-import { useEffect, useState } from "react";
-
-import { useParams } from "next/navigation";
+import { useState } from "react";
 import { useAccount } from "wagmi";
+import { Hash } from "viem";
 
-import { ConnectButton } from "@/components/ConnectButton";
 import { OnboardingProgress, OnboardingStep } from "@/components/OnboardingProgress";
 import { Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/Container";
 import { InfoText } from "@/components/ui/InfoText";
 import { useToast } from "@/components/ui/use-toast";
 
-import { verifyInvite, VerifyInviteResult } from "@/app/actions/invite";
+import { VerifyInviteResult } from "@/app/actions/invite";
 import en from "@/content/en";
-import { useIsWearerOfHat } from "@/hooks/useIsWearerOfHat";
-import { getInviteErrorCopy } from "@/lib/utils";
 import { getAuditDeviceInfo } from "@/lib/utils/device-info";
 import { marshalTypedData } from "@/lib/utils/serialize";
-import { Hash } from "viem";
 
-export default function InvitePage() {
-  const { code } = useParams();
-  const { address, isConnecting } = useAccount();
+interface OnboardingFlowProps {
+  verificationResult: VerifyInviteResult;
+}
+
+export function OnboardingFlow({ verificationResult }: OnboardingFlowProps) {
+  const { address } = useAccount();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const [onboardingStage, setOnboardingStage] = useState<number>(0); // 0: Starting, 1: Awaiting, 2: Completed
-  const [verificationResult, setVerificationResult] = useState<VerifyInviteResult | null>(null);
+  const [onboardingStage, setOnboardingStage] = useState<number>(0);
   const [isSuccess, setIsSuccess] = useState(false);
-
-  const { hasHat, isLoading: isHatLoading } = useIsWearerOfHat();
-
-  // Derived state from verification result
-  const isVerifying = verificationResult === null;
-  const isValid = verificationResult?.success || false;
-  const error = verificationResult?.error || null;
-  const expiresAt = verificationResult?.expiresAt || null;
 
   const onboardingSteps: OnboardingStep[] = [
     {
@@ -51,26 +40,6 @@ export default function InvitePage() {
       description: "Onboarding completed!",
     },
   ];
-
-  useEffect(() => {
-    // Reset state when code changes
-    setOnboardingStage(0);
-    setVerificationResult(null);
-
-    const verifyInviteCode = async () => {
-      try {
-        const result = await verifyInvite(code as string);
-        setVerificationResult(result);
-      } catch (err) {
-        setVerificationResult({
-          success: false,
-          error: "Failed to verify invite",
-        });
-      }
-    };
-
-    verifyInviteCode();
-  }, [code]);
 
   const handleAcceptInvite = async () => {
     if (
@@ -91,7 +60,6 @@ export default function InvitePage() {
       // Get client request info for audit logging
       const deviceInfo = getAuditDeviceInfo();
 
-      // TODO: recipient is a misnomer here
       const onboardResult = await fetch("/api/onboarding/invite", {
         method: "POST",
         body: JSON.stringify({
@@ -151,93 +119,6 @@ export default function InvitePage() {
     );
   }
 
-  if (!address || !isConnecting) {
-    // No account connected: only verify invite
-    if (isVerifying)
-      return (
-        <Container>
-          <InfoText
-            heading={en.invitePage.headings.verifying}
-            message={en.invitePage.prompts.processing}
-            variant="progress"
-          />
-        </Container>
-      );
-    if (!isValid) {
-      const { heading, message } = getInviteErrorCopy(error);
-      return (
-        <Container>
-          <InfoText heading={heading} message={message} variant="warning" />
-        </Container>
-      );
-    }
-    // Show prompt to connect wallet and accept invite
-    return (
-      <Container>
-        <div className="flex flex-col items-center gap-4">
-          <InfoText heading="Log in to accept invite" variant="info" className="mb-4">
-            Please log in to the RelayID network to accept this invite.
-          </InfoText>
-          {expiresAt && (
-            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-center">
-              <p className="text-sm text-blue-800">
-                <strong>Expires:</strong> {new Date(expiresAt).toLocaleString()}
-              </p>
-            </div>
-          )}
-          <ConnectButton />
-        </div>
-      </Container>
-    );
-  }
-
-  if (isHatLoading) {
-    // Account connected, checking onboarding status
-    return (
-      <Container>
-        <InfoText
-          heading={en.invitePage.prompts.checkingWalletStatus}
-          message={en.invitePage.prompts.checkingWalletStatus}
-          variant="info"
-        />
-      </Container>
-    );
-  }
-
-  if (hasHat === true) {
-    // Account is already onboarded
-    return (
-      <Container>
-        <InfoText
-          heading={en.invitePage.headings.alreadyOnboarded}
-          message={en.invitePage.prompts.alreadyOnboarded}
-          variant="info"
-        />
-      </Container>
-    );
-  }
-
-  // Now verify invite for connected account
-  if (isVerifying)
-    return (
-      <Container>
-        <InfoText
-          heading={en.invitePage.headings.verifying}
-          message={en.invitePage.prompts.processing}
-          variant="progress"
-        />
-      </Container>
-    );
-  if (!isValid) {
-    const { heading, message } = getInviteErrorCopy(error);
-    return (
-      <Container>
-        <InfoText heading={heading} message={message} variant="warning" />
-      </Container>
-    );
-  }
-
-  // Default: show main accept invite UI
   return (
     <Container>
       <h1 className="text-2xl font-semibold mb-4">{en.invitePage.headings.accept}</h1>
@@ -251,10 +132,10 @@ export default function InvitePage() {
       {!(isLoading || onboardingStage > 0) && (
         <>
           <InfoText className="mb-4">{en.invitePage.prompts.accept}</InfoText>
-          {expiresAt && (
+          {verificationResult.expiresAt && (
             <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
               <p className="text-sm text-blue-800">
-                <strong>Expires:</strong> {new Date(expiresAt).toLocaleString()}
+                <strong>Expires:</strong> {new Date(verificationResult.expiresAt).toLocaleString()}
               </p>
             </div>
           )}

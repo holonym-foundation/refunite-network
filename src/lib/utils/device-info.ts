@@ -12,10 +12,7 @@ function mapUAParserToDeviceInfo(
   env: "client" | "server"
 ): Partial<DeviceInfo> {
   // Map device type
-  let deviceType: DeviceInfo["deviceType"] = "unknown";
-  if (result.device.type === "mobile") deviceType = "mobile";
-  else if (result.device.type === "tablet") deviceType = "tablet";
-  else if (result.device.type === "desktop" || !result.device.type) deviceType = "desktop";
+  let deviceType: DeviceInfo["deviceType"] = result.device.type || "unknown";
 
   // Map platform
   let platform: DeviceInfo["platform"] = "unknown";

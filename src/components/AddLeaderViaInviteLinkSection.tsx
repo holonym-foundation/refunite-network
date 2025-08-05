@@ -53,7 +53,7 @@ export function AddLeaderViaInviteLinkSection({ disabled }: InviteLinkSectionPro
         throw new Error(data.error);
       }
 
-      const link = `${window.location.origin}/invite/${data.inviteCode}`;
+      const link = `${window.location.origin}/invite?code=${data.inviteCode}`;
       setInviteLink(link);
       toast({
         title: "Invite link generated!",

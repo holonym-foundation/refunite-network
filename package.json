@@ -4,7 +4,7 @@
   "type": "module",
   "version": "0.0.1",
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --turbopack",
     "build": "next lint --fix && next build",
     "start": "next start",
     "lint": "next lint --fix",
@@ -40,7 +40,7 @@
     "@silk-wallet/silk-wallet-sdk": "^0.7.1",
     "@tanstack/react-query": "^5.81.2",
     "@types/node": "^20.16.12",
-    "@types/react-dom": "^18.3.1",
+    "@types/react-dom": "19.1.7",
     "@wagmi/core": "^2.17.1",
     "@yudiel/react-qr-scanner": "^2.1.0",
     "autoprefixer": "^10.4.20",
@@ -48,15 +48,15 @@
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "eslint": "^8.57.1",
-    "eslint-config-next": "^14.2.15",
+    "eslint-config-next": "15.4.5",
     "ethers": "^6.13.7",
     "lucide-react": "^0.488.0",
-    "next": "^14.2.28",
+    "next": "15.4.5",
     "next-themes": "^0.2.1",
     "pino-pretty": "^13.0.0",
     "postcss": "^8.4.47",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
+    "react": "19.1.1",
+    "react-dom": "19.1.1",
     "react-hook-form": "^7.55.0",
     "react-qr-code": "^2.0.15",
     "react-toastify": "^10.0.6",
@@ -64,6 +64,7 @@
     "tailwindcss": "^3.4.14",
     "tailwindcss-animate": "^1.0.7",
     "typescript": "^5.8.3",
+    "ua-parser-js": "^2.0.4",
     "viem": "2.29.2",
     "wagmi": "^2.15.2",
     "zod": "^3.24.3"
@@ -73,7 +74,7 @@
     "@commitlint/config-conventional": "^19.5.0",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",
-    "@types/react": "18.2.64",
+    "@types/react": "19.1.9",
     "@types/ua-parser-js": "^0.7.39",
     "@vitest/ui": "^3.2.4",
     "eslint-config-prettier": "^10.1.2",
@@ -93,5 +94,11 @@
     "*.{json,md}": [
       "prettier --write"
     ]
+  },
+  "pnpm": {
+    "overrides": {
+      "@types/react": "19.1.9",
+      "@types/react-dom": "19.1.7"
+    }
   }
 }

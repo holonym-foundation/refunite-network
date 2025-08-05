@@ -2,24 +2,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CHAIN_ID, HATS_TREE_ID, RELAYER_CONTRACT_ADDRESS } from "@/lib/constants";
 import { Suspense } from "react";
-import {
-  getCompletionsCount,
-  getHatsWearersCount,
-  getInvitationsCount,
-  getRelayerBalance,
-  getReservedInvitesCount,
-} from "../actions/dashboard";
 
 async function Metrics() {
   // Fetch all metrics in parallel
-  const [completions, reserved, invites, relayerBalance, hatsWearers] = await Promise.all([
-    getCompletionsCount(),
-    getReservedInvitesCount(),
-    getInvitationsCount(),
-    getRelayerBalance(),
-    getHatsWearersCount(),
-  ]);
+  const res = await fetch("/api/metrics", { cache: "no-store" });
+  const data = await res.json();
 
+  const { completions, reservedInvites, invitations, relayerBalance, hatsWearers } = data;
   // Format relayer balance (wei to CELO)
   const relayerBalanceCelo = (Number(relayerBalance) / 1e18).toFixed(4);
 
@@ -29,10 +18,10 @@ async function Metrics() {
         Successful onboardings: <span className="text-green-600 font-mono">{completions}</span>
       </li>
       <li>
-        Reserved invites: <span className="text-green-600 font-mono">{reserved}</span>
+        Reserved invites: <span className="text-green-600 font-mono">{reservedInvites}</span>
       </li>
       <li>
-        Total invites: <span className="text-green-600 font-mono">{invites}</span>
+        Total invites: <span className="text-green-600 font-mono">{invitations}</span>
       </li>
       <li>
         Total Hats wearers: <span className="text-green-600 font-mono">{hatsWearers}</span>

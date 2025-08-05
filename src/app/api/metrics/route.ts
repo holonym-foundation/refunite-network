@@ -7,6 +7,9 @@ import {
 } from "@/app/actions/dashboard";
 import { NextRequest, NextResponse } from "next/server";
 
+// Force static generation for mobile builds
+export const dynamic = "force-static";
+
 export async function GET(request: NextRequest) {
   try {
     const results: any = {};

@@ -1,6 +1,9 @@
 import { addLeaderViaSignedTypedData } from "@/app/actions/defender";
 import { NextRequest, NextResponse } from "next/server";
 
+// Force static generation for mobile builds
+export const dynamic = "force-static";
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();

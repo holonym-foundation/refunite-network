@@ -1,5 +1,3 @@
-"use server";
-
 import { INVITE_TTL_SECONDS } from "@/lib/constants";
 import { utcAddSeconds, utcNow } from "@/lib/utils/date";
 import { DB } from "@/lib/database/service";

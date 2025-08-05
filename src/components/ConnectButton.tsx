@@ -1,7 +1,7 @@
 "use client";
+import { useEffect, useState } from "react";
 import { UserRejectedRequestError } from "viem";
 import { useAccount, useConnect, useDisconnect } from "wagmi";
-import { useEffect, useState } from "react";
 
 // Add type declaration for window.silk
 declare global {
@@ -103,9 +103,7 @@ export function ConnectButton() {
         </div>
       ) : (
         <div className="flex items-center gap-2 flex-row lg:flex-row-reverse">
-          <Button onClick={handleDisconnect}>
-            {en.common.logout}
-          </Button>
+          <Button onClick={handleDisconnect}>{en.common.logout}</Button>
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>

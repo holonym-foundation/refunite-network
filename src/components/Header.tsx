@@ -10,7 +10,6 @@ import { ConnectButton } from "./ConnectButton";
 import { NetworkTag } from "./NetworkTag";
 import { Button } from "./ui/button";
 
-import { submitFeedback } from "@/app/actions/feedback";
 import { useToast } from "@/components/ui/use-toast";
 import en from "@/content/en";
 import { getClientDeviceInfo } from "@/lib/utils/device-info";
@@ -35,17 +34,25 @@ export function Header() {
     setLoading(true);
     try {
       const deviceInfo = getClientDeviceInfo();
-      const res = await submitFeedback({
-        sentiment,
-        feedback,
-        user: address || "anonymous",
-        page: typeof window !== "undefined" ? window.location.pathname : "unknown",
-        deviceInfo,
+      const res = await fetch("/api/messages/feedback", {
+        method: "POST",
+        body: JSON.stringify({
+          sentiment,
+          feedback,
+          user: address || "anonymous",
+          page: typeof window !== "undefined" ? window.location.pathname : "unknown",
+          deviceInfo,
+        }),
       });
-      if (res.success) {
+      const data = await res.json();
+      if (data.success) {
         toast({ title: "Thank you for your feedback!" });
       } else {
-        toast({ title: "Failed to send feedback", description: res.error, variant: "destructive" });
+        toast({
+          title: "Failed to send feedback",
+          description: data.error,
+          variant: "destructive",
+        });
       }
       setFeedbackOpen(false);
       setSentiment(null);

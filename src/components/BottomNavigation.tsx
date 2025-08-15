@@ -1,32 +1,43 @@
 "use client";
 import { useState } from "react";
 
-import { MessageCircle } from "lucide-react";
-import Image from "next/image";
+import { Home, MessageCircle, Plus } from "lucide-react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
+import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ConnectButton } from "./ConnectButton";
-import { NetworkTag } from "./NetworkTag";
-import { Button } from "./ui/button";
 
 import { useToast } from "@/components/ui/use-toast";
 import en from "@/content/en";
 import { getClientDeviceInfo } from "@/lib/utils/device-info";
 import { useAccount } from "wagmi";
+import { useIsMobileApp } from "@/hooks/useIsMobileApp";
 
 const navItems = [
-  { name: en.header.nav.myAccount, href: "/" },
-  { name: en.header.nav.addLeader, href: "/add" },
+  {
+    name: en.header.nav.myAccount,
+    href: "/",
+    icon: Home,
+    label: "My Account",
+  },
+  {
+    name: en.header.nav.addLeader,
+    href: "/add",
+    icon: Plus,
+    label: "Add Leader",
+  },
 ];
 
-export function Header() {
+export function BottomNavigation() {
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [sentiment, setSentiment] = useState<"up" | "down" | null>(null);
   const [feedback, setFeedback] = useState("");
   const [loading, setLoading] = useState(false);
   const { address } = useAccount();
   const { toast } = useToast();
+  const pathname = usePathname();
+  const isMobileApp = useIsMobileApp();
 
   const handleFeedbackSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,60 +78,46 @@ export function Header() {
     }
   };
 
+  // Only show bottom navigation in mobile app environment
+  if (!isMobileApp) {
+    return null;
+  }
+
   return (
     <>
-      <header className="sticky top-0 z-50 w-full bg-white/90 backdrop-blur-sm border-b">
-        <div className="mx-auto max-w-2xl">
-          <nav className="px-4 lg:px-6 py-4" aria-label="Main Navigation">
-            <div className="flex flex-col lg:flex-col justify-between items-center gap-4">
-              <div className="flex w-full justify-between items-center">
-                <div className="flex flex-row items-center gap-2">
-                  <Link href="/" className="flex items-center">
-                    <Image
-                      src="/logo.svg"
-                      alt="Refunite Relay ID logo"
-                      width={120}
-                      height={48}
-                      priority
-                      className="h-14 w-auto"
-                    />
-                  </Link>
-                  <NetworkTag />
-                </div>
+      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200">
+        <div className="flex items-center justify-around px-2 py-2">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = pathname === item.href;
 
-                <div className="flex items-center gap-2">
-                  <div className="hidden lg:flex items-center">
-                    <ConnectButton />
-                  </div>
-                </div>
-              </div>
-
-              {/* Desktop Navigation */}
-              <div className="hidden lg:flex items-center space-x-8">
-                {navItems.map((item) => (
-                  <div key={item.name} className="group">
-                    <Link
-                      href={item.href}
-                      className="text-base text-muted-foreground hover:text-primary lg:hover:text-primary-700 font-medium"
-                    >
-                      {item.name}
-                    </Link>
-                  </div>
-                ))}
-                {/* Feedback Button */}
+            return (
+              <Link key={item.name} href={item.href} className="flex-1">
                 <Button
                   variant="ghost"
-                  size="icon"
-                  aria-label="Give feedback"
-                  onClick={() => setFeedbackOpen(true)}
+                  className={`w-full h-14 flex flex-col items-center justify-center gap-1 ${
+                    isActive ? "text-blue-600 bg-blue-50" : "text-gray-600"
+                  }`}
                 >
-                  <MessageCircle className="h-5 w-5" />
+                  <Icon className="h-6 w-6" />
+                  <span className="text-xs font-medium">{item.label}</span>
                 </Button>
-              </div>
-            </div>
-          </nav>
+              </Link>
+            );
+          })}
+
+          {/* Feedback Button */}
+          <Button
+            variant="ghost"
+            className="flex-1 h-14 flex flex-col items-center justify-center gap-1 text-gray-600"
+            onClick={() => setFeedbackOpen(true)}
+          >
+            <MessageCircle className="h-6 w-6" />
+            <span className="text-xs font-medium">Feedback</span>
+          </Button>
         </div>
-      </header>
+      </nav>
+
       {/* Feedback Modal */}
       <Dialog open={feedbackOpen} onOpenChange={setFeedbackOpen}>
         <DialogContent>

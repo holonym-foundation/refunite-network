@@ -1,8 +1,29 @@
+"use client";
 import { Header } from "@/components/Header";
+import { BottomNavigation } from "@/components/BottomNavigation";
 import { Toaster } from "@/components/ui/toaster";
 import { OfflineStatus } from "@/components/OfflineStatus";
+import { useIsMobileApp } from "@/hooks/useIsMobileApp";
 
 import { ContextProvider } from "@/context";
+
+function LayoutContent({ children }: { children: React.ReactNode }) {
+  const isMobileApp = useIsMobileApp();
+
+  return (
+    <>
+      <Header />
+      <main
+        className={`mx-auto lg:max-w-3xl px-0 lg:px-6 min-h-screen ${isMobileApp ? "pb-20" : ""}`}
+      >
+        <Toaster />
+        {children}
+      </main>
+      <BottomNavigation />
+      <OfflineStatus />
+    </>
+  );
+}
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (
@@ -25,12 +46,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       </head>
       <body>
         <ContextProvider>
-          <Header />
-          <main className="mx-auto lg:max-w-3xl px-0 lg:px-6 min-h-screen">
-            <Toaster />
-            {children}
-          </main>
-          <OfflineStatus />
+          <LayoutContent>{children}</LayoutContent>
         </ContextProvider>
       </body>
     </html>

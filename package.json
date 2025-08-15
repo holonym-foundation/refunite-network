@@ -18,7 +18,7 @@
     "lint-staged": "lint-staged",
     "check-types": "tsc --noEmit",
     "generate-static-apis": "node scripts/generate-static-apis.js",
-    "capacitor:sync": "npm run build:mobile && npm run capacitor:assets && npx cap sync",
+    "capacitor:sync": "rm -rf out android && pnpm run build:mobile && pnpm run capacitor:assets && npx cap add android",
     "capacitor:assets": "npx @capacitor/assets generate --iconBackgroundColor '#eeeeee' --iconBackgroundColorDark '#222222' --splashBackgroundColor '#eeeeee' --splashBackgroundColorDark '#111111'"
   },
   "dependencies": {

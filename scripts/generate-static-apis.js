@@ -40,6 +40,12 @@ Object.entries(staticApis).forEach(([route, data]) => {
   const routePath = route.replace("/api/", "");
   const routeDir = path.join(apiDir, routePath);
 
+  // Check if the path exists and is a file (not a directory)
+  if (fs.existsSync(routeDir) && !fs.statSync(routeDir).isDirectory()) {
+    console.log(`Skipping ${route} - path exists as file`);
+    return;
+  }
+
   if (!fs.existsSync(routeDir)) {
     fs.mkdirSync(routeDir, { recursive: true });
   }

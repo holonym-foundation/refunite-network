@@ -18,10 +18,12 @@
     "lint-staged": "lint-staged",
     "check-types": "tsc --noEmit",
     "generate-static-apis": "node scripts/generate-static-apis.js",
-    "capacitor:sync": "npm run build:mobile && npx cap sync"
+    "capacitor:sync": "npm run build:mobile && npm run capacitor:assets && npx cap sync",
+    "capacitor:assets": "npx @capacitor/assets generate --iconBackgroundColor '#eeeeee' --iconBackgroundColorDark '#222222' --splashBackgroundColor '#eeeeee' --splashBackgroundColorDark '#111111'"
   },
   "dependencies": {
     "@capacitor/android": "^7.4.2",
+    "@capacitor/app": "^7.0.2",
     "@hatsprotocol/sdk-v1-core": "^0.12.4",
     "@hookform/resolvers": "^5.1.1",
     "@libsql/client": "^0.15.9",

@@ -6,15 +6,19 @@ import { OfflineStatus } from "@/components/OfflineStatus";
 import { useIsMobileApp } from "@/hooks/useIsMobileApp";
 
 import { ContextProvider } from "@/context";
+import { useAccount } from "wagmi";
 
 function LayoutContent({ children }: { children: React.ReactNode }) {
   const isMobileApp = useIsMobileApp();
+  const { address } = useAccount();
 
   return (
     <>
       <Header />
       <main
-        className={`mx-auto lg:max-w-3xl px-0 lg:px-6 min-h-screen ${isMobileApp ? "pb-20" : ""}`}
+        className={`mx-auto lg:max-w-3xl px-0 lg:px-6 min-h-screen ${
+          isMobileApp && address ? "pb-20" : ""
+        }`}
       >
         <Toaster />
         {children}

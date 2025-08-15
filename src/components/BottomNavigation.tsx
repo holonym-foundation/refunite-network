@@ -78,14 +78,14 @@ export function BottomNavigation() {
     }
   };
 
-  // Only show bottom navigation in mobile app environment
-  if (!isMobileApp) {
+  // Only show bottom navigation in mobile app environment and when user is logged in
+  if (!isMobileApp || !address) {
     return null;
   }
 
   return (
     <>
-      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200">
+      <nav className="fixed bottom-2 left-0 right-0 z-50 bg-white border-t border-gray-200">
         <div className="flex items-center justify-around px-2 py-2">
           {navItems.map((item) => {
             const Icon = item.icon;

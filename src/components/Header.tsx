@@ -14,6 +14,7 @@ import { useToast } from "@/components/ui/use-toast";
 import en from "@/content/en";
 import { getClientDeviceInfo } from "@/lib/utils/device-info";
 import { useAccount } from "wagmi";
+import { useIsMobileApp } from "@/hooks/useIsMobileApp";
 
 const navItems = [
   { name: en.header.nav.myAccount, href: "/" },
@@ -27,6 +28,7 @@ export function Header() {
   const [loading, setLoading] = useState(false);
   const { address } = useAccount();
   const { toast } = useToast();
+  const isMobileApp = useIsMobileApp();
 
   const handleFeedbackSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -69,9 +71,16 @@ export function Header() {
 
   return (
     <>
-      <header className="sticky top-0 z-50 w-full bg-white/90 backdrop-blur-sm border-b">
+      <header
+        className={`sticky top-0 z-50 w-full bg-white/90 backdrop-blur-sm border-b ${
+          isMobileApp ? "pt-[env(safe-area-inset-top)]" : ""
+        }`}
+      >
         <div className="mx-auto max-w-2xl">
-          <nav className="px-4 lg:px-6 py-4" aria-label="Main Navigation">
+          <nav
+            className={`px-4 lg:px-6 py-4 ${isMobileApp ? "pt-2" : ""}`}
+            aria-label="Main Navigation"
+          >
             <div className="flex flex-col lg:flex-col justify-between items-center gap-4">
               <div className="flex w-full justify-between items-center">
                 <div className="flex flex-row items-center gap-2">
@@ -82,16 +91,18 @@ export function Header() {
                       width={120}
                       height={48}
                       priority
-                      className="h-14 w-auto"
+                      className={`w-auto ${isMobileApp ? "h-10" : "h-14"}`}
                     />
                   </Link>
                   <NetworkTag />
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <div className="hidden lg:flex items-center">
-                    <ConnectButton />
-                  </div>
+                  {isMobileApp ? null : (
+                    <div className="flex items-center">
+                      <ConnectButton variant={isMobileApp ? "mobile" : "default"} />
+                    </div>
+                  )}
                 </div>
               </div>
 

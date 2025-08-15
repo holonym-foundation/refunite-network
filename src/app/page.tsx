@@ -14,10 +14,12 @@ import { Button } from "@/components/ui/button";
 
 import en from "@/content/en";
 import { useIsWearerOfHat } from "@/hooks/useIsWearerOfHat";
+import { useIsMobileApp } from "@/hooks/useIsMobileApp";
 
 function AccountPage() {
   const { address, isConnected, chainId } = useAccount();
   const { hasHat, isLoading: isHatLoading, error: isHatError } = useIsWearerOfHat();
+  const isMobileApp = useIsMobileApp();
 
   // Not connected state
   if (!isConnected) {
@@ -30,7 +32,7 @@ function AccountPage() {
             variant="info"
             className="text-center"
           />
-          <ConnectButton />
+          <ConnectButton variant={isMobileApp ? "mobile" : "default"} />
         </div>
       </Container>
     );

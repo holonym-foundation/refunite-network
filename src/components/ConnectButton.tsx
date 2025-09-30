@@ -1,7 +1,7 @@
 "use client";
+import { useEffect, useState } from "react";
 import { UserRejectedRequestError } from "viem";
 import { useAccount, useConnect, useDisconnect } from "wagmi";
-import { useEffect, useState } from "react";
 
 // Add type declaration for window.silk
 declare global {
@@ -20,7 +20,11 @@ import en from "@/content/en";
 import { defaultChain } from "@/wagmi/chain-config";
 import silk from "@/wagmi/silk-connector";
 
-export function ConnectButton() {
+interface ConnectButtonProps {
+  variant?: "default" | "mobile";
+}
+
+export function ConnectButton({ variant = "default" }: ConnectButtonProps) {
   const { connect, error, isError, connectors } = useConnect();
   const { disconnect } = useDisconnect();
   const { address, isConnecting } = useAccount();
@@ -87,10 +91,14 @@ export function ConnectButton() {
   }
 
   return (
-    <div className="flex items-center gap-2">
+    <div className={`flex items-center gap-2 ${variant === "mobile" ? "max-w-lg" : ""}`}>
       {!address ? (
-        <div className="flex items-center gap-2">
-          <Button onClick={handleConnect} disabled={isConnecting}>
+        <div className={`flex items-center gap-2 ${variant === "mobile" ? "max-w-lg" : ""}`}>
+          <Button
+            onClick={handleConnect}
+            disabled={isConnecting}
+            className={variant === "mobile" ? "w-full h-12 text-lg font-semibold" : ""}
+          >
             {isConnecting ? (
               <div className="flex items-center gap-2">
                 <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
@@ -102,8 +110,13 @@ export function ConnectButton() {
           </Button>
         </div>
       ) : (
-        <div className="flex items-center gap-2 flex-row lg:flex-row-reverse">
-          <Button onClick={handleDisconnect}>
+        <div
+          className={`flex items-center gap-2 ${variant === "mobile" ? "max-w-lg" : "flex-row lg:flex-row-reverse"}`}
+        >
+          <Button
+            onClick={handleDisconnect}
+            className={variant === "mobile" ? "max-w-lg h-12 text-lg font-semibold" : ""}
+          >
             {en.common.logout}
           </Button>
           <TooltipProvider>
@@ -111,7 +124,9 @@ export function ConnectButton() {
               <TooltipTrigger asChild>
                 <Button
                   variant="ghost"
-                  className="font-mono text-muted-foreground text-sm sm:text-xs"
+                  className={`font-mono text-muted-foreground text-sm sm:text-xs ${
+                    variant === "mobile" ? "h-12 text-base" : ""
+                  }`}
                   onClick={() => copyAddress(address)}
                 >
                   {formatAddress(address)}

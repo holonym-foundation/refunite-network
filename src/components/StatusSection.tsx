@@ -15,14 +15,14 @@ interface StatusSectionProps {
 
 export function StatusSection({ hasHat, isHatLoading, isHatError }: StatusSectionProps) {
   return (
-    <div className="py-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <h3 className="text-lg font-semibold">{en.status.status}</h3>
+    <div className="py-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex items-start gap-3">
+          <h3 className="text-xl sm:text-lg font-semibold">{en.status.status}</h3>
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-6 w-6">
-                <InfoIcon className="h-4 w-4" />
+              <Button variant="ghost" size="icon" className="h-10 w-10 sm:h-6 sm:w-6 flex-shrink-0">
+                <InfoIcon className="h-5 w-5 sm:h-4 sm:w-4" />
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-80">
@@ -36,21 +36,21 @@ export function StatusSection({ hasHat, isHatLoading, isHatError }: StatusSectio
           </Popover>
         </div>
         {isHatLoading ? (
-          <Skeleton className="h-8 w-24" />
+          <Skeleton className="h-10 w-32 sm:h-8 sm:w-24" />
         ) : isHatError ? (
           <Badge
             variant="destructive"
-            className="bg-red-200 text-red-700 gap-1 px-3 py-2 shadow-sm font-semibold tracking-wide"
+            className="bg-red-200 text-red-700 gap-2 px-4 py-3 sm:px-3 sm:py-2 shadow-sm font-semibold tracking-wide text-base sm:text-sm"
           >
             {en.status.errorLoadingStatus}
           </Badge>
         ) : hasHat ? (
           <Badge
             variant="default"
-            className="bg-green-200 text-green-700 gap-1 px-3 py-2 shadow-sm font-semibold tracking-wide"
+            className="bg-green-200 text-green-700 gap-2 px-4 py-3 sm:px-3 sm:py-2 shadow-sm font-semibold tracking-wide text-base sm:text-sm"
           >
             <svg
-              className="w-4 h-4"
+              className="w-5 h-5 sm:w-4 sm:h-4"
               viewBox="0 0 24 24"
               fill="none"
               xmlns="http://www.w3.org/2000/svg"
@@ -68,10 +68,10 @@ export function StatusSection({ hasHat, isHatLoading, isHatError }: StatusSectio
         ) : (
           <Badge
             variant="destructive"
-            className="bg-red-200 text-red-700 gap-1 px-3 py-2 shadow-sm font-semibold tracking-wide"
+            className="bg-red-200 text-red-700 gap-2 px-4 py-3 sm:px-3 sm:py-2 shadow-sm font-semibold tracking-wide text-base sm:text-sm"
           >
             <svg
-              className="w-4 h-4"
+              className="w-5 h-5 sm:w-4 sm:h-4"
               viewBox="0 0 24 24"
               fill="none"
               xmlns="http://www.w3.org/2000/svg"
@@ -89,11 +89,13 @@ export function StatusSection({ hasHat, isHatLoading, isHatError }: StatusSectio
         )}
       </div>
       {!isHatLoading && !hasHat && (
-        <div className="mt-4 p-4 bg-slate-50 rounded-lg border border-slate-200">
-          <h4 className="font-medium mb-2">{en.status.onboardingTitle}</h4>
-          <ol className="list-decimal list-inside space-y-2 text-sm text-slate-600">
+        <div className="mt-6 p-4 bg-slate-50 rounded-lg border border-slate-200">
+          <h4 className="font-medium mb-3 text-lg sm:text-base">{en.status.onboardingTitle}</h4>
+          <ol className="list-decimal list-inside space-y-3 text-base sm:text-sm text-slate-600">
             {en.status.onboardingSteps.map((step, idx) => (
-              <li key={idx}>{step}</li>
+              <li key={idx} className="leading-relaxed">
+                {step}
+              </li>
             ))}
           </ol>
         </div>

@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 
-import { Menu, MessageCircle, X } from "lucide-react";
+import { MessageCircle } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -10,11 +10,10 @@ import { ConnectButton } from "./ConnectButton";
 import { NetworkTag } from "./NetworkTag";
 import { Button } from "./ui/button";
 
-import { submitFeedback } from "@/app/actions/feedback";
 import { useToast } from "@/components/ui/use-toast";
 import en from "@/content/en";
-import { getClientDeviceInfo } from "@/lib/utils/device-info";
 import { useAccount } from "wagmi";
+import { getClientDeviceInfo } from "@/lib/utils/device-info";
 
 const navItems = [
   { name: en.header.nav.myAccount, href: "/" },
@@ -22,7 +21,6 @@ const navItems = [
 ];
 
 export function Header() {
-  const [isOpen, setIsOpen] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [sentiment, setSentiment] = useState<"up" | "down" | null>(null);
   const [feedback, setFeedback] = useState("");
@@ -34,18 +32,25 @@ export function Header() {
     e.preventDefault();
     setLoading(true);
     try {
-      const deviceInfo = getClientDeviceInfo();
-      const res = await submitFeedback({
-        sentiment,
-        feedback,
-        user: address || "anonymous",
-        page: typeof window !== "undefined" ? window.location.pathname : "unknown",
-        deviceInfo,
+      const res = await fetch("/api/messages/feedback", {
+        method: "POST",
+        body: JSON.stringify({
+          sentiment,
+          feedback,
+          user: address || "anonymous",
+          page: typeof window !== "undefined" ? window.location.pathname : "unknown",
+          deviceInfo: getClientDeviceInfo(),
+        }),
       });
-      if (res.success) {
+      const data = await res.json();
+      if (data.success) {
         toast({ title: "Thank you for your feedback!" });
       } else {
-        toast({ title: "Failed to send feedback", description: res.error, variant: "destructive" });
+        toast({
+          title: "Failed to send feedback",
+          description: data.error,
+          variant: "destructive",
+        });
       }
       setFeedbackOpen(false);
       setSentiment(null);
@@ -66,64 +71,36 @@ export function Header() {
       <header className="sticky top-0 z-50 w-full bg-white/90 backdrop-blur-sm border-b">
         <div className="mx-auto max-w-2xl">
           <nav className="px-4 lg:px-6 py-4" aria-label="Main Navigation">
-            <div className="flex flex-col lg:flex-col justify-between items-center gap-4">
-              <div className="flex w-full justify-between items-center">
-                <div className="flex flex-row items-center gap-2">
-                  <Link href="/" className="flex items-center">
-                    <Image
-                      src="/logo.svg"
-                      alt="Refunite Relay ID logo"
-                      width={120}
-                      height={48}
-                      priority
-                      className="h-14 w-auto"
-                    />
-                  </Link>
-                  <NetworkTag />
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <div className="hidden lg:flex items-center">
-                    <ConnectButton />
-                  </div>
-                  {/* Mobile Feedback Button */}
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="lg:hidden"
-                    aria-label="Give feedback"
-                    onClick={() => setFeedbackOpen(true)}
-                  >
-                    <MessageCircle className="h-5 w-5" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="lg:hidden"
-                    onClick={() => setIsOpen(!isOpen)}
-                    aria-expanded={isOpen}
-                    aria-controls="mobile-menu"
-                  >
-                    <span className="sr-only">
-                      {isOpen ? en.header.menu.close : en.header.menu.open}
-                    </span>
-                    {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-                  </Button>
-                </div>
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-2">
+                <Link href="/" className="flex items-center">
+                  <Image
+                    src="/logo.svg"
+                    alt="Refunite Relay ID logo"
+                    width={120}
+                    height={48}
+                    priority
+                    className="w-auto h-10"
+                  />
+                </Link>
+                <NetworkTag />
               </div>
 
-              {/* Desktop Navigation */}
-              <div className="hidden lg:flex items-center space-x-8">
-                {navItems.map((item) => (
-                  <div key={item.name} className="group">
-                    <Link
-                      href={item.href}
-                      className="text-base text-muted-foreground hover:text-primary lg:hover:text-primary-700 font-medium"
-                    >
-                      {item.name}
-                    </Link>
-                  </div>
-                ))}
+              <div className="flex items-center gap-6">
+                {/* Navigation */}
+                <div className="flex items-center space-x-8">
+                  {navItems.map((item) => (
+                    <div key={item.name} className="group">
+                      <Link
+                        href={item.href}
+                        className="text-base text-muted-foreground hover:text-primary font-medium"
+                      >
+                        {item.name}
+                      </Link>
+                    </div>
+                  ))}
+                </div>
+
                 {/* Feedback Button */}
                 <Button
                   variant="ghost"
@@ -133,30 +110,10 @@ export function Header() {
                 >
                   <MessageCircle className="h-5 w-5" />
                 </Button>
-              </div>
-            </div>
 
-            {/* Mobile Navigation */}
-            <div
-              className={`${isOpen ? "block" : "hidden"} lg:hidden w-full mt-4`}
-              id="mobile-menu"
-            >
-              <ul className="flex flex-col">
-                {navItems.map((item) => (
-                  <li key={item.name} className="group">
-                    <Link
-                      href={item.href}
-                      className="block py-2 text-base text-muted-foreground hover:text-primary font-medium"
-                      onClick={() => setIsOpen(false)}
-                    >
-                      {item.name}
-                    </Link>
-                  </li>
-                ))}
-                <li className="mt-4">
-                  <ConnectButton />
-                </li>
-              </ul>
+                {/* Connect Button */}
+                <ConnectButton variant="default" />
+              </div>
             </div>
           </nav>
         </div>

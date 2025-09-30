@@ -1,5 +1,3 @@
-"use server";
-
 import { sendFeedbackMessage } from "@/lib/slack/webhook";
 
 interface FeedbackInput {

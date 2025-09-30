@@ -1,4 +1,3 @@
-import { addLeaderViaSignedTypedData } from "@/app/actions/defender";
 import { QrScannerDialog } from "@/components/QrScannerDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +7,7 @@ import { useSafeOwner } from "@/hooks/useSafeOwner";
 import { useSilkSigner } from "@/hooks/useSilkSigner";
 import { createDirectOnboardTypedData, generateNonce } from "@/lib/eip712";
 import { getClientDeviceInfo } from "@/lib/utils/device-info";
+import { marshalTypedData } from "@/lib/utils/serialize";
 import { QrCode } from "lucide-react";
 import { useState } from "react";
 import { isAddress } from "viem";
@@ -82,10 +82,19 @@ export function AddLeaderViaQRSection({ onSuccess }: AddLeaderViaQRSectionProps)
       });
       const signature = await signTypedData(typedData);
       const deviceInfo = getClientDeviceInfo();
-      const result = await addLeaderViaSignedTypedData(recipient, typedData, signature, deviceInfo);
+      const result = await fetch("/api/onboarding/direct", {
+        method: "POST",
+        body: JSON.stringify({
+          recipient,
+          typedData: marshalTypedData(typedData),
+          signature,
+          deviceInfo,
+        }),
+      });
 
-      if (result.error) {
-        throw new Error(result.error);
+      const data = await result.json();
+      if (data.error) {
+        throw new Error(data.error);
       }
 
       setRecipient("");

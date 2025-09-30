@@ -1,41 +1,85 @@
+"use client";
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CHAIN_ID, HATS_TREE_ID, RELAYER_CONTRACT_ADDRESS } from "@/lib/constants";
-import { Suspense } from "react";
-import {
-  getCompletionsCount,
-  getHatsWearersCount,
-  getInvitationsCount,
-  getRelayerBalance,
-  getReservedInvitesCount,
-} from "../actions/dashboard";
+import { useEffect, useState } from "react";
 
-async function Metrics() {
-  // Fetch all metrics in parallel
-  const [completions, reserved, invites, relayerBalance, hatsWearers] = await Promise.all([
-    getCompletionsCount(),
-    getReservedInvitesCount(),
-    getInvitationsCount(),
-    getRelayerBalance(),
-    getHatsWearersCount(),
-  ]);
+interface MetricsData {
+  completions: number;
+  reservedInvites: number;
+  invitations: number;
+  relayerBalance: string;
+  hatsWearers: number;
+}
+
+function Metrics() {
+  const [metrics, setMetrics] = useState<MetricsData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchMetrics() {
+      try {
+        setLoading(true);
+        const res = await fetch("/api/metrics", { cache: "no-store" });
+        if (!res.ok) {
+          throw new Error(`Failed to fetch metrics: ${res.status} ${res.statusText}`);
+        }
+        const data = await res.json();
+        setMetrics(data);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to fetch metrics");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchMetrics();
+  }, []);
+
+  if (loading) {
+    return (
+      <ul className="list-disc pl-5 space-y-1">
+        <li>Loading metrics...</li>
+      </ul>
+    );
+  }
+
+  if (error) {
+    return (
+      <ul className="list-disc pl-5 space-y-1">
+        <li className="text-red-600">Error: {error}</li>
+      </ul>
+    );
+  }
+
+  if (!metrics) {
+    return (
+      <ul className="list-disc pl-5 space-y-1">
+        <li>No metrics data available</li>
+      </ul>
+    );
+  }
 
   // Format relayer balance (wei to CELO)
-  const relayerBalanceCelo = (Number(relayerBalance) / 1e18).toFixed(4);
+  const relayerBalanceCelo = (Number(metrics.relayerBalance) / 1e18).toFixed(4);
 
   return (
     <ul className="list-disc pl-5 space-y-1">
       <li>
-        Successful onboardings: <span className="text-green-600 font-mono">{completions}</span>
+        Successful onboardings:{" "}
+        <span className="text-green-600 font-mono">{metrics.completions}</span>
       </li>
       <li>
-        Reserved invites: <span className="text-green-600 font-mono">{reserved}</span>
+        Reserved invites:{" "}
+        <span className="text-green-600 font-mono">{metrics.reservedInvites}</span>
       </li>
       <li>
-        Total invites: <span className="text-green-600 font-mono">{invites}</span>
+        Total invites: <span className="text-green-600 font-mono">{metrics.invitations}</span>
       </li>
       <li>
-        Total Hats wearers: <span className="text-green-600 font-mono">{hatsWearers}</span>
+        Total Hats wearers: <span className="text-green-600 font-mono">{metrics.hatsWearers}</span>
       </li>
       <li>
         Relayer contract balance:{" "}
@@ -45,20 +89,27 @@ async function Metrics() {
   );
 }
 
-async function HealthStatus() {
-  // Fetch /api/health
-  let status = "Loading...";
-  try {
-    const res = await fetch("/api/health", { cache: "no-store" });
-    if (res.ok) {
-      const data = await res.json();
-      status = data.status === "ok" ? "Healthy" : "Unhealthy";
-    } else {
-      status = "Unhealthy";
+function HealthStatus() {
+  const [status, setStatus] = useState("Loading...");
+
+  useEffect(() => {
+    async function fetchHealth() {
+      try {
+        const res = await fetch("/api/health", { cache: "no-store" });
+        if (res.ok) {
+          const data = await res.json();
+          setStatus(data.status === "ok" ? "Healthy" : "Unhealthy");
+        } else {
+          setStatus("Unhealthy");
+        }
+      } catch {
+        setStatus("Unhealthy");
+      }
     }
-  } catch {
-    status = "Unhealthy";
-  }
+
+    fetchHealth();
+  }, []);
+
   return (
     <span className={`font-mono ${status === "Healthy" ? "text-green-600" : "text-red-600"}`}>
       Status: {status}
@@ -86,11 +137,7 @@ export default function AdminDashboard() {
           <CardTitle>API Health</CardTitle>
         </CardHeader>
         <CardContent>
-          <Suspense
-            fallback={<span className="font-mono text-yellow-500">Status: Loading...</span>}
-          >
-            <HealthStatus />
-          </Suspense>
+          <HealthStatus />
         </CardContent>
       </Card>
 
@@ -119,15 +166,7 @@ export default function AdminDashboard() {
           <CardTitle>Performance Metrics</CardTitle>
         </CardHeader>
         <CardContent>
-          <Suspense
-            fallback={
-              <ul className="list-disc pl-5 space-y-1">
-                <li>Loading metrics...</li>
-              </ul>
-            }
-          >
-            <Metrics />
-          </Suspense>
+          <Metrics />
         </CardContent>
       </Card>
     </div>

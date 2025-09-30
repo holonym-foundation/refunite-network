@@ -1,15 +1,15 @@
-import { createInvite } from "@/app/actions/invite";
 import { Button } from "@/components/ui/button";
+import { InfoText } from "@/components/ui/InfoText";
 import { useToast } from "@/components/ui/use-toast";
+import en from "@/content/en";
 import { useSilkSigner } from "@/hooks/useSilkSigner";
 import { INVITE_TTL_SECONDS } from "@/lib/constants";
 import { createNetworkInviteTypedData, generateNonce } from "@/lib/eip712";
+import { getAuditDeviceInfo } from "@/lib/utils/device-info";
+import { marshalTypedData } from "@/lib/utils/serialize";
 import { formatDistanceToNow } from "date-fns";
 import { useState } from "react";
 import { useAccount } from "wagmi";
-import en from "@/content/en";
-import { InfoText } from "@/components/ui/InfoText";
-import { getAuditDeviceInfo } from "@/lib/utils/device-info";
 
 interface InviteLinkSectionProps {
   disabled?: boolean;
@@ -37,13 +37,23 @@ export function AddLeaderViaInviteLinkSection({ disabled }: InviteLinkSectionPro
       // Get client request info for audit logging
       const deviceInfo = getAuditDeviceInfo();
 
-      const result = await createInvite(account, signature, nonce, typedData, deviceInfo);
+      const result = await fetch("/api/invites", {
+        method: "POST",
+        body: JSON.stringify({
+          inviterAddress: account,
+          signature,
+          nonce,
+          typedData: marshalTypedData(typedData),
+          deviceInfo,
+        }),
+      });
+      const data = await result.json();
 
-      if (!result.success) {
-        throw new Error(result.error || "Failed to generate invite");
+      if (data.error) {
+        throw new Error(data.error);
       }
 
-      const link = `${window.location.origin}/invite/${result.inviteCode}`;
+      const link = `${window.location.origin}/invite?code=${data.inviteCode}`;
       setInviteLink(link);
       toast({
         title: "Invite link generated!",

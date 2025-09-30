@@ -35,14 +35,18 @@ export function ShareSection({ address, chainId }: ShareSectionProps) {
 
   return (
     <>
-      <div className="py-4 border-b border-slate-300">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <h3 className="text-lg font-semibold">{en.share.shareAccountInfo}</h3>
+      <div className="py-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <h3 className="text-xl sm:text-lg font-semibold">{en.share.shareAccountInfo}</h3>
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-6 w-6">
-                  <InfoIcon className="h-4 w-4" />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-10 w-10 sm:h-6 sm:w-6 flex-shrink-0"
+                >
+                  <InfoIcon className="h-5 w-5 sm:h-4 sm:w-4" />
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-80">
@@ -55,10 +59,11 @@ export function ShareSection({ address, chainId }: ShareSectionProps) {
               </PopoverContent>
             </Popover>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-3 sm:gap-2">
             <Button
-              variant="ghost"
-              size="icon"
+              variant="outline"
+              size="lg"
+              className="h-12 w-12 sm:h-10 sm:w-10 p-0"
               onClick={() => {
                 if (address) {
                   const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(
@@ -70,7 +75,12 @@ export function ShareSection({ address, chainId }: ShareSectionProps) {
             >
               <WhatsAppIcon />
             </Button>
-            <Button variant="ghost" size="icon" onClick={() => setIsQrDialogOpen(true)}>
+            <Button
+              variant="outline"
+              size="lg"
+              className="h-12 w-12 sm:h-10 sm:w-10 p-0"
+              onClick={() => setIsQrDialogOpen(true)}
+            >
               <QrCode className="h-5 w-5" />
             </Button>
           </div>

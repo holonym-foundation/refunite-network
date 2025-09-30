@@ -10,6 +10,7 @@ import { ShareSection } from "@/components/ShareSection";
 import { StatusSection } from "@/components/StatusSection";
 import { Container } from "@/components/ui/Container";
 import { InfoText } from "@/components/ui/InfoText";
+import { Button } from "@/components/ui/button";
 
 import en from "@/content/en";
 import { useIsWearerOfHat } from "@/hooks/useIsWearerOfHat";
@@ -22,14 +23,14 @@ function AccountPage() {
   if (!isConnected) {
     return (
       <Container>
-        <div className="flex flex-col items-center justify-center">
+        <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-6">
           <InfoText
             heading={en.page.myAccountTitle}
             message={en.page.loginPrompt}
             variant="info"
-            className="mb-6"
+            className="text-center"
           />
-          <ConnectButton />
+          <ConnectButton variant={"default"} />
         </div>
       </Container>
     );
@@ -39,11 +40,14 @@ function AccountPage() {
   if (isHatLoading) {
     return (
       <Container>
-        <InfoText
-          heading="Loading account status"
-          message="Checking your network membership..."
-          variant="progress"
-        />
+        <div className="flex flex-col items-center justify-center min-h-[60vh]">
+          <InfoText
+            heading="Loading account status"
+            message="Checking your network membership..."
+            variant="progress"
+            className="text-center"
+          />
+        </div>
       </Container>
     );
   }
@@ -52,11 +56,14 @@ function AccountPage() {
   if (isHatError) {
     return (
       <Container>
-        <InfoText
-          heading="Error loading account"
-          message="Failed to load your network membership status. Please try refreshing the page."
-          variant="warning"
-        />
+        <div className="flex flex-col items-center justify-center min-h-[60vh]">
+          <InfoText
+            heading="Error loading account"
+            message="Failed to load your network membership status. Please try refreshing the page."
+            variant="warning"
+            className="text-center"
+          />
+        </div>
       </Container>
     );
   }
@@ -68,32 +75,35 @@ function AccountPage() {
       <ProfileSection address={address} />
 
       {/* Status Section */}
-      <StatusSection hasHat={hasHat} isHatLoading={isHatLoading} isHatError={isHatError} />
+      <div className="mb-8">
+        <StatusSection hasHat={hasHat} isHatLoading={isHatLoading} isHatError={isHatError} />
+      </div>
 
       {/* Actions Section */}
-      <div className="mt-8">
+      <div className="space-y-4">
         {hasHat === false && <ShareSection address={address} chainId={chainId} />}
         {hasHat === true && (
-          <Link
-            href="/add"
-            className="font-semibold text-blue-600 hover:text-blue-800 border-b-2 border-blue-600 flex items-center gap-1"
-          >
-            {en.page.addAnotherLeader}
-            <svg
-              className="w-4 h-4"
-              viewBox="0 0 24 24"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M5 12H19M19 12L12 5M19 12L12 19"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </Link>
+          <div className="pt-4">
+            <Link href="/add" className="block">
+              <Button className="w-full h-12 text-base font-semibold" variant="default">
+                {en.page.addAnotherLeader}
+                <svg
+                  className="w-5 h-5 ml-2"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M5 12H19M19 12L12 5M19 12L12 19"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </Button>
+            </Link>
+          </div>
         )}
       </div>
     </Container>

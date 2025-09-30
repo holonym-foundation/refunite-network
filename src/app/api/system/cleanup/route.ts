@@ -2,9 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { validateApiToken } from "@/lib/utils/api-auth";
 import { DB } from "@/lib/database/service";
 
-// Force static generation for mobile builds
-export const dynamic = "force-static";
-
 async function performCleanup() {
   // Clean up expired reservations using database service
   const cleanedCount = await DB.cleanupExpiredReservations();

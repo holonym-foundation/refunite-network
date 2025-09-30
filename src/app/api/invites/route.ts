@@ -1,9 +1,6 @@
-import { createInvite } from "@/app/actions/invite";
+import { createInvite, getInviteByCode, verifyInvite } from "@/app/actions/invite";
 import { NextRequest, NextResponse } from "next/server";
 import { isAddress } from "viem";
-
-// Force static generation for mobile builds
-export const dynamic = "force-static";
 
 export async function POST(request: NextRequest) {
   try {
@@ -52,7 +49,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(result);
   } catch (error) {
-    console.error("Error in /api/members (POST):", error);
+    console.error("Error in /api/invites (POST):", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

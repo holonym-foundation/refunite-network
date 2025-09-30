@@ -24,11 +24,13 @@ export default function InvitePage() {
 
   // If verification failed, show error (handled by InviteVerification)
   if (verificationResult && !verificationResult.success) {
+    console.log("Verification failed", verificationResult);
     return null; // InviteVerification will handle the error display
   }
 
   // If verification succeeded and wallet is ready, show onboarding flow
   if (verificationResult?.success && isWalletReady) {
+    console.log("Verification succeeded and wallet is ready", verificationResult);
     return (
       <Suspense fallback={<InvitePageSkeleton />}>
         <OnboardingFlow verificationResult={verificationResult} />
@@ -38,6 +40,7 @@ export default function InvitePage() {
 
   // If verification succeeded but wallet not ready, show wallet connection
   if (verificationResult?.success && !isWalletReady) {
+    console.log("Verification succeeded but wallet not ready", verificationResult);
     return (
       <Suspense fallback={<InvitePageSkeleton />}>
         <WalletConnection
@@ -51,6 +54,7 @@ export default function InvitePage() {
   // Default: show invite verification
   return (
     <Suspense fallback={<InvitePageSkeleton />}>
+      <div>Verification Result: {JSON.stringify(verificationResult)}</div>
       <InviteVerification onVerificationComplete={handleVerificationComplete} />
     </Suspense>
   );

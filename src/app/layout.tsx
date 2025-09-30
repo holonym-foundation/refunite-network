@@ -1,30 +1,20 @@
 "use client";
 import { Header } from "@/components/Header";
-import { BottomNavigation } from "@/components/BottomNavigation";
 import { Toaster } from "@/components/ui/toaster";
-import { OfflineStatus } from "@/components/OfflineStatus";
-import { useIsMobileApp } from "@/hooks/useIsMobileApp";
 
 import { ContextProvider } from "@/context";
 import { useAccount } from "wagmi";
 
 function LayoutContent({ children }: { children: React.ReactNode }) {
-  const isMobileApp = useIsMobileApp();
   const { address } = useAccount();
 
   return (
     <>
       <Header />
-      <main
-        className={`mx-auto lg:max-w-3xl px-0 lg:px-6 min-h-screen ${
-          isMobileApp && address ? "pb-20" : ""
-        }`}
-      >
+      <main className="mx-auto lg:max-w-3xl px-0 lg:px-6 min-h-screen">
         <Toaster />
         {children}
       </main>
-      <BottomNavigation />
-      <OfflineStatus />
     </>
   );
 }

@@ -22,6 +22,7 @@ A Next.js application facilitating a secure and streamlined onboarding process f
   - [Turso](#turso)
   - [Defender Integration](#defender-integration)
   - [BigInt Serialization/Deserialization](#bigint-serializationdeserialization)
+  - [Native mobile app development](#native-mobile-app-development)
   - [Troubleshooting](#troubleshooting)
   - [Contributing](#contributing)
   - [License](#license)
@@ -260,6 +261,13 @@ const dataWithBigInts = deserializeBigInts(retrievedData);
 ```
 
 These utilities are used automatically in the server actions when handling typed data.
+
+## Native mobile app development
+
+We use Capacitor to wrap the NextJS frontend into an Android app
+
+- `pnpm capacitor:sync`
+- `pnpm android:open` which will open the repo in Android Studio
 
 ## Troubleshooting
 

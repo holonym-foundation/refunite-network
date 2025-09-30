@@ -12,15 +12,6 @@ importers:
 
   .:
     dependencies:
-      '@capacitor/android':
-        specifier: ^7.4.2
-        version: 7.4.2(@capacitor/core@7.4.2)
-      '@capacitor/app':
-        specifier: ^7.0.2
-        version: 7.0.2(@capacitor/core@7.4.2)
-      '@capacitor/core':
-        specifier: ^7.4.2
-        version: 7.4.2
       '@hatsprotocol/sdk-v1-core':
         specifier: ^0.12.4
         version: 0.12.4(viem@2.29.2(bufferutil@4.0.9)(typescript@5.8.3)(utf-8-validate@5.0.10)(zod@3.24.3))
@@ -85,8 +76,8 @@ importers:
         specifier: ^0.4.2
         version: 0.4.2
       '@silk-wallet/silk-wallet-sdk':
-        specifier: ^0.7.1
-        version: 0.7.1(@ethersproject/sha2@5.8.0)(@types/react@19.1.9)(@upstash/redis@1.35.0)(bufferutil@4.0.9)(ethers@6.13.7(bufferutil@4.0.9)(utf-8-validate@5.0.10))(react@19.1.1)(typescript@5.8.3)(utf-8-validate@5.0.10)
+        specifier: ^0.7.2
+        version: 0.7.2(@ethersproject/sha2@5.8.0)(@types/react@19.1.9)(@upstash/redis@1.35.0)(bufferutil@4.0.9)(ethers@6.13.7(bufferutil@4.0.9)(utf-8-validate@5.0.10))(react@19.1.1)(typescript@5.8.3)(utf-8-validate@5.0.10)
       '@tanstack/react-query':
         specifier: ^5.81.2
         version: 5.81.2(react@19.1.1)
@@ -257,23 +248,10 @@ packages:
     resolution: {integrity: sha512-vbavdySgbTTrmFE+EsiqUTzlOr5bzlnJtUv9PynGCAKvfQqjIXbvFdumPM/GxMDfyuGMJaJAU6TO4zc1Jf1i8Q==}
     engines: {node: '>=6.9.0'}
 
-  '@capacitor/android@7.4.2':
-    resolution: {integrity: sha512-FZ7M9NwFkljR7EP5eXiE32mAIfZNcYw2CzRMCG3rQu0u0ZaIoeOeq5/oK4YcDnGpNmu8jpngKJqZ+9OiSQSwDg==}
-    peerDependencies:
-      '@capacitor/core': ^7.4.0
-
-  '@capacitor/app@7.0.2':
-    resolution: {integrity: sha512-kRWBF6Wc6OQxhL+N6rsegyfJY37Lj9/VJhtrmgmH+y+rdxQLQwUOpMyxXStym7cF+QzGeVpItyVxyUT9fE5ByQ==}
-    peerDependencies:
-      '@capacitor/core': '>=7.0.0'
-
   '@capacitor/cli@7.4.2':
     resolution: {integrity: sha512-ckcRbg/kBSnJsuCTCLzowBxvgDTI+dcIN7LK+Nt71fbaUG3judpF279ymJRrgRDJshFR5D5dfcvTFh5N1z8liA==}
     engines: {node: '>=20.0.0'}
     hasBin: true
-
-  '@capacitor/core@7.4.2':
-    resolution: {integrity: sha512-akCf9A1FUR8AWTtmgGjHEq6LmGsjA2U7igaJ9PxiCBfyxKqlDbuGHrlNdpvHEjV5tUPH3KYtkze6gtFcNKPU9A==}
 
   '@coinbase/wallet-sdk@3.9.3':
     resolution: {integrity: sha512-N/A2DRIf0Y3PHc1XAMvbBUu4zisna6qAdqABMZwBMNEfWrXpAwx16pZGkYCLGE+Rvv1edbcB2LYDRnACNcmCiw==}
@@ -2420,16 +2398,20 @@ packages:
   '@scure/bip39@1.6.0':
     resolution: {integrity: sha512-+lF0BbLiJNwVlev4eKelw1WWLaiKXw7sSl8T6FvBlWkdX+94aGJ4o8XjUdlyhTCjd8c+B3KT3JfS8P0bLRNU6A==}
 
-  '@silk-wallet/silk-constants@0.3.2':
-    resolution: {integrity: sha512-0Tf+q19iIIgb4DxbGlysAvWiJd0EUj0W9I+GRVDwfeSik6T5YmRtUR5EsJDOulHKhvhdNqWNGezBRd6Av11Dqw==}
+  '@silk-wallet/silk-constants@0.3.3':
+    resolution: {integrity: sha512-ZtdspCAPZLnLPIJgX/Av5UcnF7N1TP2cXnLupRvWbwRb6hD8R/ntEFP2Rpoc9MiRV7bk4DDFGhvrnX4dP9T3kg==}
     engines: {node: '>=18.0.0'}
 
   '@silk-wallet/silk-interface-core@0.4.2':
     resolution: {integrity: sha512-SoFDdVC4OThFRoXuKcZJYJ6WV/T1GsW1XlKPZ6NJnxzthnbhXq1YJ7HyqgRMxSvGGSLMzMzOuiB0eBsNSMuEXQ==}
     engines: {node: '>=18.0.0'}
 
-  '@silk-wallet/silk-wallet-sdk@0.7.1':
-    resolution: {integrity: sha512-Wx8BEUL1aPR943+JMU8dxcw7BW3io3TOC/4+0WHvOB7l6Wnj8JDyDYwHK0A43TO50HT4kQNqVZlRvVeC4fsfLw==}
+  '@silk-wallet/silk-interface-core@0.4.3':
+    resolution: {integrity: sha512-sEyEBS+9SfR9Vwea7TgXM9B6jmdKQHv2jIsjj8o41ci3XyScTANKAZpbSwBIrUz5oP8iQw24AXMCZMoiRXvAjA==}
+    engines: {node: '>=18.0.0'}
+
+  '@silk-wallet/silk-wallet-sdk@0.7.2':
+    resolution: {integrity: sha512-lFqqgTPJalhSwveCMR/TjLiVdbFq+CxtrBhmjb3W51PufRp/Pge7mZ4Any0H1sJfCRISOPjtZf3jYq/ZnJr4pA==}
     engines: {node: '>=18.0.0'}
 
   '@socket.io/component-emitter@3.1.2':
@@ -6293,14 +6275,6 @@ snapshots:
 
   '@babel/runtime@7.27.6': {}
 
-  '@capacitor/android@7.4.2(@capacitor/core@7.4.2)':
-    dependencies:
-      '@capacitor/core': 7.4.2
-
-  '@capacitor/app@7.0.2(@capacitor/core@7.4.2)':
-    dependencies:
-      '@capacitor/core': 7.4.2
-
   '@capacitor/cli@7.4.2':
     dependencies:
       '@ionic/cli-framework-output': 2.2.8
@@ -6322,10 +6296,6 @@ snapshots:
       xml2js: 0.6.2
     transitivePeerDependencies:
       - supports-color
-
-  '@capacitor/core@7.4.2':
-    dependencies:
-      tslib: 2.8.1
 
   '@coinbase/wallet-sdk@3.9.3':
     dependencies:
@@ -9072,19 +9042,21 @@ snapshots:
       '@noble/hashes': 1.8.0
       '@scure/base': 1.2.6
 
-  '@silk-wallet/silk-constants@0.3.2':
+  '@silk-wallet/silk-constants@0.3.3':
     dependencies:
-      '@silk-wallet/silk-interface-core': 0.4.2
+      '@silk-wallet/silk-interface-core': 0.4.3
 
   '@silk-wallet/silk-interface-core@0.4.2': {}
 
-  '@silk-wallet/silk-wallet-sdk@0.7.1(@ethersproject/sha2@5.8.0)(@types/react@19.1.9)(@upstash/redis@1.35.0)(bufferutil@4.0.9)(ethers@6.13.7(bufferutil@4.0.9)(utf-8-validate@5.0.10))(react@19.1.1)(typescript@5.8.3)(utf-8-validate@5.0.10)':
+  '@silk-wallet/silk-interface-core@0.4.3': {}
+
+  '@silk-wallet/silk-wallet-sdk@0.7.2(@ethersproject/sha2@5.8.0)(@types/react@19.1.9)(@upstash/redis@1.35.0)(bufferutil@4.0.9)(ethers@6.13.7(bufferutil@4.0.9)(utf-8-validate@5.0.10))(react@19.1.1)(typescript@5.8.3)(utf-8-validate@5.0.10)':
     dependencies:
       '@metamask/rpc-errors': 5.1.1
       '@reown/appkit': 1.7.10(@types/react@19.1.9)(@upstash/redis@1.35.0)(bufferutil@4.0.9)(react@19.1.1)(typescript@5.8.3)(utf-8-validate@5.0.10)(zod@3.24.3)
       '@reown/appkit-adapter-ethers': 1.7.10(@ethersproject/sha2@5.8.0)(@types/react@19.1.9)(@upstash/redis@1.35.0)(bufferutil@4.0.9)(ethers@6.13.7(bufferutil@4.0.9)(utf-8-validate@5.0.10))(react@19.1.1)(typescript@5.8.3)(utf-8-validate@5.0.10)(zod@3.24.3)
-      '@silk-wallet/silk-constants': 0.3.2
-      '@silk-wallet/silk-interface-core': 0.4.2
+      '@silk-wallet/silk-constants': 0.3.3
+      '@silk-wallet/silk-interface-core': 0.4.3
       events: 3.3.0
       pino-pretty: 10.3.1
       zod: 3.24.3

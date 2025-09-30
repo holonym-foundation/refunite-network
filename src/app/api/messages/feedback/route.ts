@@ -1,9 +1,6 @@
 import { submitFeedback } from "@/app/actions/feedback";
 import { NextRequest, NextResponse } from "next/server";
 
-// Force static generation for mobile builds
-export const dynamic = "force-static";
-
 // TOOD: we could add rate limiting to prevent spam
 export async function POST(request: NextRequest) {
   const body = await request.json();

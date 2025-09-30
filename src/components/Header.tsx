@@ -12,9 +12,7 @@ import { Button } from "./ui/button";
 
 import { useToast } from "@/components/ui/use-toast";
 import en from "@/content/en";
-import { getClientDeviceInfo } from "@/lib/utils/device-info";
 import { useAccount } from "wagmi";
-import { useIsMobileApp } from "@/hooks/useIsMobileApp";
 
 const navItems = [
   { name: en.header.nav.myAccount, href: "/" },
@@ -28,13 +26,11 @@ export function Header() {
   const [loading, setLoading] = useState(false);
   const { address } = useAccount();
   const { toast } = useToast();
-  const isMobileApp = useIsMobileApp();
 
   const handleFeedbackSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
-      const deviceInfo = getClientDeviceInfo();
       const res = await fetch("/api/messages/feedback", {
         method: "POST",
         body: JSON.stringify({
@@ -42,7 +38,6 @@ export function Header() {
           feedback,
           user: address || "anonymous",
           page: typeof window !== "undefined" ? window.location.pathname : "unknown",
-          deviceInfo,
         }),
       });
       const data = await res.json();
@@ -71,53 +66,39 @@ export function Header() {
 
   return (
     <>
-      <header
-        className={`sticky top-0 z-50 w-full bg-white/90 backdrop-blur-sm border-b ${
-          isMobileApp ? "pt-[env(safe-area-inset-top)]" : ""
-        }`}
-      >
+      <header className="sticky top-0 z-50 w-full bg-white/90 backdrop-blur-sm border-b">
         <div className="mx-auto max-w-2xl">
-          <nav
-            className={`px-4 lg:px-6 py-4 ${isMobileApp ? "pt-2" : ""}`}
-            aria-label="Main Navigation"
-          >
-            <div className="flex flex-col lg:flex-col justify-between items-center gap-4">
-              <div className="flex w-full justify-between items-center">
-                <div className="flex flex-row items-center gap-2">
-                  <Link href="/" className="flex items-center">
-                    <Image
-                      src="/logo.svg"
-                      alt="Refunite Relay ID logo"
-                      width={120}
-                      height={48}
-                      priority
-                      className={`w-auto ${isMobileApp ? "h-10" : "h-14"}`}
-                    />
-                  </Link>
-                  <NetworkTag />
-                </div>
-
-                <div className="flex items-center gap-2">
-                  {isMobileApp ? null : (
-                    <div className="flex items-center">
-                      <ConnectButton variant={isMobileApp ? "mobile" : "default"} />
-                    </div>
-                  )}
-                </div>
+          <nav className="px-4 lg:px-6 py-4" aria-label="Main Navigation">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-2">
+                <Link href="/" className="flex items-center">
+                  <Image
+                    src="/logo.svg"
+                    alt="Refunite Relay ID logo"
+                    width={120}
+                    height={48}
+                    priority
+                    className="w-auto h-10"
+                  />
+                </Link>
+                <NetworkTag />
               </div>
 
-              {/* Desktop Navigation */}
-              <div className="hidden lg:flex items-center space-x-8">
-                {navItems.map((item) => (
-                  <div key={item.name} className="group">
-                    <Link
-                      href={item.href}
-                      className="text-base text-muted-foreground hover:text-primary lg:hover:text-primary-700 font-medium"
-                    >
-                      {item.name}
-                    </Link>
-                  </div>
-                ))}
+              <div className="flex items-center gap-6">
+                {/* Navigation */}
+                <div className="flex items-center space-x-8">
+                  {navItems.map((item) => (
+                    <div key={item.name} className="group">
+                      <Link
+                        href={item.href}
+                        className="text-base text-muted-foreground hover:text-primary font-medium"
+                      >
+                        {item.name}
+                      </Link>
+                    </div>
+                  ))}
+                </div>
+
                 {/* Feedback Button */}
                 <Button
                   variant="ghost"
@@ -127,6 +108,9 @@ export function Header() {
                 >
                   <MessageCircle className="h-5 w-5" />
                 </Button>
+
+                {/* Connect Button */}
+                <ConnectButton variant="default" />
               </div>
             </div>
           </nav>

@@ -31,13 +31,33 @@ export function InviteVerification({ onVerificationComplete }: InviteVerificatio
       }
 
       try {
-        const result = await verifyInvite(code);
-        setVerificationResult(result);
-        onVerificationComplete(result);
+        console.log("Verifying invite code", code);
+        console.log("Making fetch request to /api/invites/verify");
+
+        const result = await fetch(`/api/invites/verify`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            code,
+          }),
+        });
+
+        console.log("Fetch completed, status:", result.status);
+        console.log("Invite result", result);
+
+        const data = await result.json();
+        console.log("JSON parsing completed");
+        console.log("Invite data", data);
+
+        setVerificationResult(data);
+        onVerificationComplete(data);
       } catch (err) {
+        console.error("Error in invite verification:", err);
         const errorResult = {
           success: false,
-          error: "Failed to verify invite",
+          error: `Failed to verify invite: ${err instanceof Error ? err.message : "Unknown error"}`,
         };
         setVerificationResult(errorResult);
         onVerificationComplete(errorResult);

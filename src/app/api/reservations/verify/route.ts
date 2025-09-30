@@ -6,9 +6,6 @@ import { validateApiToken } from "@/lib/utils/api-auth";
 import { DB } from "@/lib/database/service";
 import { unmarshalTypedData } from "@/lib/utils/serialize";
 
-// Force static generation for mobile builds
-export const dynamic = "force-static";
-
 const verifyReservationSchema = z.object({
   reservationId: z.string().uuid(),
   signature: z.string().startsWith("0x"),

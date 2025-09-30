@@ -13,6 +13,7 @@ import { Button } from "./ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import en from "@/content/en";
 import { useAccount } from "wagmi";
+import { getClientDeviceInfo } from "@/lib/utils/device-info";
 
 const navItems = [
   { name: en.header.nav.myAccount, href: "/" },
@@ -38,6 +39,7 @@ export function Header() {
           feedback,
           user: address || "anonymous",
           page: typeof window !== "undefined" ? window.location.pathname : "unknown",
+          deviceInfo: getClientDeviceInfo(),
         }),
       });
       const data = await res.json();

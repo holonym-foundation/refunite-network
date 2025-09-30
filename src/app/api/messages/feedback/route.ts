@@ -34,5 +34,5 @@ export async function POST(request: NextRequest) {
   const result = await submitFeedback(body);
 
   console.log(body);
-  return NextResponse.json({ message: "Feedback received" });
+  return NextResponse.json(result);
 }

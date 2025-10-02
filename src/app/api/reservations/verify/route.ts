@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAddress, Hash, TypedDataDefinition } from "viem";
 import { z } from "zod";
 import { verifyNetworkInviteSignature, verifyDirectOnboardSignature } from "@/lib/eip712";
-import { validateApiToken } from "@/lib/utils/api-auth";
 import { DB } from "@/lib/database/service";
 import { unmarshalTypedData } from "@/lib/utils/serialize";
 
@@ -16,32 +15,19 @@ const verifyReservationSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    // 1. Validate authentication
-    const authHeader = request.headers.get("Authorization");
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      console.log("Unauthorized token used in call to /api/reservations/verify");
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const token = authHeader.split(" ")[1];
-    if (!validateApiToken(token)) {
-      console.error("Unauthorized token used in call to /api/reservations/verify");
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    // 2. Parse and validate request
+    // Parse and validate request
     const body = await request.json();
     const data = verifyReservationSchema.parse(body);
     const { reservationId, signature, typedData, recipient, inviterAddress } = data;
 
-    // 3. Verify reservation exists and is valid
+    // Verify reservation exists and is valid
     const reservation = await DB.findActiveReservation(reservationId);
     if (!reservation) {
       console.error("Reservation not found", { reservationId });
       return NextResponse.json({ error: "Reservation not found" }, { status: 404 });
     }
 
-    // 4. Verify reservation matches the provided data
+    // Verify reservation matches the provided data
     if (reservation.recipient_address !== recipient) {
       console.error("Reservation recipient mismatch", {
         reservationId,
@@ -51,13 +37,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Reservation recipient mismatch" }, { status: 400 });
     }
 
-    // 5. Verify reservation is not expired
+    // Verify reservation is not expired
     if (new Date(reservation.expires_at) < new Date()) {
       console.error("Reservation expired", { reservationId, expiresAt: reservation.expires_at });
       return NextResponse.json({ error: "Reservation expired" }, { status: 400 });
     }
 
-    // 6. Get invitation to determine flow type
+    // Get invitation to determine flow type
     const invitation = await DB.findInvitation({ id: reservation.invitation_id });
     if (!invitation) {
       console.error("Invitation not found for reservation", {
@@ -67,13 +53,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invitation not found" }, { status: 404 });
     }
 
-    // 7. Verify signature matches the stored signature
+    // Verify signature matches the stored signature
     if (invitation.signature !== signature) {
       console.error("Signature mismatch", { reservationId });
       return NextResponse.json({ error: "Signature mismatch" }, { status: 400 });
     }
 
-    // 8. Re-verify the EIP-712 signature based on flow type
+    // Re-verify the EIP-712 signature based on flow type
     const unmarshaledTypedData = unmarshalTypedData(typedData);
     let isValidSignature = false;
 
@@ -105,7 +91,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
     }
 
-    // 9. All checks passed - reservation is valid
+    // All checks passed - reservation is valid
     console.log("Reservation verified successfully", {
       reservationId,
       recipient,

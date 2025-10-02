@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { validateApiToken } from "@/lib/utils/api-auth";
 import { DB } from "@/lib/database/service";
 
 async function performCleanup() {
@@ -46,18 +45,6 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    // Check bearer token
-    const authHeader = request.headers.get("Authorization");
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const token = authHeader.split(" ")[1];
-    if (!validateApiToken(token)) {
-      console.error("Unauthorized token used in call to /api/system/cleanup");
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const result = await performCleanup();
     return NextResponse.json(result);
   } catch (error) {

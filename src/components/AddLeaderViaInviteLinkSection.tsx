@@ -5,6 +5,7 @@ import en from "@/content/en";
 import { useSilkSigner } from "@/hooks/useSilkSigner";
 import { INVITE_TTL_SECONDS } from "@/lib/constants";
 import { createNetworkInviteTypedData, generateNonce } from "@/lib/eip712";
+import { createInvite } from "@/app/actions/api";
 import { getAuditDeviceInfo } from "@/lib/utils/device-info";
 import { marshalTypedData } from "@/lib/utils/serialize";
 import { formatDistanceToNow } from "date-fns";
@@ -37,17 +38,13 @@ export function AddLeaderViaInviteLinkSection({ disabled }: InviteLinkSectionPro
       // Get client request info for audit logging
       const deviceInfo = getAuditDeviceInfo();
 
-      const result = await fetch("/api/invites", {
-        method: "POST",
-        body: JSON.stringify({
-          inviterAddress: account,
-          signature,
-          nonce,
-          typedData: marshalTypedData(typedData),
-          deviceInfo,
-        }),
+      const data = await createInvite({
+        inviterAddress: account,
+        signature,
+        nonce,
+        typedData: marshalTypedData(typedData),
+        deviceInfo,
       });
-      const data = await result.json();
 
       if (data.error) {
         throw new Error(data.error);

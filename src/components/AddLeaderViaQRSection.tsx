@@ -6,6 +6,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { useSafeOwner } from "@/hooks/useSafeOwner";
 import { useSilkSigner } from "@/hooks/useSilkSigner";
 import { createDirectOnboardTypedData, generateNonce } from "@/lib/eip712";
+import { processDirectOnboarding } from "@/app/actions/api";
 import { getClientDeviceInfo } from "@/lib/utils/device-info";
 import { marshalTypedData } from "@/lib/utils/serialize";
 import { QrCode } from "lucide-react";
@@ -82,17 +83,14 @@ export function AddLeaderViaQRSection({ onSuccess }: AddLeaderViaQRSectionProps)
       });
       const signature = await signTypedData(typedData);
       const deviceInfo = getClientDeviceInfo();
-      const result = await fetch("/api/onboarding/direct", {
-        method: "POST",
-        body: JSON.stringify({
-          recipient,
-          typedData: marshalTypedData(typedData),
-          signature,
-          deviceInfo,
-        }),
+
+      const data = await processDirectOnboarding({
+        recipient,
+        typedData: marshalTypedData(typedData),
+        signature,
+        deviceInfo,
       });
 
-      const data = await result.json();
       if (data.error) {
         throw new Error(data.error);
       }

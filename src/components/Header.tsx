@@ -11,6 +11,7 @@ import { NetworkTag } from "./NetworkTag";
 import { Button } from "./ui/button";
 
 import { useToast } from "@/components/ui/use-toast";
+import { submitFeedback } from "@/app/actions/api";
 import en from "@/content/en";
 import { useAccount } from "wagmi";
 import { getClientDeviceInfo } from "@/lib/utils/device-info";
@@ -32,17 +33,14 @@ export function Header() {
     e.preventDefault();
     setLoading(true);
     try {
-      const res = await fetch("/api/messages/feedback", {
-        method: "POST",
-        body: JSON.stringify({
-          sentiment,
-          feedback,
-          user: address || "anonymous",
-          page: typeof window !== "undefined" ? window.location.pathname : "unknown",
-          deviceInfo: getClientDeviceInfo(),
-        }),
+      const data = await submitFeedback({
+        sentiment,
+        feedback,
+        user: address || "anonymous",
+        page: typeof window !== "undefined" ? window.location.pathname : "unknown",
+        deviceInfo: getClientDeviceInfo(),
       });
-      const data = await res.json();
+
       if (data.success) {
         toast({ title: "Thank you for your feedback!" });
       } else {

@@ -11,6 +11,7 @@ import { InfoText } from "@/components/ui/InfoText";
 import { useToast } from "@/components/ui/use-toast";
 
 import { VerifyInviteResult } from "@/app/actions/invite";
+import { processInviteOnboarding } from "@/app/actions/api";
 import en from "@/content/en";
 import { getAuditDeviceInfo } from "@/lib/utils/device-info";
 import { marshalTypedData } from "@/lib/utils/serialize";
@@ -60,16 +61,12 @@ export function OnboardingFlow({ verificationResult }: OnboardingFlowProps) {
       // Get client request info for audit logging
       const deviceInfo = getAuditDeviceInfo();
 
-      const onboardResult = await fetch("/api/onboarding/invite", {
-        method: "POST",
-        body: JSON.stringify({
-          recipient: address,
-          typedData: marshalTypedData(verificationResult.typedData),
-          signature: verificationResult.signature as Hash,
-          deviceInfo,
-        }),
+      const data = await processInviteOnboarding({
+        recipient: address,
+        typedData: marshalTypedData(verificationResult.typedData),
+        signature: verificationResult.signature as Hash,
+        deviceInfo,
       });
-      const data = await onboardResult.json();
 
       if (data.error) {
         throw new Error(data.error);

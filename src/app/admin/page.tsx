@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { fetchMetrics } from "@/app/actions/api";
 import { CHAIN_ID, HATS_TREE_ID, RELAYER_CONTRACT_ADDRESS } from "@/lib/constants";
 import { useEffect, useState } from "react";
 
@@ -19,14 +20,10 @@ function Metrics() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    async function fetchMetrics() {
+    async function loadMetrics() {
       try {
         setLoading(true);
-        const res = await fetch("/api/metrics", { cache: "no-store" });
-        if (!res.ok) {
-          throw new Error(`Failed to fetch metrics: ${res.status} ${res.statusText}`);
-        }
-        const data = await res.json();
+        const data = await fetchMetrics();
         setMetrics(data);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to fetch metrics");
@@ -35,7 +32,7 @@ function Metrics() {
       }
     }
 
-    fetchMetrics();
+    loadMetrics();
   }, []);
 
   if (loading) {

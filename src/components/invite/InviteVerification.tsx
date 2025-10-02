@@ -5,7 +5,8 @@ import { useSearchParams } from "next/navigation";
 
 import { InfoText } from "@/components/ui/InfoText";
 import { Container } from "@/components/ui/Container";
-import { verifyInvite, VerifyInviteResult } from "@/app/actions/invite";
+import { VerifyInviteResult } from "@/app/actions/invite";
+import { verifyInviteCode } from "@/app/actions/api";
 import { getInviteErrorCopy } from "@/lib/utils";
 import en from "@/content/en";
 
@@ -32,23 +33,8 @@ export function InviteVerification({ onVerificationComplete }: InviteVerificatio
 
       try {
         console.log("Verifying invite code", code);
-        console.log("Making fetch request to /api/invites/verify");
 
-        const result = await fetch(`/api/invites/verify`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            code,
-          }),
-        });
-
-        console.log("Fetch completed, status:", result.status);
-        console.log("Invite result", result);
-
-        const data = await result.json();
-        console.log("JSON parsing completed");
+        const data = await verifyInviteCode(code);
         console.log("Invite data", data);
 
         setVerificationResult(data);

@@ -20,7 +20,7 @@ A Next.js application facilitating a secure and streamlined onboarding process f
   - [Local database](#local-database)
   - [Database Schema](#database-schema)
   - [Turso](#turso)
-  - [Defender Integration](#defender-integration)
+  - [Onboarding Relayer](#onboarding-relayer)
   - [BigInt Serialization/Deserialization](#bigint-serializationdeserialization)
   - [Native mobile app development](#native-mobile-app-development)
   - [Troubleshooting](#troubleshooting)
@@ -29,7 +29,7 @@ A Next.js application facilitating a secure and streamlined onboarding process f
 
 ## Architecture Overview
 
-The application is built with Next.js, utilizing its App Router for routing and React Server Components for efficient rendering. Server Actions are employed for handling backend logic directly within React components, eliminating the need for traditional API routes for internal operations. Supabase serves as the backend database for storing invite data, and OpenZeppelin Defender is used for secure transaction relaying (e.g., minting Hats).
+The application is built with Next.js, utilizing its App Router for routing and React Server Components for efficient rendering. Server Actions are employed for handling backend logic directly within React components, eliminating the need for traditional API routes for internal operations. Supabase serves as the backend database for storing invite data, and a server-side relayer wallet sends the onboarding transactions (minting Hats and adding Safe signers).
 
 ```mermaid
 graph TD
@@ -37,7 +37,7 @@ graph TD
     B --> C[Next.js Server Actions];
     C --> D{EIP-712 Signature Utils};
     C --> E[Supabase DB];
-    C --> F[OpenZeppelin Defender];
+    C --> F[Relayer wallet];
     G[Silk Wallet/Metamask] <--> A;
     F --> H[Blockchain Interaction];
 ```
@@ -55,7 +55,7 @@ graph TD
 - **EIP-712**: Standard for typed structured data signing, enhancing security and UX for wallet interactions.
 - **Viem**: TypeScript interface for Ethereum, used for wallet interactions and cryptographic operations.
 - **Supabase**: Backend-as-a-Service for database storage (PostgreSQL) and authentication.
-- **OpenZeppelin Defender**: Platform for secure smart contract operations, including transaction relaying.
+- **Relayer wallet**: Server-held key that pays gas for onboarding transactions.
 - **Hats Protocol**: For on-chain role management and attestations.
 - **Silk Wallet / MetaMask**: User wallets for interacting with the application and signing transactions/messages.
 - **Tailwind CSS & shadcn/ui**: For styling and UI components.
@@ -79,7 +79,7 @@ When a leader initiates an invite or adds another leader:
 2. The leader signs this typed data using their connected wallet.
 3. The signature, along with the typed data, is sent to a Server Action.
 4. The Server Action verifies the signature against the provided data and the inviter's address using `viem` utility functions.
-5. If valid, the action proceeds (e.g., stores the invite in Supabase or calls Defender to mint a Hat).
+5. If valid, the action proceeds (e.g., stores the invite or has the relayer mint a Hat).
 
 **Typed Data Format (`NetworkInvite`)**
 
@@ -110,7 +110,7 @@ sequenceDiagram
     participant Wallet as User's Wallet
     participant ServerAction as Next.js Server Action
     participant SupabaseDB as Supabase DB
-    participant DefenderRelay as OpenZeppelin Defender
+    participant Relayer as Relayer wallet
     participant Blockchain
 
     alt Invite Flow / Add Leader Flow
@@ -120,10 +120,12 @@ sequenceDiagram
         ServerAction->>ServerAction: Verify EIP-712 Signature against inviterAddress
         alt Signature Valid
             ServerAction->>SupabaseDB: (If invite link) Mark invite as used
-            ServerAction->>DefenderRelay: Request mintHat (recipient, signature, hatId)
-            DefenderRelay->>Blockchain: Mint Hat Transaction
-            Blockchain-->>DefenderRelay: Transaction Hash
-            DefenderRelay-->>ServerAction: Transaction Hash / Result
+            ServerAction->>Blockchain: Check inviter wears the leader hat
+            ServerAction->>Relayer: mintHat(leaderHat, recipient)
+            Relayer->>Blockchain: Mint Hat Transaction
+            ServerAction->>Relayer: claimSignerFor(leaderHat, recipient)
+            Relayer->>Blockchain: Add Safe signer via HSG
+            Blockchain-->>ServerAction: Transaction receipts
             ServerAction-->>UserFrontend: Success (mintHatTxHash, claimSignerTxHash)
         else Signature Invalid
             ServerAction-->>UserFrontend: Error (Invalid Signature)
@@ -143,7 +145,7 @@ Key Server Actions in this project:
    - `verifyInvite`: Checks if an invite code is valid and unused
    - `getInviteByCode`: Retrieves invite data by code
 
-2. **`src/app/actions/defender.ts`**: Handles blockchain interactions through Defender
+2. **`src/app/actions/onboard.ts`**: Handles onboarding through the relayer (`src/lib/relayer`)
    - `addLeaderViaSignedTypedData`: Processes verified signatures to add new leaders via the Hats Protocol
 
 These actions provide a streamlined way to handle server-side operations without creating separate API routes.
@@ -155,7 +157,7 @@ These actions provide a streamlined way to handle server-side operations without
 - [Node.js](https://nodejs.org/) (v18 or later)
 - [pnpm](https://pnpm.io/installation)
 - [Supabase Account](https://supabase.com/) (for managing onboarding invites)
-- [OpenZeppelin Defender Account](https://defender.openzeppelin.com/) (for blockchain interactions)
+- A relayer wallet that wears an admin hat of the leader hat (see [Onboarding Relayer](#onboarding-relayer))
 
 ### Installation
 
@@ -180,8 +182,9 @@ These actions provide a streamlined way to handle server-side operations without
    TURSO_DATABASE_URL="file:local.db" -> replace this with a staging or prod deployment url
    TURSO_AUTH_TOKEN=
 
-   # Defender
-   DEFENDER_WEBHOOK_URL=your_defender_webhook_url
+   # Relayer
+   RELAYER_PRIVATE_KEY=your_relayer_private_key
+   NEXT_PUBLIC_HSG_CONTRACT_ADDRESS=your_hsg_address
 
    # Hats Protocol
    NEXT_PUBLIC_HATS_TREE_ID=your_hats_tree_id
@@ -189,7 +192,8 @@ These actions provide a streamlined way to handle server-side operations without
    NEXT_PUBLIC_HATS_LEADER_SAFE_ACCOUNT=your_leader_safe_address
 
    # Chain
-   NEXT_PUBLIC_CHAIN_ID=10 # Optimism
+   NEXT_PUBLIC_DEFAULT_CHAIN=sepolia # or celo
+   NEXT_PUBLIC_CHAIN_ID=11155111 # or 42220
    ```
 
 ### Running the Development Server
@@ -202,11 +206,12 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ## Environment Variables
 
-Required environment variables:
+See `.env.example` for the full list, split into required and optional. The main ones:
 
 | Variable                               | Description                              | Public? |
 | -------------------------------------- | ---------------------------------------- | ------- |
-| `DEFENDER_WEBHOOK_URL`                 | OpenZeppelin Defender webhook URL        | No      |
+| `RELAYER_PRIVATE_KEY`                  | Relayer wallet private key               | No      |
+| `NEXT_PUBLIC_HSG_CONTRACT_ADDRESS`     | Hats Signer Gate for the leaders' Safe   | Yes     |
 | `NEXT_PUBLIC_HATS_TREE_ID`             | Hats Protocol tree ID                    | Yes     |
 | `NEXT_PUBLIC_HATS_LEADER_ID`           | Leader hat ID in Hats Protocol           | Yes     |
 | `NEXT_PUBLIC_HATS_LEADER_SAFE_ACCOUNT` | Safe account address for leaders         | Yes     |
@@ -238,15 +243,25 @@ We maintain two databases:
 - `relay-id-tst`
 - `relay-id-prd`
 
-## Defender Integration
+## Onboarding Relayer
 
-This application uses OpenZeppelin Defender to securely interact with smart contracts:
+Onboarding used to run through an OpenZeppelin Defender Action. Defender shut down on 2026-07-01, so the app now sends the transactions itself from a relayer wallet (`src/lib/relayer`).
 
-1. **Create a Defender Relayer**: Set up a relayer in Defender for your target network (e.g., Optimism).
-2. **Create a Defender Autotask**: This will be triggered by a webhook to execute the smart contract interactions (e.g., minting a Hat).
-3. **Configure the Webhook**: The Autotask should expose a webhook URL which you'll set as `DEFENDER_WEBHOOK_URL` in your environment variables.
+For each onboarding, `addLeaderViaSignedTypedData` in `src/app/actions/onboard.ts`:
 
-The `addLeaderViaSignedTypedData` server action in `src/app/actions/defender.ts` handles sending the request to Defender, which then executes the blockchain transaction.
+1. Checks the inviter currently wears the leader hat.
+2. Verifies the EIP-712 signature and reserves the invite (`src/lib/onboarding/reservations.ts`).
+3. Sends `Hats.mintHat(leaderHat, recipient)` from the relayer and waits for the receipt.
+4. Sends `HSG.claimSignerFor(leaderHat, recipient)` to add the recipient as a Safe signer.
+5. Confirms the reservation, or rolls it back if a transaction fails.
+
+Setting up a relayer for a chain:
+
+1. Create a new wallet and set its private key as `RELAYER_PRIVATE_KEY` (server-only; mark it sensitive in Vercel).
+2. Fund it with native gas (CELO on Celo, ETH on Sepolia).
+3. From the top hat, give the wallet an admin hat of the leader hat, e.g. `Hats.transferHat` of the level-1 hat from the old relayer, or `Hats.mintHat` of an unused admin hat.
+
+The admin dashboard shows the relayer address and balance.
 
 ## BigInt Serialization/Deserialization
 
@@ -278,10 +293,10 @@ Common issues and solutions:
    - Ensure the wallet is connected to the correct network (check CHAIN_ID)
    - Verify the inviter has proper permissions to create invites
 
-2. **Defender Webhook Errors**
+2. **Relayer Transaction Errors**
 
-   - Check Defender Relayer has sufficient funds for gas
-   - Verify the Autotask is properly configured with the correct contract ABI
+   - Check the relayer wallet has sufficient funds for gas (see the admin dashboard)
+   - Verify the relayer wallet wears an admin hat of the leader hat (`Hats.isAdminOfHat`)
 
 3. **Database Access Issues**
    - Ensure Supabase service key has proper permissions

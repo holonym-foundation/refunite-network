@@ -2,13 +2,16 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CHAIN_ID, HATS_TREE_ID, RELAYER_CONTRACT_ADDRESS } from "@/lib/constants";
+import { CHAIN_ID, HATS_TREE_ID } from "@/lib/constants";
+import { defaultChain } from "@/wagmi/chain-config";
 import { useEffect, useState } from "react";
 
 interface MetricsData {
   completions: number;
   reservedInvites: number;
   invitations: number;
+  relayerAddress?: string;
+  relayerExplorerUrl?: string;
   relayerBalance: string;
   hatsWearers: number;
 }
@@ -62,8 +65,8 @@ function Metrics() {
     );
   }
 
-  // Format relayer balance (wei to CELO)
-  const relayerBalanceCelo = (Number(metrics.relayerBalance) / 1e18).toFixed(4);
+  // Format relayer balance (wei to native token)
+  const relayerBalanceNative = (Number(metrics.relayerBalance) / 1e18).toFixed(4);
 
   return (
     <ul className="list-disc pl-5 space-y-1">
@@ -82,9 +85,24 @@ function Metrics() {
         Total Hats wearers: <span className="text-green-600 font-mono">{metrics.hatsWearers}</span>
       </li>
       <li>
-        Relayer contract balance:{" "}
-        <span className="text-green-600 font-mono">{relayerBalanceCelo} CELO</span>
+        Relayer balance:{" "}
+        <span className="text-green-600 font-mono">
+          {relayerBalanceNative} {defaultChain.nativeCurrency.symbol}
+        </span>
       </li>
+      {metrics.relayerAddress && (
+        <li>
+          Relayer:{" "}
+          <a
+            href={metrics.relayerExplorerUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-mono underline"
+          >
+            {metrics.relayerAddress}
+          </a>
+        </li>
+      )}
     </ul>
   );
 }
@@ -122,10 +140,6 @@ const buildHatsTreeLink = () => {
   return `https://app.hatsprotocol.xyz/trees/${CHAIN_ID}/${HATS_TREE_ID}`;
 };
 
-const buildDefenderRelayerContractLink = () => {
-  return `https://celoscan.io/address/${RELAYER_CONTRACT_ADDRESS}`;
-};
-
 export default function AdminDashboard() {
   return (
     <div className="max-w-3xl mx-auto py-10 space-y-6">
@@ -150,11 +164,6 @@ export default function AdminDashboard() {
           <Button asChild variant="outline">
             <a href={buildHatsTreeLink()} target="_blank" rel="noopener noreferrer">
               Hats Tree
-            </a>
-          </Button>
-          <Button asChild variant="outline">
-            <a href={buildDefenderRelayerContractLink()} target="_blank" rel="noopener noreferrer">
-              Defender Relayer Contract
             </a>
           </Button>
         </CardContent>

@@ -1,6 +1,7 @@
-import { HATS_CONTRACT_ADDRESS, LEADER_HAT_ID, RELAYER_CONTRACT_ADDRESS } from "@/lib/constants";
+import { HATS_CONTRACT_ADDRESS, LEADER_HAT_ID } from "@/lib/constants";
 import { DB } from "@/lib/database/service";
 import { abi as hatsAbi } from "@/lib/hatsAbi";
+import { getRelayerAddress, getRelayerClients } from "@/lib/relayer";
 import { createPublicClient, http } from "viem";
 import { celo } from "viem/chains";
 
@@ -26,11 +27,11 @@ export async function getInvitationsCount() {
 }
 
 /**
- * Fetch the balance of the relayer contract on Celo
+ * Fetch the relayer wallet's native balance on the default chain
  */
 export async function getRelayerBalance() {
-  const client = createPublicClient({ chain: celo, transport: http() });
-  const balance = await client.getBalance({ address: RELAYER_CONTRACT_ADDRESS });
+  const { publicClient } = getRelayerClients();
+  const balance = await publicClient.getBalance({ address: getRelayerAddress() });
   return balance.toString(); // Return as string (wei)
 }
 

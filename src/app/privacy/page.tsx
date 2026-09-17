@@ -391,9 +391,12 @@ export default function PrivacyPolicyPage() {
           <p className="mb-6 leading-relaxed text-base">Email: gb@refunite.org</p>
           <p className="mb-6 leading-relaxed text-base">
             Address: <br />
-            Refugees United Foundation USA<br />
-            548 Market St<br />
-            San Francisco, CA 94194-5401<br />
+            Refugees United Foundation USA
+            <br />
+            548 Market St
+            <br />
+            San Francisco, CA 94194-5401
+            <br />
           </p>
           <p className="mb-6 leading-relaxed text-base">
             Website:{" "}

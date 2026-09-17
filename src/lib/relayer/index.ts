@@ -30,6 +30,14 @@ import { nonceManager, privateKeyToAccount } from "viem/accounts";
 
 const hsgAbi = parseAbi(["function claimSignerFor(uint256 _hatId, address _signer)"]);
 
+// Gas estimates for mintHat have come in too low (a Sepolia mint ran out of gas at exactly
+// the estimate), so send each transaction with 25% headroom. Unused gas is not charged.
+const GAS_BUFFER_PERCENT = BigInt(125);
+
+export function withGasBuffer(estimate: bigint): bigint {
+  return (estimate * GAS_BUFFER_PERCENT) / BigInt(100);
+}
+
 export type RelayerConfig = {
   hatsAddress: Address;
   hsgAddress: Address;
@@ -123,7 +131,8 @@ export async function isLeader(
 
 /**
  * Mints the leader hat to the recipient and adds them as a signer on the leaders' Safe.
- * Each transaction is simulated first so reverts surface before any gas is spent.
+ * Each transaction is simulated first so reverts surface before any gas is spent, and is
+ * sent with a buffered gas limit.
  */
 export async function onboardLeader(
   { publicClient, walletClient }: RelayerClients,
@@ -137,27 +146,37 @@ export async function onboardLeader(
     return { status: "already_onboarded" };
   }
 
-  const { request: mintRequest } = await publicClient.simulateContract({
+  const mintCall = {
     account,
     address: config.hatsAddress,
     abi: hatsAbi,
     functionName: "mintHat",
     args: [config.leaderHatId, recipient],
+  } as const;
+  const { request: mintRequest } = await publicClient.simulateContract(mintCall);
+  const mintGas = await publicClient.estimateContractGas(mintCall);
+  const mintHatTxHash = await walletClient.writeContract({
+    ...mintRequest,
+    gas: withGasBuffer(mintGas),
   });
-  const mintHatTxHash = await walletClient.writeContract(mintRequest);
   const mintReceipt = await publicClient.waitForTransactionReceipt({ hash: mintHatTxHash });
   if (mintReceipt.status !== "success") {
     throw new RelayerTransactionError("mintHat transaction reverted", mintHatTxHash);
   }
 
-  const { request: claimRequest } = await publicClient.simulateContract({
+  const claimCall = {
     account,
     address: config.hsgAddress,
     abi: hsgAbi,
     functionName: "claimSignerFor",
     args: [config.leaderHatId, recipient],
+  } as const;
+  const { request: claimRequest } = await publicClient.simulateContract(claimCall);
+  const claimGas = await publicClient.estimateContractGas(claimCall);
+  const claimSignerTxHash = await walletClient.writeContract({
+    ...claimRequest,
+    gas: withGasBuffer(claimGas),
   });
-  const claimSignerTxHash = await walletClient.writeContract(claimRequest);
   const claimReceipt = await publicClient.waitForTransactionReceipt({ hash: claimSignerTxHash });
   if (claimReceipt.status !== "success") {
     throw new RelayerTransactionError("claimSignerFor transaction reverted", claimSignerTxHash);

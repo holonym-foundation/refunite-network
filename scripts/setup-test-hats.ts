@@ -13,6 +13,7 @@
  * RELAYER_ADDRESS       address of RELAYER_PRIVATE_KEY; receives the relayer admin hat
  * FIRST_LEADER          optional; minted the leader hat and made a Safe signer, so it can invite
  * RPC_URL               defaults to a public Sepolia RPC
+ * TOP_HAT_ID            optional; reuse a top hat the deployer already wears (e.g. after a timeout)
  */
 import {
   type Address,
@@ -23,6 +24,7 @@ import {
   encodeFunctionData,
   getAddress,
   http,
+  keccak256,
   parseAbi,
   parseEventLogs,
 } from "viem";
@@ -39,6 +41,7 @@ const hatsAbi = parseAbi([
   "function mintTopHat(address _target, string _details, string _imageURI) returns (uint256 topHatId)",
   "function createHat(uint256 _admin, string _details, uint32 _maxSupply, address _eligibility, address _toggle, bool _mutable, string _imageURI) returns (uint256 newHatId)",
   "function mintHat(uint256 _hatId, address _wearer) returns (bool success)",
+  "function isWearerOfHat(address _user, uint256 _hatId) view returns (bool)",
 ]);
 const hsgAbi = parseAbi([
   "function setUp(bytes initializeParams)",
@@ -60,6 +63,7 @@ const privateKey = process.env.DEPLOYER_PRIVATE_KEY as Hex | undefined;
 if (!privateKey) throw new Error("DEPLOYER_PRIVATE_KEY is required");
 const relayer = requireAddress("RELAYER_ADDRESS");
 const firstLeader = process.env.FIRST_LEADER ? requireAddress("FIRST_LEADER") : undefined;
+const existingTopHat = process.env.TOP_HAT_ID;
 const rpcUrl = process.env.RPC_URL ?? "https://ethereum-sepolia-rpc.publicnode.com";
 
 const account = privateKeyToAccount(privateKey);
@@ -71,26 +75,67 @@ if (!chain) throw new Error(`Unsupported chain ${chainId}; use Sepolia or Celo`)
 const publicClient = createPublicClient({ chain, transport });
 const walletClient = createWalletClient({ account, chain, transport });
 
-/** Simulates a write to get its return value, sends it, and waits for success. */
+const hex = (id: bigint) => `0x${id.toString(16).padStart(64, "0")}`;
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Simulates a write to get its return value, signs it once, and broadcasts it until mined.
+ * Public RPCs often time out or rate-limit sends even when the transaction lands, so the
+ * same signed transaction (same hash and nonce) is rebroadcast instead of failing.
+ */
 async function send<T>(label: string, params: Parameters<typeof publicClient.simulateContract>[0]) {
   const { request, result } = await publicClient.simulateContract({ ...params, account });
-  const hash = await walletClient.writeContract(request as never);
-  const receipt = await publicClient.waitForTransactionReceipt({ hash });
-  if (receipt.status !== "success") throw new Error(`${label} reverted: ${hash}`);
-  console.log(`✓ ${label} (${hash})`);
-  return { result: result as T, receipt };
-}
+  const prepared = await walletClient.prepareTransactionRequest({
+    account,
+    chain,
+    to: request.address,
+    data: encodeFunctionData(request as never),
+  } as never);
+  const serializedTransaction = await walletClient.signTransaction(prepared as never);
+  const hash = keccak256(serializedTransaction);
 
-const hex = (id: bigint) => `0x${id.toString(16).padStart(64, "0")}`;
+  for (let attempt = 1; ; attempt++) {
+    try {
+      await publicClient.sendRawTransaction({ serializedTransaction });
+    } catch (error) {
+      // "already known" / "nonce too low" just mean an earlier broadcast got through
+      console.warn(`  ${label}: broadcast attempt ${attempt} failed (${(error as Error).name})`);
+    }
+    try {
+      const receipt = await publicClient.waitForTransactionReceipt({ hash, timeout: 90_000 });
+      if (receipt.status !== "success") throw new Error(`${label} reverted: ${hash}`);
+      console.log(`✓ ${label} (${hash})`);
+      return { result: result as T, receipt };
+    } catch (error) {
+      if ((error as Error).message.includes("reverted") || attempt >= 5) throw error;
+      await sleep(5_000);
+    }
+  }
+}
 
 console.log(`Chain ${chain.name}, deployer ${account.address}, relayer ${relayer}\n`);
 
-const { result: topHat } = await send<bigint>("mint top hat", {
-  address: HATS,
-  abi: hatsAbi,
-  functionName: "mintTopHat",
-  args: [account.address, "RelayID test network", ""],
-});
+let topHat: bigint;
+if (existingTopHat) {
+  // Resume after a failed run instead of minting another top hat
+  topHat = BigInt(existingTopHat);
+  const wears = await publicClient.readContract({
+    address: HATS,
+    abi: hatsAbi,
+    functionName: "isWearerOfHat",
+    args: [account.address, topHat],
+  });
+  if (!wears) throw new Error(`Deployer does not wear top hat ${hex(topHat)}`);
+  console.log(`✓ reusing top hat ${hex(topHat)}`);
+} else {
+  ({ result: topHat } = await send<bigint>("mint top hat", {
+    address: HATS,
+    abi: hatsAbi,
+    functionName: "mintTopHat",
+    args: [account.address, "RelayID test network", ""],
+  }));
+}
 
 const { result: relayerAdminHat } = await send<bigint>("create relayer admin hat", {
   address: HATS,

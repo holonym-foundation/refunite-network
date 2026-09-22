@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useCallback, useEffect, useState } from "react";
 
 import { getAddress, isAddress } from "viem";
 
@@ -12,38 +12,110 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
 import en from "@/content/en";
 import { useIsWearerOfHat } from "@/hooks/useIsWearerOfHat";
-import { SignedLeaderAction, useLeaderAction } from "@/hooks/useLeaderAction";
+import { useSession } from "@/hooks/useSession";
+import { useSignedAction } from "@/hooks/useSignedAction";
 import type { BeneficiaryResponse } from "@/lib/beneficiaries";
-import { MAX_SIGNATURE_AGE_SECONDS } from "@/lib/leader-auth/constants";
+import {
+  SignedRequestError,
+  getJson,
+  postSigned,
+  shortenAddress,
+} from "@/lib/client/signed-request";
+import type { AllowanceResponse, DisbursementResponse } from "@/lib/disbursements";
 
 const t = en.beneficiariesPage;
+const XLM_AMOUNT = /^\d+(\.\d{1,7})?$/;
 
-async function postSigned<T>(url: string, signed: SignedLeaderAction): Promise<T> {
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ message: signed.message, signature: signed.signature }),
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error ?? `Request failed (${res.status})`);
-  return data as T;
+type LeaderOverview = {
+  beneficiaries: BeneficiaryResponse[];
+  disbursements: DisbursementResponse[];
+  allowance: AllowanceResponse;
+};
+
+function DisburseForm({
+  beneficiary,
+  onDisbursed,
+  onError,
+}: {
+  beneficiary: BeneficiaryResponse;
+  onDisbursed: (disbursement: DisbursementResponse) => void;
+  onError: (error: unknown) => void;
+}) {
+  const { sign } = useSignedAction();
+  const [amount, setAmount] = useState("");
+  const [amountError, setAmountError] = useState<string | null>(null);
+  const [sending, setSending] = useState(false);
+
+  async function handleSubmit(event: FormEvent) {
+    event.preventDefault();
+    // Many phone keyboards type a comma as the decimal separator
+    const value = amount.trim().replace(",", ".");
+    if (!value) {
+      setAmountError(t.amountRequired);
+      return;
+    }
+    if (!XLM_AMOUNT.test(value) || Number(value) <= 0) {
+      setAmountError(t.invalidAmount);
+      return;
+    }
+
+    setSending(true);
+    try {
+      const signed = await sign("CreateDisbursement", {
+        beneficiary: getAddress(beneficiary.ethAddress),
+        amount: value,
+      });
+      const data = await postSigned<{ disbursement: DisbursementResponse }>(
+        "/api/disbursements",
+        signed
+      );
+      setAmount("");
+      onDisbursed(data.disbursement);
+    } catch (error) {
+      onError(error);
+    } finally {
+      setSending(false);
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="flex items-start gap-2" noValidate>
+      <div className="space-y-1">
+        <Input
+          value={amount}
+          onChange={(e) => {
+            setAmount(e.target.value);
+            setAmountError(null);
+          }}
+          inputMode="decimal"
+          // The theme's placeholder colour matches body text; keep this one clearly empty
+          placeholder={t.amountPlaceholder}
+          aria-label={`${t.amountLabel}, ${beneficiary.ethAddress}`}
+          aria-invalid={!!amountError}
+          className="w-28 placeholder:text-gray-400"
+        />
+        {amountError && <p className="text-xs text-red-600">{amountError}</p>}
+      </div>
+      <Button type="submit" size="sm" disabled={sending} className="mt-0.5">
+        {sending ? t.disbursing : t.disburse}
+      </Button>
+    </form>
+  );
 }
-
-const shorten = (value: string) => `${value.slice(0, 6)}…${value.slice(-4)}`;
 
 export default function BeneficiariesPage() {
   const { isConnected, hasHat, isLoading: isCheckingHat } = useIsWearerOfHat();
-  const { sign } = useLeaderAction();
+  const { sign } = useSignedAction();
   const { toast } = useToast();
 
   const [beneficiaryInput, setBeneficiaryInput] = useState("");
   const [inputError, setInputError] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
 
-  const [beneficiaries, setBeneficiaries] = useState<BeneficiaryResponse[] | null>(null);
+  const [overview, setOverview] = useState<LeaderOverview | null>(null);
   const [loadingList, setLoadingList] = useState(false);
-  // A ListBeneficiaries signature is read-only and reusable until it expires
-  const [listSignature, setListSignature] = useState<SignedLeaderAction | null>(null);
+  // Listing uses a read-only session: one StartSession signature, then no prompts
+  const session = useSession();
 
   const showError = (error: unknown) =>
     toast({
@@ -52,24 +124,32 @@ export default function BeneficiariesPage() {
       variant: "destructive",
     });
 
-  async function loadBeneficiaries() {
+  const { markSignedOut } = session;
+  const fetchOverview = useCallback(async () => {
     setLoadingList(true);
     try {
-      const reusable =
-        listSignature &&
-        Date.now() / 1000 - listSignature.issuedAt < MAX_SIGNATURE_AGE_SECONDS - 30;
-      const signed = reusable ? listSignature : await sign("ListBeneficiaries", {});
-      setListSignature(signed);
-
-      const data = await postSigned<{ beneficiaries: BeneficiaryResponse[] }>(
-        "/api/beneficiaries/list",
-        signed
-      );
-      setBeneficiaries(data.beneficiaries);
+      setOverview(await getJson<LeaderOverview>("/api/beneficiaries/list"));
     } catch (error) {
-      showError(error);
+      if (error instanceof SignedRequestError && error.code === "no_session") markSignedOut();
+      else showError(error);
     } finally {
       setLoadingList(false);
+    }
+    // showError only wraps the stable toast function
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [markSignedOut]);
+
+  // Load automatically once signed in (no prompt)
+  useEffect(() => {
+    if (hasHat && session.status === "signed_in" && !overview) fetchOverview();
+  }, [hasHat, session.status, overview, fetchOverview]);
+
+  async function showList() {
+    try {
+      if (session.status !== "signed_in") await session.signIn();
+      await fetchOverview();
+    } catch (error) {
+      showError(error);
     }
   }
 
@@ -90,13 +170,18 @@ export default function BeneficiariesPage() {
       );
       setBeneficiaryInput("");
       toast({ title: t.added, description: data.beneficiary.ethAddress });
-      // Show the new entry without asking for another signature
-      setBeneficiaries((list) => (list ? [data.beneficiary, ...list] : list));
+      if (session.status === "signed_in") fetchOverview();
     } catch (error) {
       showError(error);
     } finally {
       setAdding(false);
     }
+  }
+
+  function handleDisbursed(disbursement: DisbursementResponse) {
+    toast({ title: t.disbursed, description: t.disbursedDescription(disbursement.amount) });
+    // Refresh the list and allowance (the session makes this prompt-free)
+    if (session.status === "signed_in") fetchOverview();
   }
 
   if (!isConnected) {
@@ -145,6 +230,8 @@ export default function BeneficiariesPage() {
     );
   }
 
+  const statusLabel = en.disbursements.status;
+
   return (
     <Container>
       <h1 className="text-2xl font-semibold mb-8">{t.title}</h1>
@@ -162,7 +249,8 @@ export default function BeneficiariesPage() {
                   setInputError(null);
                 }}
                 placeholder={t.addressPlaceholder}
-                aria-label={en.beneficiariesPage.ethAddress}
+                className="placeholder:text-gray-400"
+                aria-label={t.ethAddress}
                 aria-invalid={!!inputError}
                 autoComplete="off"
                 spellCheck={false}
@@ -178,34 +266,83 @@ export default function BeneficiariesPage() {
         <section className="space-y-3">
           <div className="flex items-center justify-between gap-4">
             <h2 className="text-lg font-medium">{t.listHeading}</h2>
-            <Button variant="outline" onClick={loadBeneficiaries} disabled={loadingList}>
-              {loadingList ? t.loadingList : beneficiaries ? t.refresh : t.show}
+            <Button
+              variant="outline"
+              onClick={showList}
+              disabled={loadingList || session.status === "checking"}
+            >
+              {loadingList ? t.loadingList : overview ? t.refresh : t.show}
             </Button>
           </div>
           <p className="text-sm text-muted-foreground">{t.listDescription}</p>
 
-          {beneficiaries && beneficiaries.length === 0 && (
+          {overview && (
+            <div className="rounded-md border p-4 text-sm space-y-1">
+              <p className="font-medium">{t.allowanceHeading}</p>
+              <p>
+                {t.allowanceBalance}:{" "}
+                <span className="font-mono">{overview.allowance.balance} XLM</span>
+                {" · "}
+                {t.allowanceToday}:{" "}
+                <span className="font-mono">{overview.allowance.usedLast24h} XLM</span>
+              </p>
+              <p className="text-muted-foreground">
+                {t.allowanceLimits(
+                  overview.allowance.maxPerDisbursement,
+                  overview.allowance.maxPerLeaderPerDay
+                )}
+              </p>
+            </div>
+          )}
+
+          {overview && overview.beneficiaries.length === 0 && (
             <p className="text-sm text-muted-foreground">{t.empty}</p>
           )}
 
-          {beneficiaries && beneficiaries.length > 0 && (
+          {overview && overview.beneficiaries.length > 0 && (
             <ul className="divide-y rounded-md border">
-              {beneficiaries.map((b) => (
-                <li key={b.id} className="p-3 grid gap-1 sm:grid-cols-3 sm:items-center text-sm">
-                  <span className="font-mono" title={b.ethAddress}>
-                    {shorten(b.ethAddress)}
-                  </span>
-                  <span className="font-mono text-muted-foreground" title={b.stellarAddress}>
-                    {t.stellarAddress}: {shorten(b.stellarAddress)}
-                  </span>
-                  <span className="text-muted-foreground sm:text-right">
-                    {t.addedOn} {new Date(b.createdAt).toLocaleDateString()}
-                  </span>
+              {overview.beneficiaries.map((b) => (
+                <li
+                  key={b.id}
+                  className="p-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between text-sm"
+                >
+                  <div className="space-y-0.5">
+                    <p className="font-mono" title={b.ethAddress}>
+                      {shortenAddress(b.ethAddress)}
+                    </p>
+                    <p className="font-mono text-muted-foreground" title={b.stellarAddress}>
+                      {t.stellarAddress}: {shortenAddress(b.stellarAddress)}
+                    </p>
+                  </div>
+                  <DisburseForm beneficiary={b} onDisbursed={handleDisbursed} onError={showError} />
                 </li>
               ))}
             </ul>
           )}
         </section>
+
+        {overview && (
+          <section className="space-y-3">
+            <h2 className="text-lg font-medium">{t.recentHeading}</h2>
+            {overview.disbursements.length === 0 ? (
+              <p className="text-sm text-muted-foreground">{t.noDisbursements}</p>
+            ) : (
+              <ul className="divide-y rounded-md border">
+                {overview.disbursements.map((d) => (
+                  <li key={d.id} className="p-3 grid gap-1 sm:grid-cols-3 sm:items-center text-sm">
+                    <span className="font-mono" title={d.beneficiaryEthAddress}>
+                      {shortenAddress(d.beneficiaryEthAddress)}
+                    </span>
+                    <span className="font-mono">{d.amount} XLM</span>
+                    <span className="text-muted-foreground sm:text-right">
+                      {statusLabel[d.status]} · {new Date(d.createdAt).toLocaleDateString()}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        )}
       </div>
     </Container>
   );

@@ -108,7 +108,7 @@ const en = {
     added: "Beneficiary added",
     listHeading: "My beneficiaries",
     listDescription:
-      "Only you can see the beneficiaries you added. Showing them needs your signature.",
+      "Only you can see the beneficiaries you added. The first time, you sign in once; after that they load automatically.",
     show: "Show my beneficiaries",
     refresh: "Refresh",
     loadingList: "Loading…",
@@ -116,6 +116,42 @@ const en = {
     ethAddress: "RelayID",
     stellarAddress: "Stellar wallet",
     addedOn: "Added",
+    allowanceHeading: "Your disbursement allowance",
+    allowanceBalance: "Remaining",
+    allowanceToday: "Used in the last 24 hours",
+    allowanceLimits: (perDisbursement: string, perDay: string) =>
+      `Up to ${perDisbursement} XLM per disbursement and ${perDay} XLM per 24 hours.`,
+    amountLabel: "Amount (XLM)",
+    disburse: "Disburse",
+    disbursing: "Sending…",
+    disbursed: "Disbursement created",
+    disbursedDescription: (amount: string) =>
+      `${amount} XLM is waiting for the beneficiary to redeem.`,
+    amountRequired: "Enter an amount",
+    invalidAmount: "Enter an amount such as 0.5 (up to 7 decimals)",
+    amountPlaceholder: "XLM",
+    recentHeading: "Recent disbursements",
+    noDisbursements: "No disbursements yet.",
+  },
+  disbursements: {
+    status: {
+      pending: "Waiting to be redeemed",
+      redeeming: "Being paid…",
+      redeemed: "Paid",
+      needs_review: "Being checked",
+    },
+    myHeading: "My disbursements",
+    myDescription:
+      "Funds that a community leader has sent you. Redeem them to receive the XLM in your Stellar wallet.",
+    show: "Show my disbursements",
+    refresh: "Refresh",
+    loading: "Loading…",
+    none: "You have no disbursements.",
+    redeem: "Redeem",
+    redeeming: "Redeeming… this can take up to a minute",
+    redeemed: "Redeemed",
+    redeemedDescription: (amount: string) => `${amount} XLM was sent to your Stellar wallet.`,
+    viewTransaction: "View transaction",
   },
   addPage: {
     headings: {

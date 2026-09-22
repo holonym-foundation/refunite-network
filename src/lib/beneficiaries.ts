@@ -1,6 +1,6 @@
 import { DB } from "@/lib/database/service";
 import { Beneficiary } from "@/lib/database/types";
-import { LeaderAuthError } from "@/lib/leader-auth";
+import { SignedActionError } from "@/lib/signed-actions";
 import { deriveStellarWalletAddress, getStellarWalletConfig } from "@/lib/stellar/address";
 import { Address } from "viem";
 
@@ -34,7 +34,7 @@ export class BeneficiaryConflictError extends Error {
  */
 export async function addBeneficiary(leader: Address, beneficiary: Address): Promise<Beneficiary> {
   if (beneficiary === leader) {
-    throw new LeaderAuthError("invalid_request", "You cannot add yourself as a beneficiary");
+    throw new SignedActionError("invalid_request", "You cannot add yourself as a beneficiary");
   }
 
   const stellarAddress = deriveStellarWalletAddress(beneficiary, getStellarWalletConfig());

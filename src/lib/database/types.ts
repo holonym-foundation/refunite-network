@@ -79,7 +79,8 @@ export interface SecurityEvent {
     | "invalid_signature"
     | "expired_signature"
     | "expired_reservation"
-    | "recipient_mismatch";
+    | "recipient_mismatch"
+    | "not_leader";
   inviter_address: string | null;
   recipient_address: string | null;
   signature: string | null;

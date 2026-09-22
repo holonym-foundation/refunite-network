@@ -28,7 +28,7 @@ export const directOnboardSchema = z.object({
  * Domain definition for the RelayID Network
  * This provides separation between different applications using EIP-712
  */
-const DOMAIN = {
+export const DOMAIN = {
   name: "RelayID",
   version: "1",
   verifyingContract: "0x0000000000000000000000000000000000000000",

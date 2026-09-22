@@ -1,22 +1,22 @@
 import { listDisbursementsByBeneficiary } from "@/lib/disbursements";
-import { verifyBeneficiaryAction } from "@/lib/signed-actions";
-import { readSignedBody, signedActionErrorResponse } from "@/lib/signed-actions/http";
+import { getSessionAddress } from "@/lib/session";
+import { signedActionErrorResponse } from "@/lib/signed-actions/http";
 import { NextRequest, NextResponse } from "next/server";
 
+export const dynamic = "force-dynamic";
+
 /**
- * List the signing beneficiary's disbursements. Body: { message: ListMyDisbursements,
- * signature }; read-only, so the signature may be reused until it expires.
+ * The signed-in wallet's disbursements (empty if it is not a beneficiary). Needs a session
+ * (see /api/session).
  */
-export async function POST(request: NextRequest) {
+export async function GET(request: NextRequest) {
   try {
-    const { message, signature } = await readSignedBody(request);
-    const { beneficiary } = await verifyBeneficiaryAction({
-      primaryType: "ListMyDisbursements",
-      message,
-      signature,
-    });
+    const beneficiary = getSessionAddress(request);
+    if (!beneficiary) {
+      return NextResponse.json({ error: "Sign in first", code: "no_session" }, { status: 401 });
+    }
     return NextResponse.json({ disbursements: await listDisbursementsByBeneficiary(beneficiary) });
   } catch (error) {
-    return signedActionErrorResponse(error, "POST /api/disbursements/mine");
+    return signedActionErrorResponse(error, "GET /api/disbursements/mine");
   }
 }

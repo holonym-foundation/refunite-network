@@ -1,23 +1,30 @@
 import { toBeneficiaryResponse } from "@/lib/beneficiaries";
+import { getPublicClient } from "@/lib/chain";
 import { DB } from "@/lib/database/service";
 import { getAllowance, listDisbursementsByLeader } from "@/lib/disbursements";
-import { verifyLeaderAction } from "@/lib/signed-actions";
-import { signedActionErrorResponse, readSignedBody } from "@/lib/signed-actions/http";
+import { getLeaderHatConfig, isLeader } from "@/lib/relayer";
+import { getSessionAddress } from "@/lib/session";
+import { signedActionErrorResponse } from "@/lib/signed-actions/http";
 import { NextRequest, NextResponse } from "next/server";
 
+export const dynamic = "force-dynamic";
+
 /**
- * List the signing leader's beneficiaries, their recent disbursements and allowance. Body: { message: ListBeneficiaries, signature }.
- * POST rather than GET because the request carries a signature; the signature is read-only
- * and may be reused until it expires.
+ * The signed-in leader's beneficiaries, recent disbursements and allowance. Needs a session
+ * (see /api/session); the leader hat is checked on every request.
  */
-export async function POST(request: NextRequest) {
+export async function GET(request: NextRequest) {
   try {
-    const { message, signature } = await readSignedBody(request);
-    const { leader } = await verifyLeaderAction({
-      primaryType: "ListBeneficiaries",
-      message,
-      signature,
-    });
+    const leader = getSessionAddress(request);
+    if (!leader) {
+      return NextResponse.json({ error: "Sign in first", code: "no_session" }, { status: 401 });
+    }
+    if (!(await isLeader(getPublicClient(), getLeaderHatConfig(), leader))) {
+      return NextResponse.json(
+        { error: "Signer is not a current leader", code: "not_leader" },
+        { status: 403 }
+      );
+    }
 
     const [beneficiaries, disbursements, allowance] = await Promise.all([
       DB.listBeneficiariesByLeader(leader),
@@ -30,6 +37,6 @@ export async function POST(request: NextRequest) {
       allowance,
     });
   } catch (error) {
-    return signedActionErrorResponse(error, "POST /api/beneficiaries/list");
+    return signedActionErrorResponse(error, "GET /api/beneficiaries/list");
   }
 }

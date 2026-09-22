@@ -9,15 +9,16 @@ import { DOMAIN, domainSchema } from ".";
  * src/lib/signed-actions.
  */
 export const SIGNED_ACTION_TYPES = {
+  // --- Signed by any wallet: proves the address to start a read-only session ---
+  StartSession: [
+    { name: "account", type: "address" },
+    { name: "nonce", type: "string" },
+    { name: "issuedAt", type: "uint256" },
+  ],
   // --- Signed by a leader ---
   AddBeneficiary: [
     { name: "leader", type: "address" },
     { name: "beneficiary", type: "address" },
-    { name: "nonce", type: "string" },
-    { name: "issuedAt", type: "uint256" },
-  ],
-  ListBeneficiaries: [
-    { name: "leader", type: "address" },
     { name: "nonce", type: "string" },
     { name: "issuedAt", type: "uint256" },
   ],
@@ -29,11 +30,6 @@ export const SIGNED_ACTION_TYPES = {
     { name: "issuedAt", type: "uint256" },
   ],
   // --- Signed by a beneficiary ---
-  ListMyDisbursements: [
-    { name: "beneficiary", type: "address" },
-    { name: "nonce", type: "string" },
-    { name: "issuedAt", type: "uint256" },
-  ],
   RedeemDisbursement: [
     { name: "beneficiary", type: "address" },
     { name: "disbursementId", type: "string" },
@@ -43,27 +39,22 @@ export const SIGNED_ACTION_TYPES = {
 } as const;
 
 export type SignedActionType = keyof typeof SIGNED_ACTION_TYPES;
-export type SignerRole = "leader" | "beneficiary";
+export type SignerRole = "account" | "leader" | "beneficiary";
 
 /** Who signs each action; the message field of the same name holds their address. */
 export const SIGNER_ROLE = {
+  StartSession: "account", // any wallet; roles are checked per request
   AddBeneficiary: "leader",
-  ListBeneficiaries: "leader",
   CreateDisbursement: "leader",
-  ListMyDisbursements: "beneficiary",
   RedeemDisbursement: "beneficiary",
 } as const satisfies Record<SignedActionType, SignerRole>;
 
 export type LeaderActionType = {
   [K in SignedActionType]: (typeof SIGNER_ROLE)[K] extends "leader" ? K : never;
 }[SignedActionType];
-export type BeneficiaryActionType = Exclude<SignedActionType, LeaderActionType>;
-
-/** Actions that change nothing; their nonce is not consumed, so a signature can be reused. */
-export const READ_ONLY_ACTIONS: ReadonlySet<SignedActionType> = new Set<SignedActionType>([
-  "ListBeneficiaries",
-  "ListMyDisbursements",
-]);
+export type BeneficiaryActionType = {
+  [K in SignedActionType]: (typeof SIGNER_ROLE)[K] extends "beneficiary" ? K : never;
+}[SignedActionType];
 
 const address = z
   .string()
@@ -83,12 +74,11 @@ const xlmAmount = z
   .refine((value) => Number(value) > 0, "Amount must be greater than zero");
 
 export const signedActionSchemas = {
+  StartSession: z.object({ ...common, account: address }).strict(),
   AddBeneficiary: z.object({ ...common, leader: address, beneficiary: address }).strict(),
-  ListBeneficiaries: z.object({ ...common, leader: address }).strict(),
   CreateDisbursement: z
     .object({ ...common, leader: address, beneficiary: address, amount: xlmAmount })
     .strict(),
-  ListMyDisbursements: z.object({ ...common, beneficiary: address }).strict(),
   RedeemDisbursement: z
     .object({ ...common, beneficiary: address, disbursementId: z.string().uuid() })
     .strict(),
@@ -98,7 +88,7 @@ export type SignedActionMessage<T extends SignedActionType> = z.infer<
   (typeof signedActionSchemas)[T]
 >;
 
-/** The address of whoever signs `message` (its leader or beneficiary field). */
+/** The address of whoever signs `message` (its account, leader or beneficiary field). */
 export function signerOf<T extends SignedActionType>(
   primaryType: T,
   message: SignedActionMessage<T>

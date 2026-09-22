@@ -241,8 +241,9 @@ Run `pnpm db:migrate` against each environment's database before deploying code 
 
 Leaders can register beneficiaries at `/beneficiaries`. A beneficiary belongs to the leader who added them: only that leader can see them (and, later, disburse to them).
 
-- Every request is signed by the leader (EIP-712) and checked by `verifyLeaderAction` (`src/lib/leader-auth`): recent signature, signer wears the Community Leader hat, and each nonce is single-use (`leader_action_nonces`). Listing uses a read-only `ListBeneficiaries` signature that can be reused until it expires (5 minutes).
-- `POST /api/beneficiaries` adds one (`AddBeneficiary`), `POST /api/beneficiaries/list` lists the signer's own (`ListBeneficiaries`).
+- Adding is signed by the leader (EIP-712) and checked by `verifyLeaderAction` (`src/lib/signed-actions`): recent signature, signer wears the Community Leader hat, and each nonce is single-use (`leader_action_nonces`).
+- Listing needs no per-request signature: the wallet signs `StartSession` once (`POST /api/session`), which sets an HttpOnly cookie for 24 hours (`src/lib/session.ts`, signed with `SESSION_SECRET`). The session only proves the address; the leader hat is checked on every request, and anything that changes state still needs its own signature. Logging out ends it (`DELETE /api/session`).
+- `POST /api/beneficiaries` adds one (`AddBeneficiary`); `GET /api/beneficiaries/list` lists the signed-in leader's own.
 - Each beneficiary's Stellar smart-wallet address is derived from their Ethereum address (`src/lib/stellar/address.ts`, ported from Human-Wallet-On-Stellar), so it is known before the wallet is deployed. `WALLET_SALT` and the factory contract must match that app.
 
 ## Disbursements
@@ -250,7 +251,7 @@ Leaders can register beneficiaries at `/beneficiaries`. A beneficiary belongs to
 A leader can disburse XLM to their own beneficiaries (from `/beneficiaries`); the beneficiary redeems it from their account page and the XLM is sent to their Stellar smart wallet.
 
 1. **Create** (`POST /api/disbursements`, leader-signed `CreateDisbursement`): inside one transaction holding an advisory lock, the server checks the beneficiary is the leader's, the amount (max 1 XLM), the leader's rolling 24h total (max 10 XLM), their allowance (100 XLM to start + admin credits in `leader_allowance_credits`, minus everything disbursed), and that the treasury covers every unpaid disbursement (keeping a 5 XLM reserve). Limits are env settings (`DISBURSE_*`).
-2. **List** (`POST /api/disbursements/mine`, beneficiary-signed `ListMyDisbursements`, read-only).
+2. **List** (`GET /api/disbursements/mine`, with a session; empty for wallets that are not beneficiaries).
 3. **Redeem** (`POST /api/disbursements/redeem`, beneficiary-signed `RedeemDisbursement`): the row is claimed (`pending → redeeming`) so it is paid at most once, the wallet is deployed through the factory if needed, then XLM is sent from the treasury (`WALLET_SOURCE_PRIVATE_KEY`) via the native asset contract.
 
 Statuses: `pending`, `redeeming`, `redeemed` (with `tx_hash`), and `needs_review`: the payment was submitted but not confirmed, so it is never retried automatically. Check `tx_hash` on a Stellar explorer and resolve these by hand. Failures before any funds move return the disbursement to `pending` with `last_error`.

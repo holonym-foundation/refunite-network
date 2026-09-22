@@ -1,8 +1,8 @@
 // @vitest-environment node
 import { POST as addBeneficiaryRoute } from "@/app/api/beneficiaries/route";
-import { POST as listBeneficiariesRoute } from "@/app/api/beneficiaries/list/route";
+import { GET as listBeneficiariesRoute } from "@/app/api/beneficiaries/list/route";
 import { POST as createDisbursementRoute } from "@/app/api/disbursements/route";
-import { POST as myDisbursementsRoute } from "@/app/api/disbursements/mine/route";
+import { GET as myDisbursementsRoute } from "@/app/api/disbursements/mine/route";
 import { POST as redeemRoute } from "@/app/api/disbursements/redeem/route";
 import { db } from "@/lib/db";
 import { SignedActionType } from "@/lib/eip712/signed-actions";
@@ -14,7 +14,7 @@ import { sql } from "drizzle-orm";
 import { NextRequest } from "next/server";
 import { PrivateKeyAccount } from "viem/accounts";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { accounts, signedBody } from "../helpers/signed-actions";
+import { accounts, sessionCookie, signedBody } from "../helpers/signed-actions";
 
 vi.mock("@/lib/db", () => import("../helpers/db").then((m) => m.createTestDbModule()));
 
@@ -53,6 +53,7 @@ async function call(route: (r: NextRequest) => Promise<Response>, body: unknown)
 }
 
 beforeAll(() => {
+  process.env.SESSION_SECRET = "test-secret-that-is-at-least-32-chars";
   process.env.NEXT_PUBLIC_STELLAR_NETWORK_PASSPHRASE = "Test SDF Network ; September 2015";
   process.env.NEXT_PUBLIC_STELLAR_ECDSA_SECP256K1_FACTORY_CONTRACT_ID =
     "CDJOTVVKNPEQP577P2GSYBPFVEY3JPJ7QJ3T2YWPMTI3TWIKNPTDO7Z2";
@@ -78,6 +79,18 @@ beforeEach(async () => {
   ).toBe(201);
 });
 
+async function getWithSession(
+  route: (r: NextRequest) => Promise<Response>,
+  signer: PrivateKeyAccount
+) {
+  const res = await route(
+    new NextRequest("http://localhost/api", {
+      headers: { cookie: await sessionCookie(signer, defaultChain.id) },
+    })
+  );
+  return { status: res.status, body: await res.json() };
+}
+
 const disburse = async (amount: string, signer = leaderA) =>
   call(
     createDisbursementRoute,
@@ -90,10 +103,7 @@ describe("disbursements API", () => {
     expect(created.status).toBe(201);
     const { id } = created.body.disbursement;
 
-    const mine = await call(
-      myDisbursementsRoute,
-      await signed(beneficiary, "ListMyDisbursements", {})
-    );
+    const mine = await getWithSession(myDisbursementsRoute, beneficiary);
     expect(mine.body.disbursements).toEqual([
       expect.objectContaining({ id, amount: "0.5", status: "pending" }),
     ]);
@@ -116,10 +126,7 @@ describe("disbursements API", () => {
 
   it("shows the leader their disbursements and remaining allowance", async () => {
     await disburse("1");
-    const listed = await call(
-      listBeneficiariesRoute,
-      await signed(leaderA, "ListBeneficiaries", {})
-    );
+    const listed = await getWithSession(listBeneficiariesRoute, leaderA);
     expect(listed.body.allowance).toEqual({
       balance: "99",
       usedLast24h: "1",
@@ -151,8 +158,19 @@ describe("disbursements API", () => {
     });
   });
 
-  it("rejects beneficiary actions from someone who is not a registered beneficiary", async () => {
-    const res = await call(myDisbursementsRoute, await signed(stranger, "ListMyDisbursements", {}));
+  it("shows no disbursements to a wallet that is not a beneficiary", async () => {
+    expect(await getWithSession(myDisbursementsRoute, stranger)).toEqual({
+      status: 200,
+      body: { disbursements: [] },
+    });
+  });
+
+  it("rejects redeeming by someone who is not a registered beneficiary", async () => {
+    const { id } = (await disburse("0.5")).body.disbursement;
+    const res = await call(
+      redeemRoute,
+      await signed(stranger, "RedeemDisbursement", { disbursementId: id })
+    );
     expect(res).toMatchObject({ status: 403, body: { code: "not_beneficiary" } });
   });
 

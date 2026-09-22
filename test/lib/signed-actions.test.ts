@@ -10,6 +10,7 @@ import {
   VerifySignedActionDeps,
   verifyBeneficiaryAction,
   verifyLeaderAction,
+  verifySignedAction,
 } from "@/lib/signed-actions";
 import { privateKeyToAccount } from "viem/accounts";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -38,7 +39,11 @@ beforeEach(() => {
     now: () => NOW,
     // `leader` is a leader, `other` a registered beneficiary
     hasRole: vi.fn(async (role: string, address: string) =>
-      role === "leader" ? address === leader.address : address === other.address
+      role === "account"
+        ? true
+        : role === "leader"
+          ? address === leader.address
+          : address === other.address
     ),
     consumeNonce: async (address, nonce) => {
       const key = `${address}:${nonce}`;
@@ -252,16 +257,17 @@ describe("verifyLeaderAction", () => {
   });
 
   it("rejects a beneficiary action from someone who is not a registered beneficiary", async () => {
-    const message: SignedActionMessage<"ListMyDisbursements"> = {
+    const message: SignedActionMessage<"RedeemDisbursement"> = {
       beneficiary: leader.address,
+      disbursementId: "6f1c7b8e-0d5a-4c1e-9d38-2f4b0a1c9e77",
       nonce: "nonce-0003",
       issuedAt: BigInt(NOW),
     };
-    const signature = await sign("ListMyDisbursements", message);
+    const signature = await sign("RedeemDisbursement", message);
 
     await expectCode(
       verifyBeneficiaryAction(
-        { primaryType: "ListMyDisbursements", message: asJson(message), signature },
+        { primaryType: "RedeemDisbursement", message: asJson(message), signature },
         deps
       ),
       "not_beneficiary"
@@ -269,6 +275,23 @@ describe("verifyLeaderAction", () => {
     expect(deps.logSecurityEvent).toHaveBeenCalledWith(
       expect.objectContaining({ event_type: "not_beneficiary" })
     );
+  });
+
+  it("accepts StartSession from any wallet, once", async () => {
+    const message: SignedActionMessage<"StartSession"> = {
+      account: other.address,
+      nonce: "nonce-0005",
+      issuedAt: BigInt(NOW),
+    };
+    const signature = await sign("StartSession", message, { signer: other });
+    const input = { primaryType: "StartSession" as const, message: asJson(message), signature };
+
+    await expect(verifySignedAction(input, deps)).resolves.toEqual({
+      signer: other.address,
+      message,
+    });
+    expect(deps.hasRole).not.toHaveBeenCalledWith("leader", other.address);
+    await expectCode(verifySignedAction(input, deps), "replay");
   });
 
   it("rejects a RedeemDisbursement whose id is not a uuid", async () => {

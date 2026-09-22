@@ -206,15 +206,15 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 See `.env.example` for the full list, split into required and optional. The main ones:
 
-| Variable                               | Description                              | Public? |
-| -------------------------------------- | ---------------------------------------- | ------- |
-| `RELAYER_PRIVATE_KEY`                  | Relayer wallet private key               | No      |
-| `NEXT_PUBLIC_HSG_CONTRACT_ADDRESS`     | Hats Signer Gate for the leaders' Safe   | Yes     |
-| `NEXT_PUBLIC_HATS_TREE_ID`             | Hats Protocol tree ID                    | Yes     |
-| `NEXT_PUBLIC_HATS_LEADER_ID`           | Leader hat ID in Hats Protocol           | Yes     |
-| `NEXT_PUBLIC_HATS_LEADER_SAFE_ACCOUNT` | Safe account address for leaders         | Yes     |
-| `NEXT_PUBLIC_CHAIN_ID`                 | Blockchain network chain ID              | Yes     |
-| `DATABASE_URL`                         | Neon Postgres connection string          | No      |
+| Variable                               | Description                            | Public? |
+| -------------------------------------- | -------------------------------------- | ------- |
+| `RELAYER_PRIVATE_KEY`                  | Relayer wallet private key             | No      |
+| `NEXT_PUBLIC_HSG_CONTRACT_ADDRESS`     | Hats Signer Gate for the leaders' Safe | Yes     |
+| `NEXT_PUBLIC_HATS_TREE_ID`             | Hats Protocol tree ID                  | Yes     |
+| `NEXT_PUBLIC_HATS_LEADER_ID`           | Leader hat ID in Hats Protocol         | Yes     |
+| `NEXT_PUBLIC_HATS_LEADER_SAFE_ACCOUNT` | Safe account address for leaders       | Yes     |
+| `NEXT_PUBLIC_CHAIN_ID`                 | Blockchain network chain ID            | Yes     |
+| `DATABASE_URL`                         | Neon Postgres connection string        | No      |
 
 **Important**: `NEXT_PUBLIC_` variables are exposed to the browser. Do not store sensitive secrets with this prefix.
 
@@ -236,6 +236,14 @@ pnpm db:studio     # browse the database
 ```
 
 Run `pnpm db:migrate` against each environment's database before deploying code that needs a new migration. The database tests (`test/lib/database.test.ts`) run the migrations against an in-memory Postgres (PGlite), so they need no database.
+
+## Beneficiaries
+
+Leaders can register beneficiaries at `/beneficiaries`. A beneficiary belongs to the leader who added them: only that leader can see them (and, later, disburse to them).
+
+- Every request is signed by the leader (EIP-712) and checked by `verifyLeaderAction` (`src/lib/leader-auth`): recent signature, signer wears the Community Leader hat, and each nonce is single-use (`leader_action_nonces`). Listing uses a read-only `ListBeneficiaries` signature that can be reused until it expires (5 minutes).
+- `POST /api/beneficiaries` adds one (`AddBeneficiary`), `POST /api/beneficiaries/list` lists the signer's own (`ListBeneficiaries`).
+- Each beneficiary's Stellar smart-wallet address is derived from their Ethereum address (`src/lib/stellar/address.ts`, ported from Human-Wallet-On-Stellar), so it is known before the wallet is deployed. `WALLET_SALT` and the factory contract must match that app.
 
 ## Onboarding Relayer
 

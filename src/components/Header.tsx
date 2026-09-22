@@ -18,6 +18,7 @@ import { getClientDeviceInfo } from "@/lib/utils/device-info";
 const navItems = [
   { name: en.header.nav.myAccount, href: "/" },
   { name: en.header.nav.addLeader, href: "/add" },
+  { name: en.header.nav.beneficiaries, href: "/beneficiaries" },
 ];
 
 export function Header() {

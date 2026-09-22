@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import {
   auditLog,
+  beneficiaries,
   completions,
   invitations,
   leaderActionNonces,
@@ -8,10 +9,11 @@ import {
   securityEvents,
 } from "@/lib/db/schema";
 import { marshalTypedData } from "@/lib/utils/serialize";
-import { and, count, eq, isNotNull, isNull, lte, sql } from "drizzle-orm";
+import { and, count, desc, eq, isNotNull, isNull, lte, sql } from "drizzle-orm";
 import {
   AuditLogEntry,
   AuditLogMetadata,
+  Beneficiary,
   Completion,
   CreateCompletionData,
   CreateInvitationData,
@@ -235,6 +237,36 @@ export class DB {
       .onConflictDoNothing()
       .returning({ id: leaderActionNonces.id });
     return inserted.length > 0;
+  }
+
+  // =====================================================
+  // BENEFICIARIES
+  // =====================================================
+
+  /** Returns null if the Ethereum address is already a beneficiary (of any leader). */
+  static async createBeneficiary(
+    data: Pick<Beneficiary, "eth_address" | "stellar_address" | "added_by">
+  ): Promise<Beneficiary | null> {
+    const [row] = await db.insert(beneficiaries).values(data).onConflictDoNothing().returning();
+    return row ? withIsoDates(row) : null;
+  }
+
+  static async findBeneficiaryByEthAddress(ethAddress: string): Promise<Beneficiary | null> {
+    const [row] = await db
+      .select()
+      .from(beneficiaries)
+      .where(eq(beneficiaries.eth_address, ethAddress))
+      .limit(1);
+    return row ? withIsoDates(row) : null;
+  }
+
+  static async listBeneficiariesByLeader(leaderAddress: string): Promise<Beneficiary[]> {
+    const rows = await db
+      .select()
+      .from(beneficiaries)
+      .where(eq(beneficiaries.added_by, leaderAddress))
+      .orderBy(desc(beneficiaries.created_at), beneficiaries.eth_address); // stable for ties
+    return rows.map(withIsoDates);
   }
 
   // =====================================================

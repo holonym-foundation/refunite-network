@@ -15,6 +15,13 @@
       "when": 1790698402179,
       "tag": "0001_leader_action_nonces",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790700050218,
+      "tag": "0002_beneficiaries",
+      "breakpoints": true
     }
   ]
 }

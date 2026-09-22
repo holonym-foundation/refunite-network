@@ -14,6 +14,12 @@ export const LEADER_ACTION_TYPES = {
     { name: "nonce", type: "string" },
     { name: "issuedAt", type: "uint256" },
   ],
+  // Read-only: the signature may be reused until it expires (see READ_ONLY_LEADER_ACTIONS)
+  ListBeneficiaries: [
+    { name: "leader", type: "address" },
+    { name: "nonce", type: "string" },
+    { name: "issuedAt", type: "uint256" },
+  ],
   CreateDisbursement: [
     { name: "leader", type: "address" },
     { name: "beneficiary", type: "address" },
@@ -24,6 +30,11 @@ export const LEADER_ACTION_TYPES = {
 } as const;
 
 export type LeaderActionType = keyof typeof LEADER_ACTION_TYPES;
+
+/** Actions that change nothing; their nonce is not consumed, so a signature can be reused. */
+export const READ_ONLY_LEADER_ACTIONS: ReadonlySet<LeaderActionType> = new Set<LeaderActionType>([
+  "ListBeneficiaries",
+]);
 
 const address = z
   .string()
@@ -45,6 +56,7 @@ const xlmAmount = z
 
 export const leaderActionSchemas = {
   AddBeneficiary: z.object({ ...common, beneficiary: address }).strict(),
+  ListBeneficiaries: z.object(common).strict(),
   CreateDisbursement: z.object({ ...common, beneficiary: address, amount: xlmAmount }).strict(),
 } satisfies Record<LeaderActionType, z.ZodTypeAny>;
 

@@ -4,6 +4,7 @@ import {
   index,
   integer,
   jsonb,
+  numeric,
   pgTable,
   serial,
   text,
@@ -89,6 +90,7 @@ export const SECURITY_EVENT_TYPES = [
   "expired_reservation",
   "recipient_mismatch",
   "not_leader",
+  "not_beneficiary",
 ] as const;
 
 export const securityEvents = pgTable(
@@ -142,8 +144,9 @@ export const auditLog = pgTable(
   ]
 );
 
-// Every leader-signed action (see src/lib/leader-auth) consumes its nonce here, so a
-// signature can be used only once.
+// Every state-changing signed action (see src/lib/signed-actions) consumes its nonce here,
+// so a signature can be used only once. `leader_address` holds the signer, which is a
+// beneficiary for beneficiary actions (the name predates those).
 export const leaderActionNonces = pgTable(
   "leader_action_nonces",
   {
@@ -170,5 +173,64 @@ export const beneficiaries = pgTable(
   (t) => [
     index("idx_beneficiaries_added_by").on(t.added_by),
     check("beneficiaries_not_self_check", sql`${t.eth_address} <> ${t.added_by}`),
+  ]
+);
+
+const xlm = (name: string) => numeric(name, { precision: 20, scale: 7 }); // exact, 7 decimals
+
+export const DISBURSEMENT_STATUSES = [
+  "pending", // created by the leader; waiting for the beneficiary to redeem
+  "redeeming", // claimed by a redeem request; the payment is in progress
+  "redeemed", // paid; tx_hash is set
+  "needs_review", // payment was submitted but its outcome is unknown; never retried automatically
+] as const;
+
+// A leader's promise of XLM to one of their beneficiaries, redeemed by the beneficiary.
+export const disbursements = pgTable(
+  "disbursements",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    beneficiary_id: uuid("beneficiary_id")
+      .notNull()
+      .references(() => beneficiaries.id),
+    leader_address: text("leader_address").notNull(),
+    amount: xlm("amount").notNull(),
+    status: text("status", { enum: DISBURSEMENT_STATUSES }).notNull().default("pending"),
+    tx_hash: text("tx_hash").unique(),
+    last_error: text("last_error"),
+    created_at: timestamptz("created_at").notNull().defaultNow(),
+    redeemed_at: timestamptz("redeemed_at"),
+  },
+  (t) => [
+    index("idx_disbursements_leader_created").on(t.leader_address, t.created_at),
+    index("idx_disbursements_beneficiary").on(t.beneficiary_id),
+    check("disbursements_amount_positive_check", sql`${t.amount} > 0`),
+    check(
+      "disbursements_status_check",
+      sql.raw(`status IN (${DISBURSEMENT_STATUSES.map((s) => `'${s}'`).join(", ")})`)
+    ),
+    // redeemed ⇒ paid (hash + time); only redeemed has redeemed_at. tx_hash may also be
+    // set on needs_review, to look the submitted payment up.
+    check(
+      "disbursements_redeemed_check",
+      sql`(${t.status} <> 'redeemed' OR (${t.tx_hash} IS NOT NULL AND ${t.redeemed_at} IS NOT NULL)) AND (${t.redeemed_at} IS NULL OR ${t.status} = 'redeemed')`
+    ),
+  ]
+);
+
+// Admin top-ups of a leader's allowance, on top of the starting allowance. A leader's
+// balance = starting allowance + credits - everything they have disbursed.
+export const leaderAllowanceCredits = pgTable(
+  "leader_allowance_credits",
+  {
+    id: serial("id").primaryKey(),
+    leader_address: text("leader_address").notNull(),
+    amount: xlm("amount").notNull(),
+    note: text("note"),
+    created_at: timestamptz("created_at").notNull().defaultNow(),
+  },
+  (t) => [
+    index("idx_leader_allowance_credits_leader").on(t.leader_address),
+    check("leader_allowance_credits_amount_positive_check", sql`${t.amount} > 0`),
   ]
 );

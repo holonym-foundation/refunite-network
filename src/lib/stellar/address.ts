@@ -40,12 +40,17 @@ export function getStellarWalletConfig(): StellarWalletConfig {
   return { networkPassphrase, factoryContractId, walletSalt };
 }
 
+/** The 32-byte deploy salt for an Ethereum address: address (20 bytes) ++ WALLET_SALT (12). */
+export function walletDeploySalt(ethAddress: string, config: StellarWalletConfig): Buffer {
+  const ethBytes = Buffer.from(getAddress(ethAddress).slice(2), "hex");
+  return Buffer.concat([ethBytes, Buffer.from(config.walletSalt, "hex")]);
+}
+
 export function deriveStellarWalletAddress(
   ethAddress: string,
   config: StellarWalletConfig
 ): string {
-  const ethBytes = Buffer.from(getAddress(ethAddress).slice(2), "hex");
-  const salt = Buffer.concat([ethBytes, Buffer.from(config.walletSalt, "hex")]);
+  const salt = walletDeploySalt(ethAddress, config);
 
   const preimage = xdr.HashIdPreimage.envelopeTypeContractId(
     new xdr.HashIdPreimageContractId({

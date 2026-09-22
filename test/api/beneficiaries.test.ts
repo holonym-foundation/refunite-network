@@ -2,28 +2,16 @@
 import { POST as addBeneficiaryRoute } from "@/app/api/beneficiaries/route";
 import { POST as listBeneficiariesRoute } from "@/app/api/beneficiaries/list/route";
 import { db } from "@/lib/db";
-import { generateNonce } from "@/lib/eip712";
-import {
-  LeaderActionMessage,
-  LeaderActionType,
-  createLeaderActionTypedData,
-} from "@/lib/eip712/leader-actions";
+import { SignedActionType } from "@/lib/eip712/signed-actions";
 import { isLeader } from "@/lib/relayer";
 import { defaultChain } from "@/wagmi/chain-config";
 import { sql } from "drizzle-orm";
 import { NextRequest } from "next/server";
-import { PrivateKeyAccount, privateKeyToAccount } from "viem/accounts";
+import { PrivateKeyAccount } from "viem/accounts";
+import { accounts, signedBody } from "../helpers/signed-actions";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("@/lib/db", async () => {
-  const { PGlite } = await import("@electric-sql/pglite");
-  const { drizzle } = await import("drizzle-orm/pglite");
-  const { migrate } = await import("drizzle-orm/pglite/migrator");
-  const schema = await import("@/lib/db/schema");
-  const db = drizzle(new PGlite(), { schema });
-  await migrate(db, { migrationsFolder: "./drizzle" });
-  return { db };
-});
+vi.mock("@/lib/db", () => import("../helpers/db").then((m) => m.createTestDbModule()));
 
 // The on-chain hat check; everything else (signatures, nonces, DB) is real
 vi.mock("@/lib/relayer", async (importOriginal) => ({
@@ -32,13 +20,7 @@ vi.mock("@/lib/relayer", async (importOriginal) => ({
   isLeader: vi.fn(),
 }));
 
-// Anvil test keys
-const leaderA = privateKeyToAccount(
-  "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
-);
-const leaderB = privateKeyToAccount(
-  "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d"
-);
+const { leaderA, leaderB } = accounts;
 const BENEFICIARY = "0x90F79bf6EB2c4f870365E785982E1f101E93b906";
 
 beforeAll(() => {
@@ -49,28 +31,19 @@ beforeAll(() => {
 });
 
 beforeEach(async () => {
-  await db.execute(sql`TRUNCATE beneficiaries, leader_action_nonces, security_events, audit_log`);
+  await db.execute(
+    sql`TRUNCATE beneficiaries, leader_action_nonces, security_events, audit_log CASCADE`
+  );
   vi.mocked(isLeader).mockImplementation(async (_client, _config, address) =>
     [leaderA.address, leaderB.address].includes(address as `0x${string}`)
   );
 });
 
-async function signed<T extends LeaderActionType>(
+const signed = <T extends SignedActionType>(
   signer: PrivateKeyAccount,
   primaryType: T,
-  fields: Omit<LeaderActionMessage<T>, "leader" | "nonce" | "issuedAt">
-) {
-  const message = {
-    ...fields,
-    leader: signer.address,
-    nonce: generateNonce(),
-    issuedAt: BigInt(Math.floor(Date.now() / 1000)),
-  } as LeaderActionMessage<T>;
-  const signature = await signer.signTypedData(
-    createLeaderActionTypedData(primaryType, message, defaultChain.id) as never
-  );
-  return { message: { ...message, issuedAt: message.issuedAt.toString() }, signature };
-}
+  fields: Parameters<typeof signedBody<T>>[2]
+) => signedBody(signer, primaryType, fields, { chainId: defaultChain.id });
 
 const request = (body: unknown) =>
   new NextRequest("http://localhost/api", { method: "POST", body: JSON.stringify(body) });

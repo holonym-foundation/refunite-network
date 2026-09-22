@@ -3,8 +3,8 @@ import {
   addBeneficiary,
   toBeneficiaryResponse,
 } from "@/lib/beneficiaries";
-import { verifyLeaderAction } from "@/lib/leader-auth";
-import { leaderActionErrorResponse, readSignedBody } from "@/lib/leader-auth/http";
+import { verifyLeaderAction } from "@/lib/signed-actions";
+import { signedActionErrorResponse, readSignedBody } from "@/lib/signed-actions/http";
 import { NextRequest, NextResponse } from "next/server";
 
 /**
@@ -29,6 +29,6 @@ export async function POST(request: NextRequest) {
         { status: 409 }
       );
     }
-    return leaderActionErrorResponse(error, "POST /api/beneficiaries");
+    return signedActionErrorResponse(error, "POST /api/beneficiaries");
   }
 }

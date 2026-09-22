@@ -1,15 +1,16 @@
 // @vitest-environment node
 import {
-  LeaderActionMessage,
-  LeaderActionType,
-  createLeaderActionTypedData,
-} from "@/lib/eip712/leader-actions";
+  SignedActionMessage,
+  SignedActionType,
+  createSignedActionTypedData,
+} from "@/lib/eip712/signed-actions";
 import {
-  LeaderAuthError,
   MAX_SIGNATURE_AGE_SECONDS,
-  VerifyLeaderActionDeps,
+  SignedActionError,
+  VerifySignedActionDeps,
+  verifyBeneficiaryAction,
   verifyLeaderAction,
-} from "@/lib/leader-auth";
+} from "@/lib/signed-actions";
 import { privateKeyToAccount } from "viem/accounts";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -25,8 +26,8 @@ const other = privateKeyToAccount(
 const BENEFICIARY = "0x90F79bf6EB2c4f870365E785982E1f101E93b906";
 
 let usedNonces: Set<string>;
-let deps: VerifyLeaderActionDeps & {
-  isLeader: ReturnType<typeof vi.fn>;
+let deps: VerifySignedActionDeps & {
+  hasRole: ReturnType<typeof vi.fn>;
   logSecurityEvent: ReturnType<typeof vi.fn>;
 };
 
@@ -35,7 +36,10 @@ beforeEach(() => {
   deps = {
     chainId: CHAIN_ID,
     now: () => NOW,
-    isLeader: vi.fn(async (address: string) => address === leader.address),
+    // `leader` is a leader, `other` a registered beneficiary
+    hasRole: vi.fn(async (role: string, address: string) =>
+      role === "leader" ? address === leader.address : address === other.address
+    ),
     consumeNonce: async (address, nonce) => {
       const key = `${address}:${nonce}`;
       if (usedNonces.has(key)) return false;
@@ -47,8 +51,8 @@ beforeEach(() => {
 });
 
 function addBeneficiary(
-  overrides: Partial<LeaderActionMessage<"AddBeneficiary">> = {}
-): LeaderActionMessage<"AddBeneficiary"> {
+  overrides: Partial<SignedActionMessage<"AddBeneficiary">> = {}
+): SignedActionMessage<"AddBeneficiary"> {
   return {
     leader: leader.address,
     beneficiary: BENEFICIARY,
@@ -58,20 +62,20 @@ function addBeneficiary(
   };
 }
 
-async function sign<T extends LeaderActionType>(
+async function sign<T extends SignedActionType>(
   primaryType: T,
-  message: LeaderActionMessage<T>,
+  message: SignedActionMessage<T>,
   { signer = leader, chainId = CHAIN_ID } = {}
 ) {
-  return signer.signTypedData(createLeaderActionTypedData(primaryType, message, chainId) as never);
+  return signer.signTypedData(createSignedActionTypedData(primaryType, message, chainId) as never);
 }
 
 // JSON transport turns bigint into a string, as a real request would
 const asJson = (message: object) =>
   JSON.parse(JSON.stringify(message, (_, v) => (typeof v === "bigint" ? v.toString() : v)));
 
-async function expectCode(promise: Promise<unknown>, code: LeaderAuthError["code"]) {
-  await expect(promise).rejects.toMatchObject({ name: "LeaderAuthError", code });
+async function expectCode(promise: Promise<unknown>, code: SignedActionError["code"]) {
+  await expect(promise).rejects.toMatchObject({ name: "SignedActionError", code });
 }
 
 describe("verifyLeaderAction", () => {
@@ -90,7 +94,7 @@ describe("verifyLeaderAction", () => {
   });
 
   it("accepts a signed CreateDisbursement", async () => {
-    const message: LeaderActionMessage<"CreateDisbursement"> = {
+    const message: SignedActionMessage<"CreateDisbursement"> = {
       ...addBeneficiary(),
       amount: "0.5",
     };
@@ -191,7 +195,7 @@ describe("verifyLeaderAction", () => {
     const message = addBeneficiary();
     const signature = await sign("AddBeneficiary", message);
     const input = { primaryType: "AddBeneficiary" as const, message: asJson(message), signature };
-    deps.isLeader.mockResolvedValueOnce(false);
+    deps.hasRole.mockResolvedValueOnce(false);
 
     await expectCode(verifyLeaderAction(input, deps), "not_leader");
     expect(deps.logSecurityEvent).toHaveBeenCalledWith(
@@ -230,10 +234,66 @@ describe("verifyLeaderAction", () => {
     );
   });
 
+  it("accepts a registered beneficiary's signed RedeemDisbursement", async () => {
+    const message: SignedActionMessage<"RedeemDisbursement"> = {
+      beneficiary: other.address,
+      disbursementId: "6f1c7b8e-0d5a-4c1e-9d38-2f4b0a1c9e77",
+      nonce: "nonce-0002",
+      issuedAt: BigInt(NOW),
+    };
+    const signature = await sign("RedeemDisbursement", message, { signer: other });
+
+    const result = await verifyBeneficiaryAction(
+      { primaryType: "RedeemDisbursement", message: asJson(message), signature },
+      deps
+    );
+    expect(result).toEqual({ beneficiary: other.address, message });
+    expect(deps.hasRole).toHaveBeenCalledWith("beneficiary", other.address);
+  });
+
+  it("rejects a beneficiary action from someone who is not a registered beneficiary", async () => {
+    const message: SignedActionMessage<"ListMyDisbursements"> = {
+      beneficiary: leader.address,
+      nonce: "nonce-0003",
+      issuedAt: BigInt(NOW),
+    };
+    const signature = await sign("ListMyDisbursements", message);
+
+    await expectCode(
+      verifyBeneficiaryAction(
+        { primaryType: "ListMyDisbursements", message: asJson(message), signature },
+        deps
+      ),
+      "not_beneficiary"
+    );
+    expect(deps.logSecurityEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ event_type: "not_beneficiary" })
+    );
+  });
+
+  it("rejects a RedeemDisbursement whose id is not a uuid", async () => {
+    await expectCode(
+      verifyBeneficiaryAction(
+        {
+          primaryType: "RedeemDisbursement",
+          message: {
+            beneficiary: other.address,
+            disbursementId: "1",
+            nonce: "nonce-0004",
+            issuedAt: String(NOW),
+          },
+          signature: "0x00",
+        },
+        deps
+      ),
+      "invalid_request"
+    );
+  });
+
   it("maps error codes to HTTP statuses", () => {
-    expect(new LeaderAuthError("invalid_request", "").status).toBe(400);
-    expect(new LeaderAuthError("invalid_signature", "").status).toBe(401);
-    expect(new LeaderAuthError("not_leader", "").status).toBe(403);
-    expect(new LeaderAuthError("replay", "").status).toBe(409);
+    expect(new SignedActionError("invalid_request", "").status).toBe(400);
+    expect(new SignedActionError("invalid_signature", "").status).toBe(401);
+    expect(new SignedActionError("not_leader", "").status).toBe(403);
+    expect(new SignedActionError("replay", "").status).toBe(409);
   });
 });

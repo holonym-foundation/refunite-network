@@ -1,0 +1,2 @@
+ALTER TABLE "security_events" DROP CONSTRAINT "security_events_event_type_check";--> statement-breakpoint
+ALTER TABLE "security_events" ADD CONSTRAINT "security_events_event_type_check" CHECK (event_type IN ('replay_attempt', 'rate_limit_exceeded', 'invalid_signature', 'expired_signature', 'expired_reservation', 'recipient_mismatch', 'not_leader', 'not_beneficiary'));

@@ -36,7 +36,7 @@ function invitation(overrides: Partial<Parameters<typeof DB.createInvitation>[0]
 
 beforeEach(async () => {
   await db.execute(
-    sql`TRUNCATE invitations, reservations, completions, security_events, audit_log RESTART IDENTITY CASCADE`
+    sql`TRUNCATE invitations, reservations, completions, security_events, audit_log, leader_action_nonces RESTART IDENTITY CASCADE`
   );
 });
 
@@ -159,6 +159,15 @@ describe("security events and audit log", () => {
 
     const { rows } = await db.execute(sql`SELECT action FROM audit_log`);
     expect(rows).toEqual([{ action: "expire" }]);
+  });
+});
+
+describe("leader action nonces", () => {
+  it("accepts a nonce once per leader", async () => {
+    expect(await DB.consumeLeaderActionNonce(INVITER, "nonce-1", "AddBeneficiary")).toBe(true);
+    expect(await DB.consumeLeaderActionNonce(INVITER, "nonce-1", "AddBeneficiary")).toBe(false);
+    // Nonces are scoped per leader
+    expect(await DB.consumeLeaderActionNonce(RECIPIENT, "nonce-1", "AddBeneficiary")).toBe(true);
   });
 });
 

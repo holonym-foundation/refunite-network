@@ -80,6 +80,7 @@ const en = {
     nav: {
       myAccount: "My RelayID",
       addLeader: "Add Leader",
+      beneficiaries: "Beneficiaries",
     },
     menu: {
       open: "Open menu",
@@ -91,6 +92,30 @@ const en = {
     loginPrompt: "Please log in to view your RelayID.",
     addAnotherLeader: "Add another leader",
     noPermission: "You don't have permission to add another leader.",
+  },
+  beneficiariesPage: {
+    title: "Beneficiaries",
+    loginPrompt: "Please log in to manage your beneficiaries.",
+    checkingLeader: "Checking your leader status...",
+    notLeader: "Only community leaders can add beneficiaries.",
+    addHeading: "Add a beneficiary",
+    addDescription:
+      "Enter the beneficiary's RelayID (their wallet address). You will be asked to sign, so the network knows the request is from you.",
+    addressPlaceholder: "0x…",
+    invalidAddress: "Enter a valid wallet address",
+    add: "Add beneficiary",
+    adding: "Adding…",
+    added: "Beneficiary added",
+    listHeading: "My beneficiaries",
+    listDescription:
+      "Only you can see the beneficiaries you added. Showing them needs your signature.",
+    show: "Show my beneficiaries",
+    refresh: "Refresh",
+    loadingList: "Loading…",
+    empty: "You have not added any beneficiaries yet.",
+    ethAddress: "RelayID",
+    stellarAddress: "Stellar wallet",
+    addedOn: "Added",
   },
   addPage: {
     headings: {

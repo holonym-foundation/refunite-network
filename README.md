@@ -19,7 +19,6 @@ A Next.js application facilitating a secure and streamlined onboarding process f
   - [Environment Variables](#environment-variables)
   - [Local database](#local-database)
   - [Database Schema](#database-schema)
-  - [Turso](#turso)
   - [Onboarding Relayer](#onboarding-relayer)
   - [BigInt Serialization/Deserialization](#bigint-serializationdeserialization)
   - [Native mobile app development](#native-mobile-app-development)
@@ -29,14 +28,14 @@ A Next.js application facilitating a secure and streamlined onboarding process f
 
 ## Architecture Overview
 
-The application is built with Next.js, utilizing its App Router for routing and React Server Components for efficient rendering. Server Actions are employed for handling backend logic directly within React components, eliminating the need for traditional API routes for internal operations. Supabase serves as the backend database for storing invite data, and a server-side relayer wallet sends the onboarding transactions (minting Hats and adding Safe signers).
+The application is built with Next.js, utilizing its App Router for routing and React Server Components for efficient rendering. Server Actions are employed for handling backend logic directly within React components, eliminating the need for traditional API routes for internal operations. Neon (Postgres, accessed through Drizzle ORM) stores invite and onboarding data, and a server-side relayer wallet sends the onboarding transactions (minting Hats and adding Safe signers).
 
 ```mermaid
 graph TD
     A[User Browser] --> B{Next.js Frontend};
     B --> C[Next.js Server Actions];
     C --> D{EIP-712 Signature Utils};
-    C --> E[Supabase DB];
+    C --> E[Neon Postgres];
     C --> F[Relayer wallet];
     G[Silk Wallet/Metamask] <--> A;
     F --> H[Blockchain Interaction];
@@ -54,7 +53,7 @@ graph TD
 - **Next.js**: React framework for building the user interface and handling server-side logic with Server Actions.
 - **EIP-712**: Standard for typed structured data signing, enhancing security and UX for wallet interactions.
 - **Viem**: TypeScript interface for Ethereum, used for wallet interactions and cryptographic operations.
-- **Supabase**: Backend-as-a-Service for database storage (PostgreSQL) and authentication.
+- **Neon + Drizzle**: Serverless Postgres, with a typed schema and committed migrations.
 - **Relayer wallet**: Server-held key that pays gas for onboarding transactions.
 - **Hats Protocol**: For on-chain role management and attestations.
 - **Silk Wallet / MetaMask**: User wallets for interacting with the application and signing transactions/messages.
@@ -109,7 +108,7 @@ sequenceDiagram
     participant UserFrontend as User (Frontend)
     participant Wallet as User's Wallet
     participant ServerAction as Next.js Server Action
-    participant SupabaseDB as Supabase DB
+    participant DB as Neon Postgres
     participant Relayer as Relayer wallet
     participant Blockchain
 
@@ -119,7 +118,7 @@ sequenceDiagram
         UserFrontend->>ServerAction: Send recipient, typedData, signature
         ServerAction->>ServerAction: Verify EIP-712 Signature against inviterAddress
         alt Signature Valid
-            ServerAction->>SupabaseDB: (If invite link) Mark invite as used
+            ServerAction->>DB: (If invite link) Mark invite as used
             ServerAction->>Blockchain: Check inviter wears the leader hat
             ServerAction->>Relayer: mintHat(leaderHat, recipient)
             Relayer->>Blockchain: Mint Hat Transaction
@@ -156,7 +155,7 @@ These actions provide a streamlined way to handle server-side operations without
 
 - [Node.js](https://nodejs.org/) (v18 or later)
 - [pnpm](https://pnpm.io/installation)
-- [Supabase Account](https://supabase.com/) (for managing onboarding invites)
+- A [Neon](https://neon.tech/) Postgres database (for onboarding data)
 - A relayer wallet that wears an admin hat of the leader hat (see [Onboarding Relayer](#onboarding-relayer))
 
 ### Installation
@@ -178,9 +177,8 @@ These actions provide a streamlined way to handle server-side operations without
 4. Update the `.env.local` file with your own values:
 
    ```
-   # Turso
-   TURSO_DATABASE_URL="file:local.db" -> replace this with a staging or prod deployment url
-   TURSO_AUTH_TOKEN=
+   # Database (Neon Postgres connection string)
+   DATABASE_URL=postgresql://...
 
    # Relayer
    RELAYER_PRIVATE_KEY=your_relayer_private_key
@@ -216,32 +214,28 @@ See `.env.example` for the full list, split into required and optional. The main
 | `NEXT_PUBLIC_HATS_LEADER_ID`           | Leader hat ID in Hats Protocol           | Yes     |
 | `NEXT_PUBLIC_HATS_LEADER_SAFE_ACCOUNT` | Safe account address for leaders         | Yes     |
 | `NEXT_PUBLIC_CHAIN_ID`                 | Blockchain network chain ID              | Yes     |
-| `TURSO_DATABASE_URL`                   | URL to Turso instance                    | No      |
-| `TURSO_AUTH_TOKEN`                     | Token to connect to Turso Cloud instance | No      |
+| `DATABASE_URL`                         | Neon Postgres connection string          | No      |
 
 **Important**: `NEXT_PUBLIC_` variables are exposed to the browser. Do not store sensitive secrets with this prefix.
 
-## Local database
+## Database
 
-Following the [local developement guide](https://docs.turso.tech/local-development):
+Data lives in Postgres ([Neon](https://neon.tech/)), accessed through [Drizzle ORM](https://orm.drizzle.team/):
 
-- `turso db shell staging-db .dump > dump.sql`
-- `cat dump.sql | sqlite3 local.db`
+- Schema: `src/lib/db/schema.ts`
+- Client: `src/lib/db/index.ts` (Neon serverless HTTP driver)
+- Queries: `src/lib/database/service.ts` (`DB.*`)
+- Migrations: `drizzle/`, generated from the schema and committed
 
-## Database Schema
+Tables: `invitations`, `reservations`, `completions`, `security_events` and `audit_log`.
 
-The application uses Tursu (libSQL) for data storage. The main table is `invites`, created by running `dump.ql` for local development (which will actually run `sqlite3`). Turso we manage using their cloud dashboard.
+```bash
+pnpm db:generate   # after changing schema.ts: write a new migration into drizzle/
+pnpm db:migrate    # apply pending migrations to DATABASE_URL
+pnpm db:studio     # browse the database
+```
 
-The table also has:
-
-- An index on `inviter_signature` for faster lookups
-
-## Turso
-
-We maintain two databases:
-
-- `relay-id-tst`
-- `relay-id-prd`
+Run `pnpm db:migrate` against each environment's database before deploying code that needs a new migration. The database tests (`test/lib/database.test.ts`) run the migrations against an in-memory Postgres (PGlite), so they need no database.
 
 ## Onboarding Relayer
 
@@ -323,8 +317,8 @@ Common issues and solutions:
    - Verify the relayer wallet wears an admin hat of the leader hat (`Hats.isAdminOfHat`)
 
 3. **Database Access Issues**
-   - Ensure Supabase service key has proper permissions
-   - Check Row Level Security policies
+   - Check `DATABASE_URL` is set for the environment
+   - Run `pnpm db:migrate` if tables are missing
 
 ## Contributing
 

@@ -6,6 +6,7 @@ import {
   getRelayerAddress,
   isLeader,
   onboardLeader,
+  withGasBuffer,
 } from "@/lib/relayer";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -23,6 +24,7 @@ function makeClients({ recipientIsLeader = false, mintStatus = "success" } = {})
   const publicClient = {
     readContract: vi.fn().mockResolvedValue(recipientIsLeader),
     simulateContract: vi.fn(async (args) => ({ request: args })),
+    estimateContractGas: vi.fn(async () => BigInt(100_000)),
     waitForTransactionReceipt: vi.fn(async ({ hash }) => ({
       status: hash === mintHash ? mintStatus : "success",
     })),
@@ -78,6 +80,17 @@ describe("onboardLeader", () => {
     ]);
   });
 
+  it("sends each transaction with a 25% gas buffer over the estimate", async () => {
+    const { walletClient, clients } = makeClients();
+
+    await onboardLeader(clients, config, recipient);
+
+    expect(walletClient.writeContract.mock.calls.map(([req]) => req.gas)).toEqual([
+      BigInt(125_000),
+      BigInt(125_000),
+    ]);
+  });
+
   it("sends no transactions when the recipient is already a leader", async () => {
     const { walletClient, clients } = makeClients({ recipientIsLeader: true });
 
@@ -102,6 +115,12 @@ describe("onboardLeader", () => {
 
     await expect(onboardLeader(clients, config, recipient)).rejects.toThrow("NotAdmin");
     expect(walletClient.writeContract).not.toHaveBeenCalled();
+  });
+});
+
+describe("withGasBuffer", () => {
+  it("adds 25% and rounds down", () => {
+    expect(withGasBuffer(BigInt(84_550))).toBe(BigInt(105_687));
   });
 });
 

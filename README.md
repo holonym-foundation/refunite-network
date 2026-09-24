@@ -263,6 +263,27 @@ Setting up a relayer for a chain:
 
 The admin dashboard shows the relayer address and balance.
 
+### Test setup on Sepolia
+
+`scripts/setup-test-hats.ts` creates a Hats tree you control, plus a new Safe and Hats Signer Gate (v2), so you can test onboarding without access to an existing top hat:
+
+```
+top hat (deployer; also HSG owner)
+└─ relayer admin hat (worn by RELAYER_ADDRESS)
+   └─ leader hat (HSG signer hat; deployer is its eligibility module)
+```
+
+```bash
+DEPLOYER_PRIVATE_KEY=0x... RELAYER_ADDRESS=0x... FIRST_LEADER=0x... node scripts/setup-test-hats.ts
+```
+
+- `DEPLOYER_PRIVATE_KEY`: a wallet with some Sepolia ETH. It receives the top hat.
+- `RELAYER_ADDRESS`: the address of `RELAYER_PRIVATE_KEY`. Fund it with Sepolia ETH as well.
+- `FIRST_LEADER` (optional): your app wallet. It gets the leader hat and becomes a Safe signer, so it can send the first invite.
+- `RPC_URL` (optional): defaults to a public Sepolia RPC.
+
+The script prints the `NEXT_PUBLIC_*` values to put in `.env`. It needs Node 22.18 or later, which runs TypeScript directly.
+
 ## BigInt Serialization/Deserialization
 
 JavaScript cannot natively serialize `BigInt` values to JSON. The utility functions in `src/lib/utils/serialize.ts` handle this conversion for storage and retrieval:

@@ -1,9 +1,9 @@
-import { SILK_METHOD } from "@silk-wallet/silk-interface-core";
 import {
   InitSilkOptions,
-  initSilk,
+  initWaaP,
+  SILK_METHOD,
   SilkEthereumProviderInterface,
-} from "@silk-wallet/silk-wallet-sdk";
+} from "@human.tech/waap-sdk";
 import { ChainNotConfiguredError, createConnector } from "@wagmi/core";
 import { Chain, getAddress, SwitchChainError, UserRejectedRequestError } from "viem";
 
@@ -11,8 +11,8 @@ import { silkConfig } from "./silk-config";
 import { defaultChain } from "./chain-config";
 
 /**
- * Creates a WAGMI connector for the Silk Wallet SDK
- * @param options Initialization options for the Silk Wallet SDK. If not provided, uses the default configuration.
+ * Creates a WAGMI connector for the WaaP (formerly Silk) wallet SDK
+ * @param options Initialization options for the WaaP SDK. If not provided, uses the default configuration.
  * @returns
  */
 export default function silk(options: InitSilkOptions = silkConfig) {
@@ -88,7 +88,7 @@ export default function silk(options: InitSilkOptions = silkConfig) {
 
     async getProvider(): Promise<SilkEthereumProviderInterface> {
       if (!silkProvider) {
-        silkProvider = initSilk(options);
+        silkProvider = initWaaP(options);
 
         //@ts-ignore
         window.silk = silkProvider;

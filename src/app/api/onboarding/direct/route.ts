@@ -1,6 +1,9 @@
-import { addLeaderViaSignedTypedData } from "@/app/actions/defender";
+import { addLeaderViaSignedTypedData } from "@/app/actions/onboard";
 import { NextRequest, NextResponse } from "next/server";
 import { isAddress } from "viem";
+
+// Waits for two on-chain confirmations (mintHat + claimSignerFor)
+export const maxDuration = 60;
 
 export async function POST(request: NextRequest) {
   try {

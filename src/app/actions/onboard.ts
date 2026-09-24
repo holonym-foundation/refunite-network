@@ -6,8 +6,14 @@ import {
 } from "@/lib/onboarding/reservations";
 import { sendOnboardingFailedMessage, sendOnboardingSuccessMessage } from "@/lib/slack/webhook";
 import { DeviceInfo } from "@/lib/database/types";
-import { marshalTypedData } from "@/lib/utils/serialize";
-import { generateWebhookSignature } from "@/lib/utils/webhook-security";
+import {
+  RelayerClients,
+  RelayerConfig,
+  getRelayerClients,
+  getRelayerConfig,
+  isLeader,
+  onboardLeader,
+} from "@/lib/relayer";
 import { Hash, TypedDataDefinition } from "viem";
 
 type AddLeaderViaSignedTypedDataResult = {
@@ -28,9 +34,13 @@ export async function addLeaderViaSignedTypedData(
       return { error: "recipient, signature, and typedData are required" };
     }
 
-    const defenderWebhookUrl = process.env.DEFENDER_WEBHOOK_URL;
-
-    if (!defenderWebhookUrl) {
+    let relayer: RelayerClients;
+    let relayerConfig: RelayerConfig;
+    try {
+      relayer = getRelayerClients();
+      relayerConfig = getRelayerConfig();
+    } catch (error) {
+      console.error("Relayer not configured:", error);
       return { error: "Required environment variables not configured" };
     }
 
@@ -49,6 +59,11 @@ export async function addLeaderViaSignedTypedData(
     const inviterAddress = typedData.message.inviterAddress as string;
 
     console.log(`Processing ${flowType} onboarding for recipient: ${recipient}`);
+
+    // Only current leaders may onboard new leaders
+    if (!inviterAddress || !(await isLeader(relayer.publicClient, relayerConfig, inviterAddress))) {
+      return { error: "Inviter is not a leader" };
+    }
 
     // Step 1: Verify reservation exists (created by client)
     let reservationId: string;
@@ -84,57 +99,19 @@ export async function addLeaderViaSignedTypedData(
 
     console.log(`Created reservation: ${reservationId}`);
 
-    // Step 2: Call Defender webhook with reservation context
-    const payload = {
-      recipient,
-      typedData: marshalTypedData(typedData),
-      signature,
-      reservationId,
-      flowType,
-    };
-
-    // Add HMAC authentication for webhook security
-    const webhookSecret = process.env.DEFENDER_WEBHOOK_SECRET;
-    if (!webhookSecret) {
-      return { error: "Webhook secret not configured" };
-    }
-
-    const payloadString = JSON.stringify(payload);
-    const { signature: hmacSignature, timestamp } = generateWebhookSignature({
-      webhookSecret,
-      payload: payloadString,
-    });
-
-    console.log("Calling defender webhook with reservationId:", reservationId);
-    const response = await fetch(defenderWebhookUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Webhook-Timestamp": timestamp,
-        "X-Webhook-Signature": `sha256=${hmacSignature}`,
-      },
-      body: payloadString,
-    });
-
-    const responseBody = await response.text();
-
-    if (!response.ok) {
-      // Rollback reservation on Defender failure
-      await rollbackReservation({ reservationId, reason: "blockchain_failure", deviceInfo });
-      throw new Error(`Defender webhook error: ${response.status}`);
-    }
-
-    const data = JSON.parse(responseBody);
-    const result = JSON.parse(data.result);
-
-    if (result.error) {
+    // Step 2: Mint the leader hat and claim the Safe signer via the relayer
+    console.log("Relaying onboarding transactions for reservationId:", reservationId);
+    let result: Awaited<ReturnType<typeof onboardLeader>>;
+    try {
+      result = await onboardLeader(relayer, relayerConfig, recipient);
+    } catch (error) {
       // Rollback reservation on transaction failure
       await rollbackReservation({ reservationId, reason: "blockchain_failure", deviceInfo });
-      throw new Error(result.error);
+      throw error;
     }
 
     // Handle idempotent response (user already onboarded)
-    if (result.mintHatTxHash === "already_onboarded") {
+    if (result.status === "already_onboarded") {
       console.log("User was already onboarded:", recipient);
       return {
         error: "This address is already onboarded as a leader",
@@ -164,7 +141,6 @@ export async function addLeaderViaSignedTypedData(
         error: confirmResult.error || "Unknown error",
         payload: {
           reservationId,
-          webhookError: result.error,
           mintHatTxHash: result.mintHatTxHash,
           claimSignerTxHash: result.claimSignerTxHash,
           recipient,
@@ -190,7 +166,7 @@ export async function addLeaderViaSignedTypedData(
       claimSignerTxHash: result.claimSignerTxHash,
     };
   } catch (error) {
-    console.error("Error in defender action:", error);
+    console.error("Error in onboard action:", error);
     return { error: "Failed to process request" };
   }
 }

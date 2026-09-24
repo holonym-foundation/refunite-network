@@ -5,6 +5,8 @@ import {
   getRelayerBalance,
   getReservedInvitesCount,
 } from "@/app/actions/dashboard";
+import { getRelayerAddress } from "@/lib/relayer";
+import { defaultChain } from "@/wagmi/chain-config";
 import { NextRequest, NextResponse } from "next/server";
 
 // Force static generation for mobile builds
@@ -37,6 +39,8 @@ export async function GET(request: NextRequest) {
     }
 
     try {
+      results.relayerAddress = getRelayerAddress();
+      results.relayerExplorerUrl = `${defaultChain.blockExplorers?.default.url}/address/${results.relayerAddress}`;
       results.relayerBalance = await getRelayerBalance();
     } catch (error) {
       console.error("Error getting relayer balance:", error);

@@ -4,6 +4,7 @@ import { GET as listBeneficiariesRoute } from "@/app/api/beneficiaries/list/rout
 import { POST as createDisbursementRoute } from "@/app/api/disbursements/route";
 import { GET as myDisbursementsRoute } from "@/app/api/disbursements/mine/route";
 import { POST as redeemRoute } from "@/app/api/disbursements/redeem/route";
+import { POST as cancelRoute } from "@/app/api/disbursements/cancel/route";
 import { db } from "@/lib/db";
 import { SignedActionType } from "@/lib/eip712/signed-actions";
 import { isLeader } from "@/lib/relayer";
@@ -119,7 +120,8 @@ describe("disbursements API", () => {
     expect(payments.deployWallet).toHaveBeenCalledWith(beneficiary.address);
     expect(payments.sendXlm).toHaveBeenCalledWith(
       "CC3ARJ4BI6Q2IW7J27YC3K7VHC7O25PZZ74OGFL7RKG5THHEMVJVN7CY",
-      xlmToStroops("0.5")
+      xlmToStroops("0.5"),
+      expect.any(Function)
     );
     expect(stellarPaymentOps).toHaveBeenCalled();
   });
@@ -183,6 +185,24 @@ describe("disbursements API", () => {
       })
     );
     expect(res).toMatchObject({ status: 403, body: { code: "not_leader" } });
+  });
+
+  it("lets the leader cancel a pending disbursement, and no one else", async () => {
+    const { id } = (await disburse("0.5")).body.disbursement;
+    const byOther = await call(
+      cancelRoute,
+      await signed(leaderB, "CancelDisbursement", { disbursementId: id })
+    );
+    expect(byOther).toMatchObject({ status: 404 });
+
+    const cancelled = await call(
+      cancelRoute,
+      await signed(leaderA, "CancelDisbursement", { disbursementId: id })
+    );
+    expect(cancelled).toMatchObject({
+      status: 200,
+      body: { disbursement: { status: "cancelled" } },
+    });
   });
 
   it("does not redeem twice", async () => {

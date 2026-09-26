@@ -178,6 +178,25 @@ export default function BeneficiariesPage() {
     }
   }
 
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
+
+  async function handleCancel(disbursement: DisbursementResponse) {
+    setCancellingId(disbursement.id);
+    try {
+      const signed = await sign("CancelDisbursement", { disbursementId: disbursement.id });
+      await postSigned("/api/disbursements/cancel", signed);
+      toast({
+        title: en.disbursements.cancelled,
+        description: en.disbursements.cancelledDescription(disbursement.amount),
+      });
+      fetchOverview();
+    } catch (error) {
+      showError(error);
+    } finally {
+      setCancellingId(null);
+    }
+  }
+
   function handleDisbursed(disbursement: DisbursementResponse) {
     toast({ title: t.disbursed, description: t.disbursedDescription(disbursement.amount) });
     // Refresh the list and allowance (the session makes this prompt-free)
@@ -329,13 +348,27 @@ export default function BeneficiariesPage() {
             ) : (
               <ul className="divide-y rounded-md border">
                 {overview.disbursements.map((d) => (
-                  <li key={d.id} className="p-3 grid gap-1 sm:grid-cols-3 sm:items-center text-sm">
+                  <li key={d.id} className="p-3 grid gap-1 sm:grid-cols-4 sm:items-center text-sm">
                     <span className="font-mono" title={d.beneficiaryEthAddress}>
                       {shortenAddress(d.beneficiaryEthAddress)}
                     </span>
                     <span className="font-mono">{d.amount} XLM</span>
-                    <span className="text-muted-foreground sm:text-right">
+                    <span className="text-muted-foreground">
                       {statusLabel[d.status]} · {new Date(d.createdAt).toLocaleDateString()}
+                    </span>
+                    <span className="sm:text-right">
+                      {d.status === "pending" && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleCancel(d)}
+                          disabled={cancellingId !== null}
+                        >
+                          {cancellingId === d.id
+                            ? en.disbursements.cancelling
+                            : en.disbursements.cancel}
+                        </Button>
+                      )}
                     </span>
                   </li>
                 ))}

@@ -183,6 +183,7 @@ export const DISBURSEMENT_STATUSES = [
   "redeeming", // claimed by a redeem request; the payment is in progress
   "redeemed", // paid; tx_hash is set
   "needs_review", // payment was submitted but its outcome is unknown; never retried automatically
+  "cancelled", // withdrawn by the leader before it was redeemed; not counted against them
 ] as const;
 
 // A leader's promise of XLM to one of their beneficiaries, redeemed by the beneficiary.
@@ -199,9 +200,12 @@ export const disbursements = pgTable(
     tx_hash: text("tx_hash").unique(),
     last_error: text("last_error"),
     created_at: timestamptz("created_at").notNull().defaultNow(),
+    // Last status change; reconcileDisbursements uses it to find stuck payments
+    updated_at: timestamptz("updated_at").notNull().defaultNow(),
     redeemed_at: timestamptz("redeemed_at"),
   },
   (t) => [
+    index("idx_disbursements_status_updated").on(t.status, t.updated_at),
     index("idx_disbursements_leader_created").on(t.leader_address, t.created_at),
     index("idx_disbursements_beneficiary").on(t.beneficiary_id),
     check("disbursements_amount_positive_check", sql`${t.amount} > 0`),

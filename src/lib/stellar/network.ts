@@ -85,11 +85,15 @@ async function buildCall(
 }
 
 /** Simulates, signs as the source account, submits and waits for the result. */
+/** Called with the transaction hash once signed, before it is submitted. */
+export type OnSubmitting = (txHash: string) => Promise<void>;
+
 async function invokeAsSource(
   config: StellarNetworkConfig,
   contractId: string,
   method: string,
-  args: xdr.ScVal[]
+  args: xdr.ScVal[],
+  onSubmitting?: OnSubmitting
 ): Promise<string> {
   const rpcServer = server(config);
 
@@ -104,16 +108,27 @@ async function invokeAsSource(
     throw new StellarTxError("not_submitted", `${method} simulation failed: ${describe(error)}`);
   }
 
-  let hash: string;
+  // The hash is fixed once signed. Recording it before submitting means any payment that
+  // might have landed can always be looked up later (see reconcileDisbursements).
+  const hash = Buffer.from(prepared.hash()).toString("hex");
+  if (onSubmitting) {
+    try {
+      await onSubmitting(hash);
+    } catch (error) {
+      throw new StellarTxError("not_submitted", `${method} not submitted: ${describe(error)}`);
+    }
+  }
+
   try {
     const sent = await rpcServer.sendTransaction(prepared);
-    if (sent.status === "ERROR" || sent.status === "TRY_AGAIN_LATER") {
-      throw new Error(`send status ${sent.status}`);
+    if (sent.status === "ERROR") throw new StellarTxError("failed", `${method} rejected`, hash);
+    if (sent.status === "TRY_AGAIN_LATER") {
+      throw new StellarTxError("not_submitted", `${method} not accepted, try again later`, hash);
     }
-    hash = sent.hash;
   } catch (error) {
+    if (error instanceof StellarTxError) throw error;
     // A network error here could mean the node received it; treat as unknown to be safe
-    throw new StellarTxError("unknown", `${method} submission failed: ${describe(error)}`);
+    throw new StellarTxError("unknown", `${method} submission failed: ${describe(error)}`, hash);
   }
 
   try {
@@ -159,12 +174,36 @@ export async function deployWallet(config: StellarNetworkConfig, ethAddress: str
 }
 
 /** Sends `stroops` of XLM from the treasury to `to` (a contract or account address). */
-export async function sendXlm(config: StellarNetworkConfig, to: string, stroops: bigint) {
-  return invokeAsSource(config, nativeTokenContractId(config), "transfer", [
-    new Address(config.source.publicKey()).toScVal(),
-    new Address(to).toScVal(),
-    nativeToScVal(stroops, { type: "i128" }),
-  ]);
+export async function sendXlm(
+  config: StellarNetworkConfig,
+  to: string,
+  stroops: bigint,
+  onSubmitting?: OnSubmitting
+) {
+  return invokeAsSource(
+    config,
+    nativeTokenContractId(config),
+    "transfer",
+    [
+      new Address(config.source.publicKey()).toScVal(),
+      new Address(to).toScVal(),
+      nativeToScVal(stroops, { type: "i128" }),
+    ],
+    onSubmitting
+  );
+}
+
+export type TransactionOutcome = "success" | "failed" | "not_found";
+
+/** Looks a submitted transaction up (the RPC only keeps recent history). */
+export async function getTransactionOutcome(
+  config: StellarNetworkConfig,
+  txHash: string
+): Promise<TransactionOutcome> {
+  const { status } = await server(config).getTransaction(txHash);
+  if (status === rpc.Api.GetTransactionStatus.SUCCESS) return "success";
+  if (status === rpc.Api.GetTransactionStatus.FAILED) return "failed";
+  return "not_found";
 }
 
 /** The treasury's XLM balance in stroops, read from the native asset contract. */
@@ -185,6 +224,8 @@ export function stellarPaymentOps(config: StellarNetworkConfig = getStellarNetwo
   return {
     walletExists: (contractId: string) => walletExists(config, contractId),
     deployWallet: (ethAddress: string) => deployWallet(config, ethAddress),
-    sendXlm: (to: string, stroops: bigint) => sendXlm(config, to, stroops),
+    sendXlm: (to: string, stroops: bigint, onSubmitting?: OnSubmitting) =>
+      sendXlm(config, to, stroops, onSubmitting),
+    getTransactionOutcome: (txHash: string) => getTransactionOutcome(config, txHash),
   };
 }

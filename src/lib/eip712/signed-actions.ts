@@ -29,6 +29,12 @@ export const SIGNED_ACTION_TYPES = {
     { name: "nonce", type: "string" },
     { name: "issuedAt", type: "uint256" },
   ],
+  CancelDisbursement: [
+    { name: "leader", type: "address" },
+    { name: "disbursementId", type: "string" },
+    { name: "nonce", type: "string" },
+    { name: "issuedAt", type: "uint256" },
+  ],
   // --- Signed by a beneficiary ---
   RedeemDisbursement: [
     { name: "beneficiary", type: "address" },
@@ -46,6 +52,7 @@ export const SIGNER_ROLE = {
   StartSession: "account", // any wallet; roles are checked per request
   AddBeneficiary: "leader",
   CreateDisbursement: "leader",
+  CancelDisbursement: "leader",
   RedeemDisbursement: "beneficiary",
 } as const satisfies Record<SignedActionType, SignerRole>;
 
@@ -78,6 +85,9 @@ export const signedActionSchemas = {
   AddBeneficiary: z.object({ ...common, leader: address, beneficiary: address }).strict(),
   CreateDisbursement: z
     .object({ ...common, leader: address, beneficiary: address, amount: xlmAmount })
+    .strict(),
+  CancelDisbursement: z
+    .object({ ...common, leader: address, disbursementId: z.string().uuid() })
     .strict(),
   RedeemDisbursement: z
     .object({ ...common, beneficiary: address, disbursementId: z.string().uuid() })

@@ -1,6 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
 import { validateApiToken } from "@/lib/utils/api-auth";
 import { DB } from "@/lib/database/service";
+import { reconcileDisbursements } from "@/lib/disbursements";
+import { stellarPaymentOps } from "@/lib/stellar/network";
+
+// Reconciling looks transactions up on Stellar
+export const maxDuration = 60;
+
+/** Settles disbursements stuck mid-payment; skipped (not failed) if Stellar is not configured. */
+async function reconcile() {
+  let ops;
+  try {
+    ops = stellarPaymentOps();
+  } catch (error) {
+    console.warn("Skipping disbursement reconcile:", (error as Error).message);
+    return null;
+  }
+  const summary = await reconcileDisbursements(ops);
+  if (summary.redeemed || summary.returnedToPending || summary.leftForReview) {
+    console.log("Reconciled disbursements", summary);
+  }
+  return summary;
+}
 
 async function performCleanup() {
   // Clean up expired reservations using database service
@@ -22,6 +43,7 @@ async function performCleanup() {
   return {
     success: true,
     cleanedCount,
+    disbursements: await reconcile(),
     cleanupTime: new Date().toISOString(),
   };
 }

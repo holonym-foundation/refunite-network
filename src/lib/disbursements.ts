@@ -2,7 +2,7 @@ import { db, withTransaction } from "@/lib/db";
 import { beneficiaries, disbursements, leaderAllowanceCredits } from "@/lib/db/schema";
 import { stroopsToXlm, xlmToStroops } from "@/lib/stellar/amount";
 import { StellarTxError } from "@/lib/stellar/network";
-import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, lt, ne, sql } from "drizzle-orm";
 import { Address } from "viem";
 
 // =====================================================
@@ -35,6 +35,7 @@ export type DisbursementErrorCode =
   | "insufficient_treasury"
   | "disbursement_not_found"
   | "not_redeemable"
+  | "not_cancellable"
   | "payment_failed"
   | "payment_unconfirmed";
 
@@ -53,6 +54,7 @@ export class DisbursementError extends Error {
       case "disbursement_not_found":
         return 404;
       case "not_redeemable":
+      case "not_cancellable":
         return 409;
       case "payment_failed":
       case "payment_unconfirmed":
@@ -129,7 +131,8 @@ async function leaderTotals(executor: Executor, leader: Address) {
       total: sumXlm(disbursements.amount),
     })
     .from(disbursements)
-    .where(eq(disbursements.leader_address, leader));
+    // Cancelled disbursements go back to the leader's allowance and daily limit
+    .where(and(eq(disbursements.leader_address, leader), ne(disbursements.status, "cancelled")));
   const [credits] = await executor
     .select({ total: sumXlm(leaderAllowanceCredits.amount) })
     .from(leaderAllowanceCredits)
@@ -179,11 +182,14 @@ export async function getDisbursementTotals(): Promise<DisbursementTotals> {
     redeeming: 0,
     redeemed: 0,
     needs_review: 0,
+    cancelled: 0,
   } as DisbursementTotals["count"];
   let outstanding = BigInt(0);
   for (const row of rows) {
     count[row.status] = row.n;
-    if (row.status !== "redeemed") outstanding += xlmToStroops(row.total);
+    if (row.status !== "redeemed" && row.status !== "cancelled") {
+      outstanding += xlmToStroops(row.total);
+    }
   }
   return { outstanding: stroopsToXlm(outstanding), count };
 }
@@ -313,7 +319,12 @@ export async function listDisbursementsByBeneficiary(beneficiary: Address) {
 export type StellarPaymentOps = {
   walletExists: (contractId: string) => Promise<boolean>;
   deployWallet: (ethAddress: string) => Promise<string>;
-  sendXlm: (to: string, stroops: bigint) => Promise<string>;
+  /** `onSubmitting` receives the transaction hash after signing, before submitting. */
+  sendXlm: (
+    to: string,
+    stroops: bigint,
+    onSubmitting?: (txHash: string) => Promise<void>
+  ) => Promise<string>;
 };
 
 async function setStatus(
@@ -323,7 +334,7 @@ async function setStatus(
 ) {
   await db
     .update(disbursements)
-    .set(values)
+    .set({ ...values, updated_at: sql`now()` })
     .where(and(eq(disbursements.id, id), eq(disbursements.status, from)));
 }
 
@@ -349,7 +360,7 @@ export async function redeemDisbursement(
 
   const [claimed] = await db
     .update(disbursements)
-    .set({ status: "redeeming", last_error: null })
+    .set({ status: "redeeming", last_error: null, tx_hash: null, updated_at: sql`now()` })
     .where(
       and(eq(disbursements.id, input.disbursementId), eq(disbursements.status, "pending"), owned)
     )
@@ -388,7 +399,10 @@ export async function redeemDisbursement(
 
   let txHash: string;
   try {
-    txHash = await ops.sendXlm(stellarAddress, xlmToStroops(claimed.amount));
+    txHash = await ops.sendXlm(stellarAddress, xlmToStroops(claimed.amount), (hash) =>
+      // Recorded before submitting, so a crash after this point can still be reconciled
+      setStatus(input.disbursementId, { tx_hash: hash }, "redeeming")
+    );
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     if (error instanceof StellarTxError && error.outcome !== "unknown") {
@@ -404,7 +418,8 @@ export async function redeemDisbursement(
       {
         status: "needs_review",
         last_error: message,
-        tx_hash: error instanceof StellarTxError ? (error.txHash ?? null) : null,
+        // Keep the hash recorded before submitting unless the error carries one
+        ...(error instanceof StellarTxError && error.txHash ? { tx_hash: error.txHash } : {}),
       },
       "redeeming"
     );
@@ -436,4 +451,135 @@ export async function redeemDisbursement(
     .innerJoin(beneficiaries, eq(disbursements.beneficiary_id, beneficiaries.id))
     .where(eq(disbursements.id, input.disbursementId));
   return toResponse(row);
+}
+
+// =====================================================
+// CANCEL
+// =====================================================
+
+/**
+ * Withdraws `leader`'s own pending disbursement; the amount returns to their allowance.
+ * Conditional on `pending`, so it cannot race a redeem that has already claimed it.
+ */
+export async function cancelDisbursement(input: {
+  leader: Address;
+  disbursementId: string;
+}): Promise<DisbursementResponse> {
+  const own = and(
+    eq(disbursements.id, input.disbursementId),
+    eq(disbursements.leader_address, input.leader)
+  );
+  const [cancelled] = await db
+    .update(disbursements)
+    .set({ status: "cancelled", updated_at: sql`now()` })
+    .where(and(own, eq(disbursements.status, "pending")))
+    .returning({ id: disbursements.id });
+
+  if (!cancelled) {
+    const [existing] = await db
+      .select({ status: disbursements.status })
+      .from(disbursements)
+      .where(own)
+      .limit(1);
+    if (!existing) throw new DisbursementError("disbursement_not_found", "Disbursement not found");
+    throw new DisbursementError("not_cancellable", `This disbursement is ${existing.status}`);
+  }
+
+  const [row] = await db
+    .select(disbursementColumns)
+    .from(disbursements)
+    .innerJoin(beneficiaries, eq(disbursements.beneficiary_id, beneficiaries.id))
+    .where(eq(disbursements.id, input.disbursementId));
+  return toResponse(row);
+}
+
+// =====================================================
+// RECONCILE (cron)
+// =====================================================
+
+/** Rows untouched this long in redeeming / needs_review are looked at. */
+export const RECONCILE_AFTER_MINUTES = 5;
+/**
+ * A payment not found on the network is only treated as never landed while it is this recent:
+ * transactions expire 60s after signing, but the RPC keeps only recent history, so after that
+ * "not found" could also mean "landed long ago". Older ones stay for a person to check.
+ */
+export const RECONCILE_NOT_FOUND_MAX_AGE_MINUTES = 60;
+
+export type ReconcileSummary = {
+  redeemed: number;
+  returnedToPending: number;
+  leftForReview: number;
+};
+
+/**
+ * Settles disbursements stuck mid-payment (a crashed request, or an unconfirmed payment) by
+ * looking their transaction up. Never pays anything itself: at most it marks a disbursement
+ * paid (the transaction succeeded) or hands it back as pending (it never landed).
+ */
+export async function reconcileDisbursements(ops: {
+  getTransactionOutcome: (txHash: string) => Promise<"success" | "failed" | "not_found">;
+}): Promise<ReconcileSummary> {
+  const summary: ReconcileSummary = { redeemed: 0, returnedToPending: 0, leftForReview: 0 };
+
+  const stuck = await db
+    .select({
+      id: disbursements.id,
+      status: disbursements.status,
+      txHash: disbursements.tx_hash,
+      recent: sql<boolean>`${disbursements.updated_at} > now() - make_interval(mins => ${RECONCILE_NOT_FOUND_MAX_AGE_MINUTES})`,
+    })
+    .from(disbursements)
+    .where(
+      and(
+        inArray(disbursements.status, ["redeeming", "needs_review"]),
+        lt(disbursements.updated_at, sql`now() - make_interval(mins => ${RECONCILE_AFTER_MINUTES})`)
+      )
+    );
+
+  for (const row of stuck) {
+    const back = (reason: string) =>
+      setStatus(row.id, { status: "pending", tx_hash: null, last_error: reason }, row.status).then(
+        () => summary.returnedToPending++
+      );
+
+    // No hash recorded: the payment was never submitted (hash is saved before submitting)
+    if (!row.txHash) {
+      await back("Payment was interrupted before it was sent; you can redeem again");
+      continue;
+    }
+
+    let outcome;
+    try {
+      outcome = await ops.getTransactionOutcome(row.txHash);
+    } catch (error) {
+      console.error(`Could not look up ${row.txHash}`, error);
+      summary.leftForReview++;
+      continue;
+    }
+
+    if (outcome === "success") {
+      await setStatus(
+        row.id,
+        { status: "redeemed", redeemed_at: new Date(), last_error: null },
+        row.status
+      );
+      summary.redeemed++;
+    } else if (outcome === "failed") {
+      await back("The payment failed on the network; you can redeem again");
+    } else if (row.recent) {
+      await back("The payment never reached the network; you can redeem again");
+    } else {
+      // Too old to trust "not found": leave it (or move it) for a person to check
+      if (row.status === "redeeming") {
+        await setStatus(
+          row.id,
+          { status: "needs_review", last_error: "Payment could not be confirmed" },
+          "redeeming"
+        );
+      }
+      summary.leftForReview++;
+    }
+  }
+  return summary;
 }

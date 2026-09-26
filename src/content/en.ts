@@ -139,7 +139,12 @@ const en = {
       redeeming: "Being paid…",
       redeemed: "Paid",
       needs_review: "Being checked",
+      cancelled: "Cancelled",
     },
+    cancel: "Cancel",
+    cancelling: "Cancelling…",
+    cancelled: "Disbursement cancelled",
+    cancelledDescription: (amount: string) => `${amount} XLM is back in your allowance.`,
     myHeading: "My disbursements",
     myDescription:
       "Funds that a community leader has sent you. Redeem them to receive the XLM in your Stellar wallet.",

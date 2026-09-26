@@ -5,7 +5,10 @@ import { disbursements, leaderAllowanceCredits } from "@/lib/db/schema";
 import {
   DisbursementLimits,
   StellarPaymentOps,
+  cancelDisbursement,
   createDisbursement,
+  getDisbursementTotals,
+  reconcileDisbursements,
   getAllowance,
   getDisbursementLimits,
   listDisbursementsByBeneficiary,
@@ -173,7 +176,7 @@ describe("redeemDisbursement", () => {
     const redeemed = await redeem(d.id, ops);
 
     expect(ops.deployWallet).toHaveBeenCalledWith(BENEFICIARY);
-    expect(ops.sendXlm).toHaveBeenCalledWith(STELLAR, xlmToStroops("0.5"));
+    expect(ops.sendXlm).toHaveBeenCalledWith(STELLAR, xlmToStroops("0.5"), expect.any(Function));
     expect(redeemed).toMatchObject({ status: "redeemed", txHash: "pay-hash" });
     expect(redeemed.redeemedAt).not.toBeNull();
   });
@@ -268,5 +271,131 @@ describe("redeemDisbursement", () => {
     });
     await expect(redeem(d.id, ops)).rejects.toMatchObject({ code: "payment_unconfirmed" });
     expect((await status(d.id)).status).toBe("needs_review");
+  });
+});
+
+describe("cancelDisbursement", () => {
+  it("cancels a pending disbursement and returns it to the allowance and daily limit", async () => {
+    for (let i = 0; i < 9; i++) await create("1");
+    const last = await create("1");
+    await expect(create("1")).rejects.toMatchObject({ code: "exceeds_daily_limit" });
+
+    expect(await cancelDisbursement({ leader: LEADER, disbursementId: last.id })).toMatchObject({
+      status: "cancelled",
+    });
+    expect((await getAllowance(LEADER)).balance).toBe("91");
+    await expect(create("1")).resolves.toMatchObject({ status: "pending" });
+  });
+
+  it("cannot be redeemed once cancelled", async () => {
+    const d = await create("0.5");
+    await cancelDisbursement({ leader: LEADER, disbursementId: d.id });
+    await expect(
+      redeemDisbursement({ beneficiary: BENEFICIARY, disbursementId: d.id }, paymentOps())
+    ).rejects.toMatchObject({ code: "not_redeemable" });
+  });
+
+  it("only lets the leader who created it cancel it", async () => {
+    const d = await create("0.5");
+    await expect(
+      cancelDisbursement({ leader: OTHER_LEADER, disbursementId: d.id })
+    ).rejects.toMatchObject({ code: "disbursement_not_found" });
+  });
+
+  it("cannot cancel a disbursement that was already paid", async () => {
+    const d = await create("0.5");
+    await redeemDisbursement({ beneficiary: BENEFICIARY, disbursementId: d.id }, paymentOps());
+    await expect(
+      cancelDisbursement({ leader: LEADER, disbursementId: d.id })
+    ).rejects.toMatchObject({ code: "not_cancellable", status: 409 });
+  });
+
+  it("does not count cancelled disbursements as outstanding", async () => {
+    const d = await create("0.5");
+    await create("0.25");
+    await cancelDisbursement({ leader: LEADER, disbursementId: d.id });
+    expect(await getDisbursementTotals()).toMatchObject({
+      outstanding: "0.25",
+      count: { pending: 1, cancelled: 1 },
+    });
+  });
+});
+
+describe("payment hash", () => {
+  it("records the transaction hash before submitting", async () => {
+    const d = await create("0.5");
+    let hashSeenBeforeSubmit: string | null = "unset";
+    const ops = paymentOps({
+      sendXlm: vi.fn(async (_to, _amount, onSubmitting) => {
+        await onSubmitting?.("pre-submit-hash");
+        hashSeenBeforeSubmit = (await status(d.id)).tx_hash;
+        throw new Error("connection reset"); // outcome unknown
+      }),
+    });
+
+    await expect(
+      redeemDisbursement({ beneficiary: BENEFICIARY, disbursementId: d.id }, ops)
+    ).rejects.toMatchObject({ code: "payment_unconfirmed" });
+    expect(hashSeenBeforeSubmit).toBe("pre-submit-hash");
+    expect(await status(d.id)).toMatchObject({
+      status: "needs_review",
+      tx_hash: "pre-submit-hash",
+    });
+  });
+});
+
+describe("reconcileDisbursements", () => {
+  async function stuck(
+    values: { status: "redeeming" | "needs_review"; tx_hash: string | null },
+    minutesAgo: number
+  ) {
+    const d = await create("0.1");
+    await db
+      .update(disbursements)
+      .set({ ...values, updated_at: sql`now() - make_interval(mins => ${minutesAgo})` })
+      .where(eq(disbursements.id, d.id));
+    return d.id;
+  }
+
+  const outcomes = (map: Record<string, "success" | "failed" | "not_found">) => ({
+    getTransactionOutcome: vi.fn(async (hash: string) => {
+      if (!(hash in map)) throw new Error("rpc down");
+      return map[hash];
+    }),
+  });
+
+  it("settles each kind of stuck payment", async () => {
+    const interrupted = await stuck({ status: "redeeming", tx_hash: null }, 10);
+    const landed = await stuck({ status: "redeeming", tx_hash: "ok" }, 10);
+    const failed = await stuck({ status: "needs_review", tx_hash: "bad" }, 10);
+    const neverSent = await stuck({ status: "needs_review", tx_hash: "gone" }, 10);
+    const tooOld = await stuck({ status: "redeeming", tx_hash: "old" }, 120);
+    const lookupError = await stuck({ status: "needs_review", tx_hash: "unknown" }, 10);
+    const inProgress = await stuck({ status: "redeeming", tx_hash: "fresh" }, 1);
+
+    const ops = outcomes({ ok: "success", bad: "failed", gone: "not_found", old: "not_found" });
+    expect(await reconcileDisbursements(ops)).toEqual({
+      redeemed: 1,
+      returnedToPending: 3,
+      leftForReview: 2,
+    });
+
+    expect(await status(interrupted)).toMatchObject({ status: "pending", tx_hash: null });
+    expect(await status(landed)).toMatchObject({ status: "redeemed", tx_hash: "ok" });
+    expect((await status(landed)).redeemed_at).not.toBeNull();
+    expect(await status(failed)).toMatchObject({ status: "pending", tx_hash: null });
+    expect(await status(neverSent)).toMatchObject({ status: "pending" });
+    expect(await status(tooOld)).toMatchObject({ status: "needs_review", tx_hash: "old" });
+    expect(await status(lookupError)).toMatchObject({ status: "needs_review" });
+    expect(await status(inProgress)).toMatchObject({ status: "redeeming" });
+    expect(ops.getTransactionOutcome).not.toHaveBeenCalledWith("fresh");
+  });
+
+  it("lets a disbursement handed back as pending be redeemed again", async () => {
+    const id = await stuck({ status: "redeeming", tx_hash: null }, 10);
+    await reconcileDisbursements(outcomes({}));
+    await expect(
+      redeemDisbursement({ beneficiary: BENEFICIARY, disbursementId: id }, paymentOps())
+    ).resolves.toMatchObject({ status: "redeemed" });
   });
 });

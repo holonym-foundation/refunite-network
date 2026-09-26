@@ -254,7 +254,11 @@ A leader can disburse XLM to their own beneficiaries (from `/beneficiaries`); th
 2. **List** (`GET /api/disbursements/mine`, with a session; empty for wallets that are not beneficiaries).
 3. **Redeem** (`POST /api/disbursements/redeem`, beneficiary-signed `RedeemDisbursement`): the row is claimed (`pending → redeeming`) so it is paid at most once, the wallet is deployed through the factory if needed, then XLM is sent from the treasury (`WALLET_SOURCE_PRIVATE_KEY`) via the native asset contract.
 
-Statuses: `pending`, `redeeming`, `redeemed` (with `tx_hash`), and `needs_review`: the payment was submitted but not confirmed, so it is never retried automatically. Check `tx_hash` on a Stellar explorer and resolve these by hand. Failures before any funds move return the disbursement to `pending` with `last_error`.
+4. **Cancel** (`POST /api/disbursements/cancel`, leader-signed `CancelDisbursement`): the leader who created a still-`pending` disbursement can withdraw it; the amount returns to their allowance and daily limit.
+
+Statuses: `pending`, `redeeming`, `redeemed` (with `tx_hash`), `needs_review` (a payment was submitted but not confirmed; never retried automatically) and `cancelled`. Failures before any funds move return the disbursement to `pending` with `last_error`.
+
+The payment's transaction hash is recorded **before** it is submitted, so every payment that might have landed can be looked up. The 5-minute cron (`/api/system/cleanup`) runs `reconcileDisbursements` on rows stuck in `redeeming` / `needs_review` for over 5 minutes: success → `redeemed`; failed, never submitted, or not found while under an hour old (transactions expire 60 seconds after signing) → back to `pending`; not found and older (the RPC only keeps recent history) → left in `needs_review` for a person to check on a Stellar explorer.
 
 Beneficiary actions are verified like leader actions, but the signer must be a registered beneficiary instead of a hat wearer (`src/lib/signed-actions`).
 

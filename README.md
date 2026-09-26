@@ -248,7 +248,7 @@ Leaders can register beneficiaries at `/beneficiaries`. A beneficiary belongs to
 
 ## Disbursements
 
-A leader can disburse XLM to their own beneficiaries (from `/beneficiaries`); the beneficiary redeems it at `/redeem`, signing with their Stellar key in [Freighter](https://freighter.app), and the XLM is sent to their Stellar account.
+A leader can disburse XLM to their own beneficiaries (from `/beneficiaries`); the beneficiary redeems it in the mobile app, signing with their Stellar key, and the XLM is sent to their Stellar account (see [docs/mobile-redeem.md](docs/mobile-redeem.md)). The web app does not link to redemption; its `/redeem` page (signing with [Freighter](https://freighter.app)) is kept, unlinked, for testing.
 
 1. **Create** (`POST /api/disbursements`, leader-signed `CreateDisbursement`): inside one transaction holding an advisory lock, the server checks the beneficiary is the leader's, the amount (max 1 XLM), the leader's rolling 24h total (max 10 XLM), their allowance (100 XLM to start + admin credits in `leader_allowance_credits`, minus everything disbursed), and that the treasury covers every unpaid disbursement (keeping a 5 XLM reserve). Limits are env settings (`DISBURSE_*`). If the beneficiary's account does not exist yet, the amount must be at least 1 XLM (the network's minimum to create an account).
 2. **List** (`GET /api/disbursements/mine`, with a Stellar session: the beneficiary signs `StartStellarSession` once via `POST /api/session/stellar`, which sets its own 24-hour cookie; empty for accounts that are not beneficiaries).

@@ -81,7 +81,6 @@ const en = {
       myAccount: "My RelayID",
       addLeader: "Add Leader",
       beneficiaries: "Beneficiaries",
-      redeem: "Redeem",
     },
     menu: {
       open: "Open menu",

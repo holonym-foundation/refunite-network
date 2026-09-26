@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/Container";
 import { InfoText } from "@/components/ui/InfoText";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 import en from "@/content/en";
 import { useIsWearerOfHat } from "@/hooks/useIsWearerOfHat";
@@ -79,9 +80,11 @@ function DisburseForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex items-start gap-2" noValidate>
-      <div className="space-y-1">
+    <form onSubmit={handleSubmit} className="flex items-end gap-2" noValidate>
+      <div className="space-y-1.5">
+        <Label htmlFor={`amount-${beneficiary.id}`}>{t.amountLabel}</Label>
         <Input
+          id={`amount-${beneficiary.id}`}
           value={amount}
           onChange={(e) => {
             setAmount(e.target.value);
@@ -92,11 +95,11 @@ function DisburseForm({
           placeholder={t.amountPlaceholder}
           aria-label={`${t.amountLabel}, ${beneficiary.stellarAddress}`}
           aria-invalid={!!amountError}
-          className="w-28 placeholder:text-gray-400"
+          className="w-32 placeholder:text-gray-400"
         />
         {amountError && <p className="text-xs text-red-600">{amountError}</p>}
       </div>
-      <Button type="submit" size="sm" disabled={sending} className="mt-0.5">
+      <Button type="submit" disabled={sending} className="h-11">
         {sending ? t.disbursing : t.disburse}
       </Button>
     </form>
@@ -259,9 +262,15 @@ export default function BeneficiariesPage() {
         <section className="space-y-3">
           <h2 className="text-lg font-medium">{t.addHeading}</h2>
           <p className="text-sm text-muted-foreground">{t.addDescription}</p>
-          <form onSubmit={handleAdd} className="flex flex-col sm:flex-row gap-2" noValidate>
-            <div className="flex-1 space-y-1">
+          <form
+            onSubmit={handleAdd}
+            className="flex flex-col sm:flex-row sm:items-end gap-2"
+            noValidate
+          >
+            <div className="flex-1 space-y-1.5">
+              <Label htmlFor="beneficiary-address">{t.stellarAddress}</Label>
               <Input
+                id="beneficiary-address"
                 value={beneficiaryInput}
                 onChange={(e) => {
                   setBeneficiaryInput(e.target.value);
@@ -269,14 +278,13 @@ export default function BeneficiariesPage() {
                 }}
                 placeholder={t.addressPlaceholder}
                 className="placeholder:text-gray-400"
-                aria-label={t.stellarAddress}
                 aria-invalid={!!inputError}
                 autoComplete="off"
                 spellCheck={false}
               />
               {inputError && <p className="text-sm text-red-600">{inputError}</p>}
             </div>
-            <Button type="submit" disabled={adding}>
+            <Button type="submit" disabled={adding} className="h-11">
               {adding ? t.adding : t.add}
             </Button>
           </form>

@@ -113,7 +113,7 @@ const en = {
     refresh: "Refresh",
     loadingList: "Loading…",
     empty: "You have not added any beneficiaries yet.",
-    stellarAddress: "Stellar account",
+    stellarAddress: "Stellar account address",
     addedOn: "Added",
     allowanceHeading: "Your disbursement allowance",
     allowanceBalance: "Remaining",

@@ -276,7 +276,7 @@ Setting up a relayer for a chain:
 2. Fund it with native gas (CELO on Celo, ETH on Sepolia).
 3. From the top hat, give the wallet an admin hat of the leader hat, e.g. `Hats.transferHat` of the level-1 hat from the old relayer, or `Hats.mintHat` of an unused admin hat.
 
-The admin dashboard shows the relayer address and balance.
+The public `/info` page shows the relayer address and balance, and the Stellar treasury (balance, unpaid disbursements, low-balance warning).
 
 ### Test setup on Sepolia
 
@@ -334,7 +334,7 @@ Common issues and solutions:
 
 2. **Relayer Transaction Errors**
 
-   - Check the relayer wallet has sufficient funds for gas (see the admin dashboard)
+   - Check the relayer wallet has sufficient funds for gas (see `/info`)
    - Verify the relayer wallet wears an admin hat of the leader hat (`Hats.isAdminOfHat`)
 
 3. **Database Access Issues**

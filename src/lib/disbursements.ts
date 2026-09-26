@@ -156,6 +156,39 @@ export async function getAllowance(
 }
 
 // =====================================================
+// NETWORK TOTALS (public, aggregate only)
+// =====================================================
+
+export type DisbursementTotals = {
+  outstanding: string; // XLM promised but not yet paid
+  count: Record<DisbursementResponse["status"], number>;
+};
+
+export async function getDisbursementTotals(): Promise<DisbursementTotals> {
+  const rows = await db
+    .select({
+      status: disbursements.status,
+      n: sql<number>`count(*)::int`,
+      total: sumXlm(disbursements.amount),
+    })
+    .from(disbursements)
+    .groupBy(disbursements.status);
+
+  const count = {
+    pending: 0,
+    redeeming: 0,
+    redeemed: 0,
+    needs_review: 0,
+  } as DisbursementTotals["count"];
+  let outstanding = BigInt(0);
+  for (const row of rows) {
+    count[row.status] = row.n;
+    if (row.status !== "redeemed") outstanding += xlmToStroops(row.total);
+  }
+  return { outstanding: stroopsToXlm(outstanding), count };
+}
+
+// =====================================================
 // CREATE
 // =====================================================
 

@@ -48,18 +48,23 @@ async function performCleanup() {
   };
 }
 
+/**
+ * Vercel cron (see vercel.json). When CRON_SECRET is set in the project, Vercel sends it as
+ * `Authorization: Bearer <CRON_SECRET>`; anything else is rejected. (The user agent, which the
+ * old check relied on, can be set by anyone.)
+ */
 export async function GET(request: NextRequest) {
-  // Vercel Functions triggered by a cron job on Vercel will always contain vercel-cron/1.0 as the user agent.
-  // https://vercel.com/docs/cron-jobs
   try {
-    const userAgent = request.headers.get("user-agent");
-    if (!userAgent || !userAgent.includes("vercel-cron/1.0")) {
+    const secret = process.env.CRON_SECRET;
+    if (!secret) {
+      console.error("CRON_SECRET is not set; refusing to run /api/system/cleanup");
+      return NextResponse.json({ error: "Cron is not configured" }, { status: 503 });
+    }
+    if (request.headers.get("authorization") !== `Bearer ${secret}`) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // For cron jobs, we don't require authentication since Vercel handles security
-    const result = await performCleanup();
-    return NextResponse.json(result);
+    return NextResponse.json(await performCleanup());
   } catch (error) {
     console.error("Error in /api/system/cleanup (GET):", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

@@ -215,7 +215,15 @@ interface FeedbackMessageProps {
   deviceInfo?: Partial<DeviceInfo>;
 }
 
-function buildFeedbackMessage(props: FeedbackMessageProps): SlackWebhookMessage {
+/** Escapes Slack mrkdwn control characters, so user text cannot add links or mentions. */
+function escapeSlack(text: unknown): string {
+  return String(text ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+export function buildFeedbackMessage(props: FeedbackMessageProps): SlackWebhookMessage {
   const sentimentEmoji = props.sentiment === "up" ? "👍" : props.sentiment === "down" ? "👎" : "";
   const deviceInfoLine = getDeviceInfoLine(props.deviceInfo);
   const blocks: any[] = [
@@ -228,16 +236,18 @@ function buildFeedbackMessage(props: FeedbackMessageProps): SlackWebhookMessage 
       type: "section",
       fields: [
         { type: "mrkdwn", text: `*Sentiment*\n${sentimentEmoji}` },
-        { type: "mrkdwn", text: `*User*\n${props.user}` },
-        { type: "mrkdwn", text: `*Page*\n${props.page}` },
-        deviceInfoLine ? { type: "mrkdwn", text: `*Device*\n${deviceInfoLine}` } : undefined,
+        { type: "mrkdwn", text: `*User*\n${escapeSlack(props.user)}` },
+        { type: "mrkdwn", text: `*Page*\n${escapeSlack(props.page)}` },
+        deviceInfoLine
+          ? { type: "mrkdwn", text: `*Device*\n${escapeSlack(deviceInfoLine)}` }
+          : undefined,
       ].filter(Boolean),
     },
   ];
   if (props.feedback) {
     blocks.push({
       type: "section",
-      text: { type: "mrkdwn", text: `*Feedback*\n${props.feedback}` },
+      text: { type: "mrkdwn", text: `*Feedback*\n${escapeSlack(props.feedback)}` },
     });
   }
   return {

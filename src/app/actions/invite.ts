@@ -1,4 +1,6 @@
+import { getPublicClient } from "@/lib/chain";
 import { INVITE_TTL_SECONDS } from "@/lib/constants";
+import { getLeaderHatConfig, isLeader } from "@/lib/relayer";
 import { utcAddSeconds, utcNow } from "@/lib/utils/date";
 import { DB } from "@/lib/database/service";
 import { DeviceInfo } from "@/lib/database/types";
@@ -68,6 +70,11 @@ export async function createInvite(
     // Verify the typedData contents match the request
     if (typedData.message.inviterAddress !== inviterAddress || typedData.message.nonce !== nonce) {
       return { success: false, error: "TypedData mismatch with request data" };
+    }
+
+    // Only current leaders may create invite links (the relayer checks again on use)
+    if (!(await isLeader(getPublicClient(), getLeaderHatConfig(), inviterAddress))) {
+      return { success: false, error: "Only current leaders can create invite links" };
     }
 
     // Extract data from the verified typed data

@@ -262,6 +262,22 @@ The payment's transaction hash is recorded **before** it is submitted, so every 
 
 Beneficiary actions are verified like leader actions, but the signer must be a registered beneficiary instead of a hat wearer (`src/lib/signed-actions`).
 
+## API access
+
+| Route                                                                        | Who can call it                                                          |
+| ---------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| `/api/health`, `/api/metrics`                                                | anyone (public, aggregate data)                                          |
+| `POST /api/invites`                                                          | a current leader, with a fresh EIP-712 signature                         |
+| `POST /api/invites/verify`                                                   | anyone holding the invite code                                           |
+| `POST /api/onboarding/*`                                                     | an inviter's EIP-712 signature; the relayer checks they are a leader     |
+| `POST /api/beneficiaries`, `/api/disbursements`, `/api/disbursements/cancel` | a leader's per-action signature                                          |
+| `POST /api/disbursements/redeem`                                             | the beneficiary's per-action signature                                   |
+| `GET /api/beneficiaries/list`, `/api/disbursements/mine`                     | a session (`POST /api/session`)                                          |
+| `POST /api/users/delete`                                                     | a session for the address being deleted                                  |
+| `POST /api/messages/feedback`                                                | anyone; validated, size-limited and escaped for Slack (not rate limited) |
+| `POST /api/reservations/verify`, `POST /api/system/cleanup`                  | `Authorization: Bearer <RELAYID_APP_API_TOKEN>`                          |
+| `GET /api/system/cleanup` (cron)                                             | `Authorization: Bearer <CRON_SECRET>`, sent by Vercel                    |
+
 ## Onboarding Relayer
 
 Onboarding used to run through an OpenZeppelin Defender Action. Defender shut down on 2026-07-01, so the app now sends the transactions itself from a relayer wallet (`src/lib/relayer`).

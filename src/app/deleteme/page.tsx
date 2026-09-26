@@ -17,9 +17,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { toast } from "@/components/ui/use-toast";
 import { AlertTriangle } from "lucide-react";
+import { useSession } from "@/hooks/useSession";
 
 export default function DeleteMePage() {
   const { address, isConnected } = useAccount();
+  // Deleting needs a session proving this wallet is yours (one signature)
+  const session = useSession();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [confirmationInput, setConfirmationInput] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -71,6 +74,7 @@ export default function DeleteMePage() {
     setIsSubmitting(true);
 
     try {
+      if (session.status !== "signed_in") await session.signIn();
       const response = await fetch("/api/users/delete", {
         method: "POST",
         headers: {

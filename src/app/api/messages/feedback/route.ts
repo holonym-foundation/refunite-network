@@ -1,38 +1,29 @@
 import { submitFeedback } from "@/app/actions/feedback";
+import { getSessionAddress } from "@/lib/session";
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 
-// TOOD: we could add rate limiting to prevent spam
+// Anyone may send feedback, so bound what reaches Slack. (No rate limiting yet.)
+const feedbackSchema = z.object({
+  sentiment: z.enum(["up", "down"]).nullable(),
+  feedback: z.string().trim().min(1).max(2000),
+  page: z.string().max(200).default("unknown"),
+  deviceInfo: z.record(z.unknown()).optional(),
+});
+
 export async function POST(request: NextRequest) {
-  const body = await request.json();
-
-  //   sentiment,
-  //   feedback,
-  //   user: user || "anonymous",
-  //   page: page || "unknown",
-  //   deviceInfo,
-
-  if (!body.sentiment) {
-    return NextResponse.json({ error: "Missing required fields: sentiment" }, { status: 400 });
+  const body = await request.json().catch(() => null);
+  const parsed = feedbackSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: "Invalid feedback: sentiment (up/down), feedback (1-2000 chars), page" },
+      { status: 400 }
+    );
   }
 
-  if (!body.feedback) {
-    return NextResponse.json({ error: "Missing required fields: feedback" }, { status: 400 });
-  }
+  // Only a signed-in session proves who sent it; a client-supplied address is not trusted
+  const user = getSessionAddress(request) ?? "anonymous";
 
-  if (!body.user) {
-    return NextResponse.json({ error: "Missing required fields: user" }, { status: 400 });
-  }
-
-  if (!body.page) {
-    return NextResponse.json({ error: "Missing required fields: page" }, { status: 400 });
-  }
-
-  if (!body.deviceInfo) {
-    return NextResponse.json({ error: "Missing required fields: deviceInfo" }, { status: 400 });
-  }
-
-  const result = await submitFeedback(body);
-
-  console.log(body);
-  return NextResponse.json(result);
+  const result = await submitFeedback({ ...parsed.data, user });
+  return NextResponse.json(result, { status: result.success ? 200 : 502 });
 }

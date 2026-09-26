@@ -12,7 +12,7 @@ import { useSilkSigner } from "./useSilkSigner";
 /** A signed action, ready to send as a JSON request body. */
 export type SignedAction = {
   message: Record<string, string>;
-  signature: `0x${string}`;
+  signature: string; // hex (EIP-712) or base64 (Stellar)
   issuedAt: number; // unix seconds
 };
 

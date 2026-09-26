@@ -1,48 +1,37 @@
 import { DB } from "@/lib/database/service";
 import { Beneficiary } from "@/lib/database/types";
 import { SignedActionError } from "@/lib/signed-actions";
-import { deriveStellarWalletAddress, getStellarWalletConfig } from "@/lib/stellar/address";
+import { StrKey } from "@stellar/stellar-sdk";
 import { Address } from "viem";
 
 /** Shape returned by the beneficiaries API. */
 export type BeneficiaryResponse = {
   id: string;
-  ethAddress: string;
-  stellarAddress: string;
+  stellarAddress: string; // Stellar account (G…)
   createdAt: string;
 };
 
 export function toBeneficiaryResponse(row: Beneficiary): BeneficiaryResponse {
-  return {
-    id: row.id,
-    ethAddress: row.eth_address,
-    stellarAddress: row.stellar_address,
-    createdAt: row.created_at,
-  };
+  return { id: row.id, stellarAddress: row.stellar_address, createdAt: row.created_at };
 }
 
 export class BeneficiaryConflictError extends Error {
   constructor() {
-    super("This address is already registered as a beneficiary");
+    super("This Stellar account is already registered as a beneficiary");
     this.name = "BeneficiaryConflictError";
   }
 }
 
 /**
- * Registers `beneficiary` under `leader` (already verified as a current leader), with its
- * deterministic Stellar wallet address. An address can belong to only one leader.
+ * Registers the Stellar account `beneficiary` under `leader` (already verified as a current
+ * leader). An account can belong to only one leader.
  */
-export async function addBeneficiary(leader: Address, beneficiary: Address): Promise<Beneficiary> {
-  if (beneficiary === leader) {
-    throw new SignedActionError("invalid_request", "You cannot add yourself as a beneficiary");
+export async function addBeneficiary(leader: Address, beneficiary: string): Promise<Beneficiary> {
+  if (!StrKey.isValidEd25519PublicKey(beneficiary)) {
+    throw new SignedActionError("invalid_request", "Not a valid Stellar account address");
   }
 
-  const stellarAddress = deriveStellarWalletAddress(beneficiary, getStellarWalletConfig());
-  const created = await DB.createBeneficiary({
-    eth_address: beneficiary,
-    stellar_address: stellarAddress,
-    added_by: leader,
-  });
+  const created = await DB.createBeneficiary({ stellar_address: beneficiary, added_by: leader });
   if (!created) throw new BeneficiaryConflictError();
 
   await DB.logAudit({

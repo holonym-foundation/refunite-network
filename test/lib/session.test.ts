@@ -49,4 +49,17 @@ describe("session tokens", () => {
     process.env.SESSION_SECRET = "short";
     expect(() => createSessionToken(ADDRESS, NOW)).toThrow(SessionConfigError);
   });
+
+  it("keeps Stellar sessions apart from EVM sessions", () => {
+    const account = "GCFIRY65OQE7DFP5KLNS2PF2LVZMUZYJX4OZIEQ36N2IQANUB5XVYOJR";
+    const { token, expiresAt } = createSessionToken(account, NOW, "stellar");
+    expect(readSessionToken(token, NOW, "stellar")).toEqual({ address: account, expiresAt });
+    expect(readSessionToken(token, NOW, "evm")).toBeNull();
+    expect(readSessionToken(createSessionToken(ADDRESS, NOW).token, NOW, "stellar")).toBeNull();
+  });
+
+  it("rejects a Stellar session whose subject is not a Stellar account", () => {
+    const { token } = createSessionToken(ADDRESS, NOW, "stellar");
+    expect(readSessionToken(token, NOW, "stellar")).toBeNull();
+  });
 });

@@ -159,20 +159,20 @@ export const leaderActionNonces = pgTable(
   (t) => [unique("leader_action_nonces_leader_nonce_unique").on(t.leader_address, t.nonce)]
 );
 
-// People a leader registers to receive Stellar disbursements. A beneficiary belongs to the
-// leader who added them (added_by); only that leader can see them or disburse to them.
+// Stellar accounts a leader registers to receive disbursements. A beneficiary belongs to the
+// leader who added them (added_by); only that leader can see them or disburse to them, and
+// the beneficiary proves ownership of the account by signing with its Stellar key.
 export const beneficiaries = pgTable(
   "beneficiaries",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    eth_address: text("eth_address").notNull().unique(), // checksummed; their WaaP login
-    stellar_address: text("stellar_address").notNull(), // derived smart-wallet contract id
+    stellar_address: text("stellar_address").notNull().unique(), // Stellar account (G…)
     added_by: text("added_by").notNull(), // checksummed leader address
     created_at: timestamptz("created_at").notNull().defaultNow(),
   },
   (t) => [
     index("idx_beneficiaries_added_by").on(t.added_by),
-    check("beneficiaries_not_self_check", sql`${t.eth_address} <> ${t.added_by}`),
+    check("beneficiaries_stellar_account_check", sql`${t.stellar_address} ~ '^G[A-Z2-7]{55}$'`),
   ]
 );
 

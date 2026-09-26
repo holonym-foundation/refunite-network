@@ -94,8 +94,7 @@ export interface SecurityEvent {
 
 export interface Beneficiary {
   id: string;
-  eth_address: string;
-  stellar_address: string;
+  stellar_address: string; // Stellar account (G…)
   added_by: string;
   created_at: string;
 }

@@ -1,3 +1,10 @@
+import { Keypair } from "@stellar/stellar-sdk";
+import {
+  STELLAR_ACTIONS,
+  StellarActionMessage,
+  StellarActionType,
+  buildStellarActionMessage,
+} from "@/lib/stellar/signed-actions";
 import { generateNonce } from "@/lib/eip712";
 import {
   SIGNER_ROLE,
@@ -56,4 +63,53 @@ export async function sessionCookie(signer: PrivateKeyAccount, chainId: number) 
   if (res.status !== 200) throw new Error(`StartSession failed: ${res.status}`);
   const cookie = res.headers.get("set-cookie") ?? "";
   return cookie.split(";")[0]; // "relayid_session=…"
+}
+
+// ---- Stellar (beneficiaries) ----
+
+export const TEST_STELLAR_PASSPHRASE = "Test SDF Network ; September 2015";
+
+/** Deterministic Stellar test accounts. */
+export const stellarAccounts = {
+  beneficiary: Keypair.fromRawEd25519Seed(Buffer.alloc(32, 1)),
+  other: Keypair.fromRawEd25519Seed(Buffer.alloc(32, 2)),
+};
+
+/** Signs a Stellar action (SEP-53) as `signer`; returns the JSON body `{ message, signature }`. */
+export function stellarSignedBody<T extends StellarActionType>(
+  signer: Keypair,
+  primaryType: T,
+  fields: Omit<
+    StellarActionMessage<T>,
+    (typeof STELLAR_ACTIONS)[T]["signer"] | "nonce" | "issuedAt"
+  >,
+  {
+    issuedAt = Math.floor(Date.now() / 1000),
+    passphrase = TEST_STELLAR_PASSPHRASE,
+  }: { issuedAt?: number; passphrase?: string } = {}
+) {
+  const message = {
+    ...fields,
+    [STELLAR_ACTIONS[primaryType].signer]: signer.publicKey(),
+    nonce: generateNonce(),
+    issuedAt: BigInt(issuedAt),
+  } as unknown as StellarActionMessage<T>;
+  const text = buildStellarActionMessage(primaryType, message, passphrase);
+  const signature = Buffer.from(signer.signMessage(text)).toString("base64");
+  const json = Object.fromEntries(Object.entries(message).map(([k, v]) => [k, String(v)]));
+  return { message: json, signature };
+}
+
+/** Starts a Stellar session for `signer` via POST /api/session/stellar; returns its Cookie. */
+export async function stellarSessionCookie(signer: Keypair) {
+  const { POST } = await import("@/app/api/session/stellar/route");
+  const { NextRequest } = await import("next/server");
+  const res = await POST(
+    new NextRequest("http://localhost/api/session/stellar", {
+      method: "POST",
+      body: JSON.stringify(stellarSignedBody(signer, "StartStellarSession", {})),
+    })
+  );
+  if (res.status !== 200) throw new Error(`StartStellarSession failed: ${res.status}`);
+  return (res.headers.get("set-cookie") ?? "").split(";")[0];
 }

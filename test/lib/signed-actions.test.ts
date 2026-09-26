@@ -9,10 +9,18 @@ import {
   SignedActionError,
   VerifySignedActionDeps,
   verifyBeneficiaryAction,
+  verifyStellarAction,
   verifyLeaderAction,
   verifySignedAction,
 } from "@/lib/signed-actions";
 import { privateKeyToAccount } from "viem/accounts";
+import {
+  TEST_STELLAR_PASSPHRASE,
+  stellarAccounts,
+  stellarSignedBody,
+} from "../helpers/signed-actions";
+import { buildStellarActionMessage } from "@/lib/stellar/signed-actions";
+import { Keypair } from "@stellar/stellar-sdk";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const CHAIN_ID = 11155111;
@@ -24,7 +32,10 @@ const leader = privateKeyToAccount(
 const other = privateKeyToAccount(
   "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d"
 );
-const BENEFICIARY = "0x90F79bf6EB2c4f870365E785982E1f101E93b906";
+// Beneficiaries are Stellar accounts
+const stellarBeneficiary = stellarAccounts.beneficiary;
+const stellarOther = stellarAccounts.other;
+const BENEFICIARY = stellarBeneficiary.publicKey();
 
 let usedNonces: Set<string>;
 let deps: VerifySignedActionDeps & {
@@ -36,14 +47,15 @@ beforeEach(() => {
   usedNonces = new Set();
   deps = {
     chainId: CHAIN_ID,
+    stellarNetworkPassphrase: TEST_STELLAR_PASSPHRASE,
     now: () => NOW,
-    // `leader` is a leader, `other` a registered beneficiary
+    // `leader` is a leader, the Stellar `beneficiary` account a registered beneficiary
     hasRole: vi.fn(async (role: string, address: string) =>
       role === "account"
         ? true
         : role === "leader"
           ? address === leader.address
-          : address === other.address
+          : address === BENEFICIARY
     ),
     consumeNonce: async (address, nonce) => {
       const key = `${address}:${nonce}`;
@@ -126,7 +138,7 @@ describe("verifyLeaderAction", () => {
 
   it("rejects a message changed after signing", async () => {
     const signature = await sign("AddBeneficiary", addBeneficiary());
-    const tampered = addBeneficiary({ beneficiary: other.address });
+    const tampered = addBeneficiary({ beneficiary: stellarOther.publicKey() });
 
     await expectCode(
       verifyLeaderAction(
@@ -239,44 +251,6 @@ describe("verifyLeaderAction", () => {
     );
   });
 
-  it("accepts a registered beneficiary's signed RedeemDisbursement", async () => {
-    const message: SignedActionMessage<"RedeemDisbursement"> = {
-      beneficiary: other.address,
-      disbursementId: "6f1c7b8e-0d5a-4c1e-9d38-2f4b0a1c9e77",
-      nonce: "nonce-0002",
-      issuedAt: BigInt(NOW),
-    };
-    const signature = await sign("RedeemDisbursement", message, { signer: other });
-
-    const result = await verifyBeneficiaryAction(
-      { primaryType: "RedeemDisbursement", message: asJson(message), signature },
-      deps
-    );
-    expect(result).toEqual({ beneficiary: other.address, message });
-    expect(deps.hasRole).toHaveBeenCalledWith("beneficiary", other.address);
-  });
-
-  it("rejects a beneficiary action from someone who is not a registered beneficiary", async () => {
-    const message: SignedActionMessage<"RedeemDisbursement"> = {
-      beneficiary: leader.address,
-      disbursementId: "6f1c7b8e-0d5a-4c1e-9d38-2f4b0a1c9e77",
-      nonce: "nonce-0003",
-      issuedAt: BigInt(NOW),
-    };
-    const signature = await sign("RedeemDisbursement", message);
-
-    await expectCode(
-      verifyBeneficiaryAction(
-        { primaryType: "RedeemDisbursement", message: asJson(message), signature },
-        deps
-      ),
-      "not_beneficiary"
-    );
-    expect(deps.logSecurityEvent).toHaveBeenCalledWith(
-      expect.objectContaining({ event_type: "not_beneficiary" })
-    );
-  });
-
   it("accepts StartSession from any wallet, once", async () => {
     const message: SignedActionMessage<"StartSession"> = {
       account: other.address,
@@ -294,29 +268,107 @@ describe("verifyLeaderAction", () => {
     await expectCode(verifySignedAction(input, deps), "replay");
   });
 
-  it("rejects a RedeemDisbursement whose id is not a uuid", async () => {
-    await expectCode(
-      verifyBeneficiaryAction(
-        {
-          primaryType: "RedeemDisbursement",
-          message: {
-            beneficiary: other.address,
-            disbursementId: "1",
-            nonce: "nonce-0004",
-            issuedAt: String(NOW),
-          },
-          signature: "0x00",
-        },
-        deps
-      ),
-      "invalid_request"
-    );
-  });
-
   it("maps error codes to HTTP statuses", () => {
     expect(new SignedActionError("invalid_request", "").status).toBe(400);
     expect(new SignedActionError("invalid_signature", "").status).toBe(401);
     expect(new SignedActionError("not_leader", "").status).toBe(403);
     expect(new SignedActionError("replay", "").status).toBe(409);
+  });
+});
+
+describe("verifyStellarAction (beneficiaries)", () => {
+  const DISBURSEMENT = "6f1c7b8e-0d5a-4c1e-9d38-2f4b0a1c9e77";
+  const redeemBody = (signer: Keypair = stellarBeneficiary, opts = {}) =>
+    stellarSignedBody(
+      signer,
+      "RedeemDisbursement",
+      { disbursementId: DISBURSEMENT },
+      {
+        issuedAt: NOW,
+        ...opts,
+      }
+    );
+  const verify = (body: { message: unknown; signature: unknown }) =>
+    verifyBeneficiaryAction({ primaryType: "RedeemDisbursement", ...body }, deps);
+
+  it("accepts a registered beneficiary's SEP-53 signed RedeemDisbursement", async () => {
+    const result = await verify(redeemBody());
+    expect(result.beneficiary).toBe(BENEFICIARY);
+    expect(result.message.disbursementId).toBe(DISBURSEMENT);
+    expect(deps.hasRole).toHaveBeenCalledWith("beneficiary", BENEFICIARY);
+  });
+
+  it("also accepts a plain ed25519 signature of the text (wallets before SEP-53)", async () => {
+    const body = redeemBody();
+    const text = buildStellarActionMessage(
+      "RedeemDisbursement",
+      { ...body.message, issuedAt: BigInt(NOW) } as never,
+      TEST_STELLAR_PASSPHRASE
+    );
+    const raw = Buffer.from(stellarBeneficiary.sign(Buffer.from(text))).toString("base64");
+    await expect(verify({ ...body, signature: raw })).resolves.toMatchObject({
+      beneficiary: BENEFICIARY,
+    });
+  });
+
+  it("rejects someone who is not a registered beneficiary", async () => {
+    await expectCode(verify(redeemBody(stellarOther)), "not_beneficiary");
+    expect(deps.logSecurityEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ event_type: "not_beneficiary" })
+    );
+  });
+
+  it("rejects a signature made for another Stellar network", async () => {
+    const body = redeemBody(stellarBeneficiary, {
+      passphrase: "Public Global Stellar Network ; September 2015",
+    });
+    await expectCode(verify(body), "invalid_signature");
+  });
+
+  it("rejects a message changed after signing", async () => {
+    const body = redeemBody();
+    const tampered = { ...body.message, disbursementId: "11111111-2222-4333-8444-555555555555" };
+    await expectCode(verify({ ...body, message: tampered }), "invalid_signature");
+  });
+
+  it("rejects a signature by another account than the one named", async () => {
+    const body = redeemBody();
+    const forged = redeemBody(stellarOther);
+    await expectCode(verify({ ...body, signature: forged.signature }), "invalid_signature");
+  });
+
+  it("rejects a replay", async () => {
+    const body = redeemBody();
+    await verify(body);
+    await expectCode(verify(body), "replay");
+  });
+
+  it("rejects an expired signature", async () => {
+    await expectCode(
+      verify(redeemBody(stellarBeneficiary, { issuedAt: NOW - MAX_SIGNATURE_AGE_SECONDS - 1 })),
+      "expired_signature"
+    );
+  });
+
+  it.each([
+    ["an invalid account checksum", { beneficiary: "G" + "A".repeat(55) }],
+    ["a disbursement id that is not a uuid", { disbursementId: "1" }],
+  ])("rejects %s as an invalid request", async (_, override) => {
+    const body = redeemBody();
+    await expectCode(
+      verify({ ...body, message: { ...body.message, ...override } }),
+      "invalid_request"
+    );
+  });
+
+  it("rejects a signature in the wrong format", async () => {
+    await expectCode(verify({ ...redeemBody(), signature: "not-a-signature" }), "invalid_request");
+  });
+
+  it("accepts StartStellarSession from any Stellar account", async () => {
+    const body = stellarSignedBody(stellarOther, "StartStellarSession", {}, { issuedAt: NOW });
+    await expect(
+      verifyStellarAction({ primaryType: "StartStellarSession", ...body }, deps)
+    ).resolves.toMatchObject({ signer: stellarOther.publicKey() });
   });
 });

@@ -1,7 +1,7 @@
 import { db, withTransaction } from "@/lib/db";
 import { beneficiaries, disbursements, leaderAllowanceCredits } from "@/lib/db/schema";
 import { stroopsToXlm, xlmToStroops } from "@/lib/stellar/amount";
-import { StellarTxError } from "@/lib/stellar/network";
+import { MIN_NEW_ACCOUNT_STROOPS, StellarTxError } from "@/lib/stellar/network";
 import { and, desc, eq, inArray, isNull, lt, ne, sql } from "drizzle-orm";
 import { Address } from "viem";
 
@@ -33,6 +33,7 @@ export type DisbursementErrorCode =
   | "exceeds_daily_limit"
   | "insufficient_allowance"
   | "insufficient_treasury"
+  | "new_account_minimum"
   | "disbursement_not_found"
   | "not_redeemable"
   | "not_cancellable"
@@ -71,8 +72,7 @@ export class DisbursementError extends Error {
 
 export type DisbursementResponse = {
   id: string;
-  beneficiaryEthAddress: string;
-  stellarAddress: string;
+  beneficiary: string; // Stellar account (G…)
   amount: string; // XLM
   status: (typeof disbursements.$inferSelect)["status"];
   txHash: string | null;
@@ -89,8 +89,7 @@ export type AllowanceResponse = {
 
 const disbursementColumns = {
   id: disbursements.id,
-  beneficiaryEthAddress: beneficiaries.eth_address,
-  stellarAddress: beneficiaries.stellar_address,
+  beneficiary: beneficiaries.stellar_address,
   amount: disbursements.amount,
   status: disbursements.status,
   txHash: disbursements.tx_hash,
@@ -100,8 +99,7 @@ const disbursementColumns = {
 
 function toResponse(row: {
   id: string;
-  beneficiaryEthAddress: string;
-  stellarAddress: string;
+  beneficiary: string;
   amount: string;
   status: DisbursementResponse["status"];
   txHash: string | null;
@@ -204,10 +202,17 @@ const CREATE_LOCK_KEY = 7_301_001;
 /**
  * Creates a pending disbursement from `leader` (already verified) to one of their own
  * beneficiaries, after checking every limit inside one locked transaction.
- * `treasuryBalance` (stroops) is read from the network by the caller, outside the lock.
+ * `treasuryBalance` (stroops) and `beneficiaryAccountExists` are read from the network by the
+ * caller, outside the lock.
  */
 export async function createDisbursement(
-  input: { leader: Address; beneficiary: Address; amount: string; treasuryBalance: bigint },
+  input: {
+    leader: Address;
+    beneficiary: string; // Stellar account (G…)
+    amount: string;
+    treasuryBalance: bigint;
+    beneficiaryAccountExists: boolean;
+  },
   limits = getDisbursementLimits()
 ): Promise<DisbursementResponse> {
   const amount = xlmToStroops(input.amount);
@@ -220,13 +225,22 @@ export async function createDisbursement(
       .from(beneficiaries)
       .where(
         and(
-          eq(beneficiaries.eth_address, input.beneficiary),
+          eq(beneficiaries.stellar_address, input.beneficiary),
           eq(beneficiaries.added_by, input.leader)
         )
       )
       .limit(1);
     if (!beneficiary) {
       throw new DisbursementError("beneficiary_not_found", "Not one of your beneficiaries");
+    }
+
+    // The first payment to an account that does not exist yet creates it, which the network
+    // only allows with at least 1 XLM
+    if (!input.beneficiaryAccountExists && amount < MIN_NEW_ACCOUNT_STROOPS) {
+      throw new DisbursementError(
+        "new_account_minimum",
+        `This Stellar account does not exist yet, so the first disbursement must be at least ${stroopsToXlm(MIN_NEW_ACCOUNT_STROOPS)} XLM to create it`
+      );
     }
 
     if (amount > limits.maxPerDisbursement) {
@@ -276,8 +290,7 @@ export async function createDisbursement(
 
     return toResponse({
       id: created.id,
-      beneficiaryEthAddress: beneficiary.eth_address,
-      stellarAddress: beneficiary.stellar_address,
+      beneficiary: beneficiary.stellar_address,
       amount: created.amount,
       status: created.status,
       txHash: created.tx_hash,
@@ -302,12 +315,12 @@ export async function listDisbursementsByLeader(leader: Address, limit = 50) {
   return rows.map(toResponse);
 }
 
-export async function listDisbursementsByBeneficiary(beneficiary: Address) {
+export async function listDisbursementsByBeneficiary(beneficiary: string) {
   const rows = await db
     .select(disbursementColumns)
     .from(disbursements)
     .innerJoin(beneficiaries, eq(disbursements.beneficiary_id, beneficiaries.id))
-    .where(eq(beneficiaries.eth_address, beneficiary))
+    .where(eq(beneficiaries.stellar_address, beneficiary))
     .orderBy(desc(disbursements.created_at));
   return rows.map(toResponse);
 }
@@ -317,8 +330,6 @@ export async function listDisbursementsByBeneficiary(beneficiary: Address) {
 // =====================================================
 
 export type StellarPaymentOps = {
-  walletExists: (contractId: string) => Promise<boolean>;
-  deployWallet: (ethAddress: string) => Promise<string>;
   /** `onSubmitting` receives the transaction hash after signing, before submitting. */
   sendXlm: (
     to: string,
@@ -339,15 +350,15 @@ async function setStatus(
 }
 
 /**
- * Pays out a pending disbursement to `beneficiary` (already verified), deploying their
- * Stellar wallet first if needed.
+ * Pays out a pending disbursement to `beneficiary` (a registered Stellar account whose
+ * signature was already verified).
  *
  * The row is claimed (pending → redeeming) with a conditional update, so two concurrent
  * requests cannot both pay. If the payment's outcome is unknown, the row is parked as
  * needs_review instead of returning to pending, so it is never paid twice.
  */
 export async function redeemDisbursement(
-  input: { beneficiary: Address; disbursementId: string },
+  input: { beneficiary: string; disbursementId: string },
   ops: StellarPaymentOps
 ): Promise<DisbursementResponse> {
   const owned = inArray(
@@ -355,7 +366,7 @@ export async function redeemDisbursement(
     db
       .select({ id: beneficiaries.id })
       .from(beneficiaries)
-      .where(eq(beneficiaries.eth_address, input.beneficiary))
+      .where(eq(beneficiaries.stellar_address, input.beneficiary))
   );
 
   const [claimed] = await db
@@ -378,28 +389,9 @@ export async function redeemDisbursement(
     throw new DisbursementError("not_redeemable", `This disbursement is ${existing.status}`);
   }
 
-  const [{ stellarAddress }] = await db
-    .select({ stellarAddress: beneficiaries.stellar_address })
-    .from(beneficiaries)
-    .where(eq(beneficiaries.eth_address, input.beneficiary));
-
-  // Before any funds move: on failure, hand the disbursement back as pending
-  try {
-    if (!(await ops.walletExists(stellarAddress))) {
-      await ops.deployWallet(input.beneficiary);
-    }
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    await setStatus(input.disbursementId, { status: "pending", last_error: message }, "redeeming");
-    throw new DisbursementError(
-      "payment_failed",
-      `Could not set up your Stellar wallet: ${message}`
-    );
-  }
-
   let txHash: string;
   try {
-    txHash = await ops.sendXlm(stellarAddress, xlmToStroops(claimed.amount), (hash) =>
+    txHash = await ops.sendXlm(input.beneficiary, xlmToStroops(claimed.amount), (hash) =>
       // Recorded before submitting, so a crash after this point can still be reconciled
       setStatus(input.disbursementId, { tx_hash: hash }, "redeeming")
     );

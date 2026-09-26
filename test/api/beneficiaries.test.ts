@@ -8,7 +8,7 @@ import { defaultChain } from "@/wagmi/chain-config";
 import { sql } from "drizzle-orm";
 import { NextRequest } from "next/server";
 import { PrivateKeyAccount } from "viem/accounts";
-import { accounts, sessionCookie, signedBody } from "../helpers/signed-actions";
+import { accounts, sessionCookie, signedBody, stellarAccounts } from "../helpers/signed-actions";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/db", () => import("../helpers/db").then((m) => m.createTestDbModule()));
@@ -21,14 +21,11 @@ vi.mock("@/lib/relayer", async (importOriginal) => ({
 }));
 
 const { leaderA, leaderB } = accounts;
-const BENEFICIARY = "0x90F79bf6EB2c4f870365E785982E1f101E93b906";
+const BENEFICIARY = stellarAccounts.beneficiary.publicKey(); // a Stellar account
 
 beforeAll(() => {
   process.env.SESSION_SECRET = "test-secret-that-is-at-least-32-chars";
   process.env.NEXT_PUBLIC_STELLAR_NETWORK_PASSPHRASE = "Test SDF Network ; September 2015";
-  process.env.NEXT_PUBLIC_STELLAR_ECDSA_SECP256K1_FACTORY_CONTRACT_ID =
-    "CDJOTVVKNPEQP577P2GSYBPFVEY3JPJ7QJ3T2YWPMTI3TWIKNPTDO7Z2";
-  process.env.WALLET_SALT = "0102030405060708090a0b0c";
 });
 
 beforeEach(async () => {
@@ -71,8 +68,7 @@ describe("beneficiaries API", () => {
     );
     expect(added.status).toBe(201);
     expect(added.body.beneficiary).toMatchObject({
-      ethAddress: BENEFICIARY,
-      stellarAddress: "CC3ARJ4BI6Q2IW7J27YC3K7VHC7O25PZZ74OGFL7RKG5THHEMVJVN7CY",
+      stellarAddress: BENEFICIARY,
     });
 
     const listed = await list(leaderA);
@@ -103,12 +99,17 @@ describe("beneficiaries API", () => {
     expect(second).toMatchObject({ status: 409, body: { code: "already_registered" } });
   });
 
-  it("rejects a leader adding themselves", async () => {
-    const res = await call(
+  it("rejects an address that is not a Stellar account", async () => {
+    const evm = await call(
       addBeneficiaryRoute,
       await signed(leaderA, "AddBeneficiary", { beneficiary: leaderA.address })
     );
-    expect(res.status).toBe(400);
+    expect(evm.status).toBe(400);
+    const badChecksum = await call(
+      addBeneficiaryRoute,
+      await signed(leaderA, "AddBeneficiary", { beneficiary: "G" + "A".repeat(55) })
+    );
+    expect(badChecksum.status).toBe(400);
   });
 
   it("rejects a signer who is not a leader", async () => {

@@ -19,6 +19,7 @@ const navItems = [
   { name: en.header.nav.myAccount, href: "/" },
   { name: en.header.nav.addLeader, href: "/add" },
   { name: en.header.nav.beneficiaries, href: "/beneficiaries" },
+  { name: en.header.nav.redeem, href: "/redeem" },
 ];
 
 export function Header() {

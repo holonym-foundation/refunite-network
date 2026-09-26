@@ -9,13 +9,22 @@ import { db } from "@/lib/db";
 import { SignedActionType } from "@/lib/eip712/signed-actions";
 import { isLeader } from "@/lib/relayer";
 import { xlmToStroops } from "@/lib/stellar/amount";
-import { getTreasuryBalance, stellarPaymentOps } from "@/lib/stellar/network";
+import { accountExists, getTreasuryBalance, stellarPaymentOps } from "@/lib/stellar/network";
 import { defaultChain } from "@/wagmi/chain-config";
+import { Keypair } from "@stellar/stellar-sdk";
 import { sql } from "drizzle-orm";
 import { NextRequest } from "next/server";
 import { PrivateKeyAccount } from "viem/accounts";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { accounts, sessionCookie, signedBody } from "../helpers/signed-actions";
+import {
+  TEST_STELLAR_PASSPHRASE,
+  accounts,
+  sessionCookie,
+  signedBody,
+  stellarAccounts,
+  stellarSessionCookie,
+  stellarSignedBody,
+} from "../helpers/signed-actions";
 
 vi.mock("@/lib/db", () => import("../helpers/db").then((m) => m.createTestDbModule()));
 
@@ -25,26 +34,28 @@ vi.mock("@/lib/relayer", async (importOriginal) => ({
   isLeader: vi.fn(),
 }));
 
-// The Stellar network; everything else (signatures, limits, DB) is real
-const payments = {
-  walletExists: vi.fn(async () => false),
-  deployWallet: vi.fn(async () => "deploy-hash"),
-  sendXlm: vi.fn(async () => "pay-hash"),
-};
+// The Stellar network; everything else (signatures, limits, sessions, DB) is real
+const payments = { sendXlm: vi.fn(async () => "pay-hash") };
 vi.mock("@/lib/stellar/network", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/stellar/network")>()),
   getStellarNetworkConfig: () => ({}),
   getTreasuryBalance: vi.fn(),
+  accountExists: vi.fn(),
   stellarPaymentOps: vi.fn(() => payments),
 }));
 
-const { leaderA, leaderB, beneficiary, stranger } = accounts;
+const { leaderA, leaderB, stranger } = accounts;
+const beneficiary = stellarAccounts.beneficiary; // a Stellar account
+const strangerAccount = stellarAccounts.other; // a Stellar account nobody added
 
 const signed = <T extends SignedActionType>(
   signer: PrivateKeyAccount,
   primaryType: T,
   fields: Parameters<typeof signedBody<T>>[2]
 ) => signedBody(signer, primaryType, fields, { chainId: defaultChain.id });
+
+const redeemBody = (signer: Keypair, disbursementId: string) =>
+  stellarSignedBody(signer, "RedeemDisbursement", { disbursementId });
 
 async function call(route: (r: NextRequest) => Promise<Response>, body: unknown) {
   const res = await route(
@@ -53,12 +64,14 @@ async function call(route: (r: NextRequest) => Promise<Response>, body: unknown)
   return { status: res.status, body: await res.json() };
 }
 
+async function get(route: (r: NextRequest) => Promise<Response>, cookie: string) {
+  const res = await route(new NextRequest("http://localhost/api", { headers: { cookie } }));
+  return { status: res.status, body: await res.json() };
+}
+
 beforeAll(() => {
   process.env.SESSION_SECRET = "test-secret-that-is-at-least-32-chars";
-  process.env.NEXT_PUBLIC_STELLAR_NETWORK_PASSPHRASE = "Test SDF Network ; September 2015";
-  process.env.NEXT_PUBLIC_STELLAR_ECDSA_SECP256K1_FACTORY_CONTRACT_ID =
-    "CDJOTVVKNPEQP577P2GSYBPFVEY3JPJ7QJ3T2YWPMTI3TWIKNPTDO7Z2";
-  process.env.WALLET_SALT = "0102030405060708090a0b0c";
+  process.env.NEXT_PUBLIC_STELLAR_NETWORK_PASSPHRASE = TEST_STELLAR_PASSPHRASE;
 });
 
 beforeEach(async () => {
@@ -70,72 +83,68 @@ beforeEach(async () => {
     [leaderA.address, leaderB.address].includes(address as `0x${string}`)
   );
   vi.mocked(getTreasuryBalance).mockResolvedValue(xlmToStroops("1000"));
+  vi.mocked(accountExists).mockResolvedValue(true);
   expect(
     (
       await call(
         addBeneficiaryRoute,
-        await signed(leaderA, "AddBeneficiary", { beneficiary: beneficiary.address })
+        await signed(leaderA, "AddBeneficiary", { beneficiary: beneficiary.publicKey() })
       )
     ).status
   ).toBe(201);
 });
 
-async function getWithSession(
-  route: (r: NextRequest) => Promise<Response>,
-  signer: PrivateKeyAccount
-) {
-  const res = await route(
-    new NextRequest("http://localhost/api", {
-      headers: { cookie: await sessionCookie(signer, defaultChain.id) },
-    })
-  );
-  return { status: res.status, body: await res.json() };
-}
-
 const disburse = async (amount: string, signer = leaderA) =>
   call(
     createDisbursementRoute,
-    await signed(signer, "CreateDisbursement", { beneficiary: beneficiary.address, amount })
+    await signed(signer, "CreateDisbursement", { beneficiary: beneficiary.publicKey(), amount })
   );
 
 describe("disbursements API", () => {
-  it("runs the whole flow: disburse, list, redeem", async () => {
+  it("runs the whole flow: disburse, list (Stellar session), redeem (Stellar signature)", async () => {
     const created = await disburse("0.5");
     expect(created.status).toBe(201);
     const { id } = created.body.disbursement;
 
-    const mine = await getWithSession(myDisbursementsRoute, beneficiary);
+    const mine = await get(myDisbursementsRoute, await stellarSessionCookie(beneficiary));
     expect(mine.body.disbursements).toEqual([
       expect.objectContaining({ id, amount: "0.5", status: "pending" }),
     ]);
 
-    const redeemed = await call(
-      redeemRoute,
-      await signed(beneficiary, "RedeemDisbursement", { disbursementId: id })
-    );
+    const redeemed = await call(redeemRoute, redeemBody(beneficiary, id));
     expect(redeemed).toMatchObject({
       status: 200,
       body: { disbursement: { id, status: "redeemed", txHash: "pay-hash" } },
     });
-    expect(payments.deployWallet).toHaveBeenCalledWith(beneficiary.address);
     expect(payments.sendXlm).toHaveBeenCalledWith(
-      "CC3ARJ4BI6Q2IW7J27YC3K7VHC7O25PZZ74OGFL7RKG5THHEMVJVN7CY",
+      beneficiary.publicKey(),
       xlmToStroops("0.5"),
       expect.any(Function)
     );
     expect(stellarPaymentOps).toHaveBeenCalled();
   });
 
+  it("needs at least 1 XLM for a Stellar account that does not exist yet", async () => {
+    vi.mocked(accountExists).mockResolvedValue(false);
+    expect(await disburse("0.5")).toMatchObject({
+      status: 422,
+      body: { code: "new_account_minimum" },
+    });
+    expect((await disburse("1")).status).toBe(201);
+  });
+
   it("shows the leader their disbursements and remaining allowance", async () => {
     await disburse("1");
-    const listed = await getWithSession(listBeneficiariesRoute, leaderA);
+    const listed = await get(listBeneficiariesRoute, await sessionCookie(leaderA, defaultChain.id));
     expect(listed.body.allowance).toEqual({
       balance: "99",
       usedLast24h: "1",
       maxPerDisbursement: "1",
       maxPerLeaderPerDay: "10",
     });
-    expect(listed.body.disbursements).toHaveLength(1);
+    expect(listed.body.disbursements).toEqual([
+      expect.objectContaining({ beneficiary: beneficiary.publicKey(), amount: "1" }),
+    ]);
   });
 
   it("rejects a disbursement to another leader's beneficiary", async () => {
@@ -152,7 +161,7 @@ describe("disbursements API", () => {
     });
   });
 
-  it("answers 503 when the treasury balance cannot be read", async () => {
+  it("answers 503 when the Stellar network cannot be read", async () => {
     vi.mocked(getTreasuryBalance).mockRejectedValue(new Error("rpc down"));
     expect(await disburse("0.5")).toMatchObject({
       status: 503,
@@ -160,19 +169,21 @@ describe("disbursements API", () => {
     });
   });
 
-  it("shows no disbursements to a wallet that is not a beneficiary", async () => {
-    expect(await getWithSession(myDisbursementsRoute, stranger)).toEqual({
+  it("shows no disbursements to a Stellar account that is not a beneficiary", async () => {
+    expect(await get(myDisbursementsRoute, await stellarSessionCookie(strangerAccount))).toEqual({
       status: 200,
       body: { disbursements: [] },
     });
   });
 
-  it("rejects redeeming by someone who is not a registered beneficiary", async () => {
+  it("does not accept a leader's (EVM) session as a beneficiary session", async () => {
+    const res = await get(myDisbursementsRoute, await sessionCookie(leaderA, defaultChain.id));
+    expect(res).toMatchObject({ status: 401, body: { code: "no_session" } });
+  });
+
+  it("rejects redeeming by a Stellar account that is not a registered beneficiary", async () => {
     const { id } = (await disburse("0.5")).body.disbursement;
-    const res = await call(
-      redeemRoute,
-      await signed(stranger, "RedeemDisbursement", { disbursementId: id })
-    );
+    const res = await call(redeemRoute, redeemBody(strangerAccount, id));
     expect(res).toMatchObject({ status: 403, body: { code: "not_beneficiary" } });
   });
 
@@ -180,7 +191,7 @@ describe("disbursements API", () => {
     const res = await call(
       createDisbursementRoute,
       await signed(stranger, "CreateDisbursement", {
-        beneficiary: beneficiary.address,
+        beneficiary: beneficiary.publicKey(),
         amount: "0.5",
       })
     );
@@ -207,14 +218,8 @@ describe("disbursements API", () => {
 
   it("does not redeem twice", async () => {
     const { id } = (await disburse("0.5")).body.disbursement;
-    await call(
-      redeemRoute,
-      await signed(beneficiary, "RedeemDisbursement", { disbursementId: id })
-    );
-    const again = await call(
-      redeemRoute,
-      await signed(beneficiary, "RedeemDisbursement", { disbursementId: id })
-    );
+    await call(redeemRoute, redeemBody(beneficiary, id));
+    const again = await call(redeemRoute, redeemBody(beneficiary, id));
     expect(again).toMatchObject({ status: 409, body: { code: "not_redeemable" } });
     expect(payments.sendXlm).toHaveBeenCalledTimes(1);
   });

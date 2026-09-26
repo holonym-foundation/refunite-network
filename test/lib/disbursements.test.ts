@@ -25,9 +25,9 @@ vi.mock("@/lib/db", () => import("../helpers/db").then((m) => m.createTestDbModu
 
 const LEADER = getAddress("0x3333333333333333333333333333333333333333");
 const OTHER_LEADER = getAddress("0x4444444444444444444444444444444444444444");
-const BENEFICIARY = getAddress("0x1111111111111111111111111111111111111111");
-const OTHER_BENEFICIARY = getAddress("0x2222222222222222222222222222222222222222");
-const STELLAR = "CBENEFICIARYWALLET";
+// Beneficiaries are Stellar accounts
+const BENEFICIARY = "GCFIRY65OQE7DFP5KLNS2PF2LVZMUZYJX4OZIEQ36N2IQANUB5XVYOJR";
+const OTHER_BENEFICIARY = "GCATS5YOVB6ROX2WUNKGNQ2MP3GMXDMKSG2O4N5CLX3A6W4PZGZZI55U";
 const TREASURY = xlmToStroops("1000");
 
 const create = (
@@ -36,14 +36,19 @@ const create = (
   limits?: DisbursementLimits
 ) =>
   createDisbursement(
-    { leader: LEADER, beneficiary: BENEFICIARY, amount, treasuryBalance: TREASURY, ...overrides },
+    {
+      leader: LEADER,
+      beneficiary: BENEFICIARY,
+      amount,
+      treasuryBalance: TREASURY,
+      beneficiaryAccountExists: true,
+      ...overrides,
+    },
     limits
   );
 
 function paymentOps(overrides: Partial<StellarPaymentOps> = {}) {
   return {
-    walletExists: vi.fn(async () => true),
-    deployWallet: vi.fn(async () => "deploy-hash"),
     sendXlm: vi.fn(async () => `pay-${Math.random()}`),
     ...overrides,
   } satisfies StellarPaymentOps;
@@ -56,16 +61,8 @@ async function status(id: string) {
 
 beforeEach(async () => {
   await db.execute(sql`TRUNCATE disbursements, leader_allowance_credits, beneficiaries CASCADE`);
-  await DB.createBeneficiary({
-    eth_address: BENEFICIARY,
-    stellar_address: STELLAR,
-    added_by: LEADER,
-  });
-  await DB.createBeneficiary({
-    eth_address: OTHER_BENEFICIARY,
-    stellar_address: "COTHERWALLET",
-    added_by: OTHER_LEADER,
-  });
+  await DB.createBeneficiary({ stellar_address: BENEFICIARY, added_by: LEADER });
+  await DB.createBeneficiary({ stellar_address: OTHER_BENEFICIARY, added_by: OTHER_LEADER });
 });
 
 describe("limits", () => {
@@ -82,11 +79,20 @@ describe("createDisbursement", () => {
   it("creates a pending disbursement to the leader's own beneficiary", async () => {
     const d = await create("0.5");
     expect(d).toMatchObject({
-      beneficiaryEthAddress: BENEFICIARY,
-      stellarAddress: STELLAR,
+      beneficiary: BENEFICIARY,
       amount: "0.5",
       status: "pending",
       txHash: null,
+    });
+  });
+
+  it("needs at least 1 XLM for an account that does not exist yet", async () => {
+    await expect(create("0.5", { beneficiaryAccountExists: false })).rejects.toMatchObject({
+      code: "new_account_minimum",
+      status: 422,
+    });
+    await expect(create("1", { beneficiaryAccountExists: false })).resolves.toMatchObject({
+      amount: "1",
     });
   });
 
@@ -166,26 +172,19 @@ describe("redeemDisbursement", () => {
   const redeem = (id: string, ops: StellarPaymentOps, beneficiary = BENEFICIARY) =>
     redeemDisbursement({ beneficiary, disbursementId: id }, ops);
 
-  it("deploys the wallet if needed, pays, and records the transaction", async () => {
+  it("pays the beneficiary's Stellar account and records the transaction", async () => {
     const d = await create("0.5");
-    const ops = paymentOps({
-      walletExists: vi.fn(async () => false),
-      sendXlm: vi.fn(async () => "pay-hash"),
-    });
+    const ops = paymentOps({ sendXlm: vi.fn(async () => "pay-hash") });
 
     const redeemed = await redeem(d.id, ops);
 
-    expect(ops.deployWallet).toHaveBeenCalledWith(BENEFICIARY);
-    expect(ops.sendXlm).toHaveBeenCalledWith(STELLAR, xlmToStroops("0.5"), expect.any(Function));
+    expect(ops.sendXlm).toHaveBeenCalledWith(
+      BENEFICIARY,
+      xlmToStroops("0.5"),
+      expect.any(Function)
+    );
     expect(redeemed).toMatchObject({ status: "redeemed", txHash: "pay-hash" });
     expect(redeemed.redeemedAt).not.toBeNull();
-  });
-
-  it("skips deployment for an existing wallet", async () => {
-    const d = await create("0.5");
-    const ops = paymentOps();
-    await redeem(d.id, ops);
-    expect(ops.deployWallet).not.toHaveBeenCalled();
   });
 
   it("pays only once", async () => {
@@ -231,19 +230,6 @@ describe("redeemDisbursement", () => {
     });
 
     await expect(redeem(d.id, paymentOps())).resolves.toMatchObject({ status: "redeemed" });
-  });
-
-  it("returns to pending when the wallet deployment fails", async () => {
-    const d = await create("0.5");
-    const ops = paymentOps({
-      walletExists: vi.fn(async () => false),
-      deployWallet: vi.fn(async () => {
-        throw new Error("deploy failed");
-      }),
-    });
-    await expect(redeem(d.id, ops)).rejects.toMatchObject({ code: "payment_failed" });
-    expect(ops.sendXlm).not.toHaveBeenCalled();
-    expect((await status(d.id)).status).toBe("pending");
   });
 
   it("parks an unconfirmed payment for review and never retries it", async () => {

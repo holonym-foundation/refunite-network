@@ -243,19 +243,19 @@ export class DB {
   // BENEFICIARIES
   // =====================================================
 
-  /** Returns null if the Ethereum address is already a beneficiary (of any leader). */
+  /** Returns null if the Stellar account is already a beneficiary (of any leader). */
   static async createBeneficiary(
-    data: Pick<Beneficiary, "eth_address" | "stellar_address" | "added_by">
+    data: Pick<Beneficiary, "stellar_address" | "added_by">
   ): Promise<Beneficiary | null> {
     const [row] = await db.insert(beneficiaries).values(data).onConflictDoNothing().returning();
     return row ? withIsoDates(row) : null;
   }
 
-  static async findBeneficiaryByEthAddress(ethAddress: string): Promise<Beneficiary | null> {
+  static async findBeneficiaryByStellarAddress(account: string): Promise<Beneficiary | null> {
     const [row] = await db
       .select()
       .from(beneficiaries)
-      .where(eq(beneficiaries.eth_address, ethAddress))
+      .where(eq(beneficiaries.stellar_address, account))
       .limit(1);
     return row ? withIsoDates(row) : null;
   }
@@ -265,7 +265,7 @@ export class DB {
       .select()
       .from(beneficiaries)
       .where(eq(beneficiaries.added_by, leaderAddress))
-      .orderBy(desc(beneficiaries.created_at), beneficiaries.eth_address); // stable for ties
+      .orderBy(desc(beneficiaries.created_at), beneficiaries.stellar_address); // stable for ties
     return rows.map(withIsoDates);
   }
 

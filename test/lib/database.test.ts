@@ -177,32 +177,33 @@ describe("leader action nonces", () => {
 
 describe("beneficiaries", () => {
   const LEADER = INVITER;
-  const row = (eth_address: string, added_by = LEADER) => ({
-    eth_address,
-    stellar_address: "CSTELLAR",
-    added_by,
-  });
+  const ACCOUNT = "GCFIRY65OQE7DFP5KLNS2PF2LVZMUZYJX4OZIEQ36N2IQANUB5XVYOJR";
+  const OTHER_ACCOUNT = "GCATS5YOVB6ROX2WUNKGNQ2MP3GMXDMKSG2O4N5CLX3A6W4PZGZZI55U";
+  const row = (stellar_address: string, added_by = LEADER) => ({ stellar_address, added_by });
 
-  it("creates, finds and lists beneficiaries per leader, newest first", async () => {
-    const first = await DB.createBeneficiary(row(RECIPIENT));
-    const second = await DB.createBeneficiary(row("0x2222222222222222222222222222222222222222"));
+  it("creates, finds and lists beneficiaries per leader", async () => {
+    const first = await DB.createBeneficiary(row(ACCOUNT));
+    const second = await DB.createBeneficiary(row(OTHER_ACCOUNT));
 
-    expect(first).toMatchObject({ eth_address: RECIPIENT, added_by: LEADER });
+    expect(first).toMatchObject({ stellar_address: ACCOUNT, added_by: LEADER });
     expect(typeof first!.created_at).toBe("string");
-    expect(await DB.findBeneficiaryByEthAddress(RECIPIENT)).toMatchObject({ id: first!.id });
+    expect(await DB.findBeneficiaryByStellarAddress(ACCOUNT)).toMatchObject({ id: first!.id });
     expect((await DB.listBeneficiariesByLeader(LEADER)).map((b) => b.id).sort()).toEqual(
       [first!.id, second!.id].sort()
     );
     expect(await DB.listBeneficiariesByLeader(RECIPIENT)).toEqual([]);
   });
 
-  it("returns null when the address is already a beneficiary", async () => {
-    await DB.createBeneficiary(row(RECIPIENT));
-    expect(await DB.createBeneficiary(row(RECIPIENT, RECIPIENT.replace("1", "4")))).toBeNull();
+  it("returns null when the account is already a beneficiary (of any leader)", async () => {
+    await DB.createBeneficiary(row(ACCOUNT));
+    expect(await DB.createBeneficiary(row(ACCOUNT, RECIPIENT))).toBeNull();
   });
 
-  it("rejects a leader as their own beneficiary", async () => {
-    await expect(DB.createBeneficiary(row(LEADER))).rejects.toThrow();
+  it("rejects anything that is not a Stellar account address", async () => {
+    await expect(DB.createBeneficiary(row(RECIPIENT))).rejects.toThrow();
+    await expect(
+      DB.createBeneficiary(row("CCKA7L6JJNLSFEF3YHL5PJIYTRZMACF4D5U4DOJST3KWTLBP5SJDIDPY"))
+    ).rejects.toThrow();
   });
 });
 

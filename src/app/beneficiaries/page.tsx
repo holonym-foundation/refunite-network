@@ -2,8 +2,6 @@
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
 
-import { getAddress, isAddress } from "viem";
-
 import { ConnectButton } from "@/components/ConnectButton";
 import { Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/Container";
@@ -25,6 +23,8 @@ import type { AllowanceResponse, DisbursementResponse } from "@/lib/disbursement
 
 const t = en.beneficiariesPage;
 const XLM_AMOUNT = /^\d+(\.\d{1,7})?$/;
+// Stellar account (G…); the server also verifies the checksum
+const STELLAR_ACCOUNT = /^G[A-Z2-7]{55}$/;
 
 type LeaderOverview = {
   beneficiaries: BeneficiaryResponse[];
@@ -62,7 +62,7 @@ function DisburseForm({
     setSending(true);
     try {
       const signed = await sign("CreateDisbursement", {
-        beneficiary: getAddress(beneficiary.ethAddress),
+        beneficiary: beneficiary.stellarAddress,
         amount: value,
       });
       const data = await postSigned<{ disbursement: DisbursementResponse }>(
@@ -90,7 +90,7 @@ function DisburseForm({
           inputMode="decimal"
           // The theme's placeholder colour matches body text; keep this one clearly empty
           placeholder={t.amountPlaceholder}
-          aria-label={`${t.amountLabel}, ${beneficiary.ethAddress}`}
+          aria-label={`${t.amountLabel}, ${beneficiary.stellarAddress}`}
           aria-invalid={!!amountError}
           className="w-28 placeholder:text-gray-400"
         />
@@ -156,20 +156,20 @@ export default function BeneficiariesPage() {
   async function handleAdd(event: FormEvent) {
     event.preventDefault();
     const value = beneficiaryInput.trim();
-    if (!isAddress(value)) {
+    if (!STELLAR_ACCOUNT.test(value)) {
       setInputError(t.invalidAddress);
       return;
     }
 
     setAdding(true);
     try {
-      const signed = await sign("AddBeneficiary", { beneficiary: getAddress(value) });
+      const signed = await sign("AddBeneficiary", { beneficiary: value });
       const data = await postSigned<{ beneficiary: BeneficiaryResponse }>(
         "/api/beneficiaries",
         signed
       );
       setBeneficiaryInput("");
-      toast({ title: t.added, description: data.beneficiary.ethAddress });
+      toast({ title: t.added, description: data.beneficiary.stellarAddress });
       if (session.status === "signed_in") fetchOverview();
     } catch (error) {
       showError(error);
@@ -269,7 +269,7 @@ export default function BeneficiariesPage() {
                 }}
                 placeholder={t.addressPlaceholder}
                 className="placeholder:text-gray-400"
-                aria-label={t.ethAddress}
+                aria-label={t.stellarAddress}
                 aria-invalid={!!inputError}
                 autoComplete="off"
                 spellCheck={false}
@@ -325,14 +325,9 @@ export default function BeneficiariesPage() {
                   key={b.id}
                   className="p-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between text-sm"
                 >
-                  <div className="space-y-0.5">
-                    <p className="font-mono" title={b.ethAddress}>
-                      {shortenAddress(b.ethAddress)}
-                    </p>
-                    <p className="font-mono text-muted-foreground" title={b.stellarAddress}>
-                      {t.stellarAddress}: {shortenAddress(b.stellarAddress)}
-                    </p>
-                  </div>
+                  <p className="font-mono" title={b.stellarAddress}>
+                    {shortenAddress(b.stellarAddress)}
+                  </p>
                   <DisburseForm beneficiary={b} onDisbursed={handleDisbursed} onError={showError} />
                 </li>
               ))}
@@ -349,8 +344,8 @@ export default function BeneficiariesPage() {
               <ul className="divide-y rounded-md border">
                 {overview.disbursements.map((d) => (
                   <li key={d.id} className="p-3 grid gap-1 sm:grid-cols-4 sm:items-center text-sm">
-                    <span className="font-mono" title={d.beneficiaryEthAddress}>
-                      {shortenAddress(d.beneficiaryEthAddress)}
+                    <span className="font-mono" title={d.beneficiary}>
+                      {shortenAddress(d.beneficiary)}
                     </span>
                     <span className="font-mono">{d.amount} XLM</span>
                     <span className="text-muted-foreground">

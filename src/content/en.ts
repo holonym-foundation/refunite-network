@@ -81,6 +81,7 @@ const en = {
       myAccount: "My RelayID",
       addLeader: "Add Leader",
       beneficiaries: "Beneficiaries",
+      redeem: "Redeem",
     },
     menu: {
       open: "Open menu",
@@ -100,9 +101,9 @@ const en = {
     notLeader: "Only community leaders can add beneficiaries.",
     addHeading: "Add a beneficiary",
     addDescription:
-      "Enter the beneficiary's RelayID (their wallet address). You will be asked to sign, so the network knows the request is from you.",
-    addressPlaceholder: "0x…",
-    invalidAddress: "Enter a valid wallet address",
+      "Enter the beneficiary's Stellar account address (starts with G). You will be asked to sign, so the network knows the request is from you.",
+    addressPlaceholder: "G…",
+    invalidAddress: "Enter a valid Stellar account address (starts with G, 56 characters)",
     add: "Add beneficiary",
     adding: "Adding…",
     added: "Beneficiary added",
@@ -113,8 +114,7 @@ const en = {
     refresh: "Refresh",
     loadingList: "Loading…",
     empty: "You have not added any beneficiaries yet.",
-    ethAddress: "RelayID",
-    stellarAddress: "Stellar wallet",
+    stellarAddress: "Stellar account",
     addedOn: "Added",
     allowanceHeading: "Your disbursement allowance",
     allowanceBalance: "Remaining",
@@ -145,6 +145,15 @@ const en = {
     cancelling: "Cancelling…",
     cancelled: "Disbursement cancelled",
     cancelledDescription: (amount: string) => `${amount} XLM is back in your allowance.`,
+    redeemTitle: "Redeem",
+    redeemIntro:
+      "If a community leader added your Stellar account, the XLM they sent you is waiting here. Connect your Stellar wallet (Freighter) to see and redeem it.",
+    connect: "Connect Freighter",
+    connecting: "Connecting…",
+    connectedAs: "Stellar account",
+    disconnect: "Disconnect",
+    signInHint:
+      "You will be asked to sign once with your Stellar wallet. It is free and does not move any money.",
     myHeading: "My disbursements",
     myDescription:
       "Funds that a community leader has sent you. Redeem them to receive the XLM in your Stellar wallet.",

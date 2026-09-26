@@ -1,6 +1,6 @@
 import { DisbursementError } from "@/lib/disbursements";
 import { SessionConfigError } from "@/lib/session";
-import { StellarConfigError } from "@/lib/stellar/address";
+import { StellarConfigError } from "@/lib/stellar/network";
 import { NextResponse } from "next/server";
 import { SignedActionError } from ".";
 

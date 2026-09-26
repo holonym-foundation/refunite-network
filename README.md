@@ -244,15 +244,15 @@ Leaders can register beneficiaries at `/beneficiaries`. A beneficiary belongs to
 - Adding is signed by the leader (EIP-712) and checked by `verifyLeaderAction` (`src/lib/signed-actions`): recent signature, signer wears the Community Leader hat, and each nonce is single-use (`leader_action_nonces`).
 - Listing needs no per-request signature: the wallet signs `StartSession` once (`POST /api/session`), which sets an HttpOnly cookie for 24 hours (`src/lib/session.ts`, signed with `SESSION_SECRET`). The session only proves the address; the leader hat is checked on every request, and anything that changes state still needs its own signature. Logging out ends it (`DELETE /api/session`).
 - `POST /api/beneficiaries` adds one (`AddBeneficiary`); `GET /api/beneficiaries/list` lists the signed-in leader's own.
-- Each beneficiary's Stellar smart-wallet address is derived from their Ethereum address (`src/lib/stellar/address.ts`, ported from Human-Wallet-On-Stellar), so it is known before the wallet is deployed. `WALLET_SALT` and the factory contract must match that app.
+- A beneficiary is a Stellar account address (`G…`). It does not need to exist on the network yet: the first payment to a new account creates it.
 
 ## Disbursements
 
-A leader can disburse XLM to their own beneficiaries (from `/beneficiaries`); the beneficiary redeems it from their account page and the XLM is sent to their Stellar smart wallet.
+A leader can disburse XLM to their own beneficiaries (from `/beneficiaries`); the beneficiary redeems it at `/redeem`, signing with their Stellar key in [Freighter](https://freighter.app), and the XLM is sent to their Stellar account.
 
-1. **Create** (`POST /api/disbursements`, leader-signed `CreateDisbursement`): inside one transaction holding an advisory lock, the server checks the beneficiary is the leader's, the amount (max 1 XLM), the leader's rolling 24h total (max 10 XLM), their allowance (100 XLM to start + admin credits in `leader_allowance_credits`, minus everything disbursed), and that the treasury covers every unpaid disbursement (keeping a 5 XLM reserve). Limits are env settings (`DISBURSE_*`).
-2. **List** (`GET /api/disbursements/mine`, with a session; empty for wallets that are not beneficiaries).
-3. **Redeem** (`POST /api/disbursements/redeem`, beneficiary-signed `RedeemDisbursement`): the row is claimed (`pending → redeeming`) so it is paid at most once, the wallet is deployed through the factory if needed, then XLM is sent from the treasury (`WALLET_SOURCE_PRIVATE_KEY`) via the native asset contract.
+1. **Create** (`POST /api/disbursements`, leader-signed `CreateDisbursement`): inside one transaction holding an advisory lock, the server checks the beneficiary is the leader's, the amount (max 1 XLM), the leader's rolling 24h total (max 10 XLM), their allowance (100 XLM to start + admin credits in `leader_allowance_credits`, minus everything disbursed), and that the treasury covers every unpaid disbursement (keeping a 5 XLM reserve). Limits are env settings (`DISBURSE_*`). If the beneficiary's account does not exist yet, the amount must be at least 1 XLM (the network's minimum to create an account).
+2. **List** (`GET /api/disbursements/mine`, with a Stellar session: the beneficiary signs `StartStellarSession` once via `POST /api/session/stellar`, which sets its own 24-hour cookie; empty for accounts that are not beneficiaries).
+3. **Redeem** (`POST /api/disbursements/redeem`, beneficiary-signed `RedeemDisbursement`): the row is claimed (`pending → redeeming`) so it is paid at most once, then XLM is sent from the treasury (`WALLET_SOURCE_PRIVATE_KEY`): a payment, or a `createAccount` if the account does not exist yet.
 
 4. **Cancel** (`POST /api/disbursements/cancel`, leader-signed `CancelDisbursement`): the leader who created a still-`pending` disbursement can withdraw it; the amount returns to their allowance and daily limit.
 
@@ -260,7 +260,7 @@ Statuses: `pending`, `redeeming`, `redeemed` (with `tx_hash`), `needs_review` (a
 
 The payment's transaction hash is recorded **before** it is submitted, so every payment that might have landed can be looked up. The 5-minute cron (`/api/system/cleanup`) runs `reconcileDisbursements` on rows stuck in `redeeming` / `needs_review` for over 5 minutes: success → `redeemed`; failed, never submitted, or not found while under an hour old (transactions expire 60 seconds after signing) → back to `pending`; not found and older (the RPC only keeps recent history) → left in `needs_review` for a person to check on a Stellar explorer.
 
-Beneficiary actions are verified like leader actions, but the signer must be a registered beneficiary instead of a hat wearer (`src/lib/signed-actions`).
+Beneficiary actions are signed with the beneficiary's Stellar key (SEP-53 message signing; the text comes from `src/lib/stellar/signed-actions.ts` and names the network). They are checked like leader actions (fresh, single-use nonce), but the signer must be a registered beneficiary instead of a hat wearer (`verifyBeneficiaryAction` in `src/lib/signed-actions`).
 
 ## API access
 
@@ -271,8 +271,9 @@ Beneficiary actions are verified like leader actions, but the signer must be a r
 | `POST /api/invites/verify`                                                   | anyone holding the invite code                                           |
 | `POST /api/onboarding/*`                                                     | an inviter's EIP-712 signature; the relayer checks they are a leader     |
 | `POST /api/beneficiaries`, `/api/disbursements`, `/api/disbursements/cancel` | a leader's per-action signature                                          |
-| `POST /api/disbursements/redeem`                                             | the beneficiary's per-action signature                                   |
-| `GET /api/beneficiaries/list`, `/api/disbursements/mine`                     | a session (`POST /api/session`)                                          |
+| `POST /api/disbursements/redeem`                                             | the beneficiary's per-action Stellar signature                           |
+| `GET /api/beneficiaries/list`                                                | a session (`POST /api/session`)                                          |
+| `GET /api/disbursements/mine`                                                | a Stellar session (`POST /api/session/stellar`)                          |
 | `POST /api/users/delete`                                                     | a session for the address being deleted                                  |
 | `POST /api/messages/feedback`                                                | anyone; validated, size-limited and escaped for Slack (not rate limited) |
 | `POST /api/reservations/verify`, `POST /api/system/cleanup`                  | `Authorization: Bearer <RELAYID_APP_API_TOKEN>`                          |

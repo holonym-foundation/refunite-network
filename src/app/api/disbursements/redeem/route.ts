@@ -4,12 +4,12 @@ import { readSignedBody, signedActionErrorResponse } from "@/lib/signed-actions/
 import { stellarPaymentOps } from "@/lib/stellar/network";
 import { NextRequest, NextResponse } from "next/server";
 
-// May deploy a wallet and then pay, each waiting for Stellar confirmation
+// Waits for the Stellar payment to be confirmed
 export const maxDuration = 60;
 
 /**
- * Redeem one of your disbursements. Body: { message: RedeemDisbursement, signature } signed by
- * the beneficiary. Deploys their Stellar wallet if needed, then sends the XLM.
+ * Redeem one of your disbursements. Body: { message: RedeemDisbursement, signature } signed
+ * with the beneficiary's Stellar key (SEP-53). Sends the XLM to their Stellar account.
  */
 export async function POST(request: NextRequest) {
   try {

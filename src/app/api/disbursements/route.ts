@@ -1,8 +1,12 @@
 import { createDisbursement } from "@/lib/disbursements";
 import { verifyLeaderAction } from "@/lib/signed-actions";
 import { readSignedBody, signedActionErrorResponse } from "@/lib/signed-actions/http";
-import { StellarConfigError } from "@/lib/stellar/address";
-import { getStellarNetworkConfig, getTreasuryBalance } from "@/lib/stellar/network";
+import {
+  StellarConfigError,
+  accountExists,
+  getStellarNetworkConfig,
+  getTreasuryBalance,
+} from "@/lib/stellar/network";
 import { NextRequest, NextResponse } from "next/server";
 
 /**
@@ -20,11 +24,16 @@ export async function POST(request: NextRequest) {
     });
 
     let treasuryBalance: bigint;
+    let beneficiaryAccountExists: boolean;
     try {
-      treasuryBalance = await getTreasuryBalance(getStellarNetworkConfig());
+      const config = getStellarNetworkConfig();
+      [treasuryBalance, beneficiaryAccountExists] = await Promise.all([
+        getTreasuryBalance(config),
+        accountExists(config, action.beneficiary),
+      ]);
     } catch (error) {
       if (error instanceof StellarConfigError) throw error;
-      console.error("Could not read the treasury balance", error);
+      console.error("Could not read the treasury or the beneficiary account", error);
       return NextResponse.json(
         {
           error: "The Stellar network is unavailable, try again shortly",
@@ -39,6 +48,7 @@ export async function POST(request: NextRequest) {
       beneficiary: action.beneficiary,
       amount: action.amount,
       treasuryBalance,
+      beneficiaryAccountExists,
     });
     return NextResponse.json({ disbursement }, { status: 201 });
   } catch (error) {

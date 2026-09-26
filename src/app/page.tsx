@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useAccount } from "wagmi";
 
 import { ConnectButton } from "@/components/ConnectButton";
-import { MyDisbursementsSection } from "@/components/MyDisbursementsSection";
 import { ProfileSection } from "@/components/ProfileSection";
 import { ShareSection } from "@/components/ShareSection";
 import { StatusSection } from "@/components/StatusSection";
@@ -79,9 +78,6 @@ function AccountPage() {
       <div className="mb-8">
         <StatusSection hasHat={hasHat} isHatLoading={isHatLoading} isHatError={isHatError} />
       </div>
-
-      {/* Disbursements from leaders (for beneficiaries) */}
-      <MyDisbursementsSection />
 
       {/* Actions Section */}
       <div className="space-y-4">

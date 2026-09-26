@@ -12,11 +12,6 @@ const optionalPeerStubs = ["@reown/appkit", "@reown/appkit-adapter-ethers"];
 console.log("isProduction", isProduction);
 
 const nextConfig: NextConfig = {
-  // Image configuration
-  images: {
-    domains: ["ipfs.io", "github.com"],
-  },
-
   // Package transpilation
   transpilePackages: ["@refunite/ui", "ua-parser-js"],
 

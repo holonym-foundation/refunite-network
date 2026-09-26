@@ -12,9 +12,6 @@ importers:
 
   .:
     dependencies:
-      '@hatsprotocol/sdk-v1-core':
-        specifier: ^0.12.4
-        version: 0.12.4(viem@2.29.2(bufferutil@4.0.9)(typescript@5.8.3)(utf-8-validate@5.0.10)(zod@3.24.3))
       '@hookform/resolvers':
         specifier: ^5.1.1
         version: 5.1.1(react-hook-form@7.55.0(react@19.1.9))
@@ -976,14 +973,6 @@ packages:
     resolution: {integrity: sha512-mB9oAsNCm9aM3/SOv4YtBMqZbYj10R7dkq8byBqxGY/ncFwhf2oQzMV+LCRlWoDSEBJ3COiR1yeDvMtsoOsuFQ==}
     peerDependencies:
       graphql: ^0.8.0 || ^0.9.0 || ^0.10.0 || ^0.11.0 || ^0.12.0 || ^0.13.0 || ^14.0.0 || ^15.0.0 || ^16.0.0 || ^17.0.0
-
-  '@hatsprotocol/sdk-v1-core@0.12.4':
-    resolution: {integrity: sha512-tDun0JjLzNJn7TTopTWVD+p4OtHCrSqMwPCoUML0wJr23QO6vO5/dz/piyVAu/6wJ9j9sgqlrsof+IFaNvEvTA==}
-    peerDependencies:
-      viem: ^2.0.0
-
-  '@hatsprotocol/sdk-v1-subgraph@1.1.0':
-    resolution: {integrity: sha512-cxf+9cfs1gBmNhgDTUqQvN8g8GyED/vYb1YlbLI8VIEhRiD89bDKEh+JkJinc5yd8jOE9sPH/OmRlo4QYdbkrQ==}
 
   '@hookform/resolvers@5.1.1':
     resolution: {integrity: sha512-J/NVING3LMAEvexJkyTLjruSm7aOFx7QX21pzkiJfMoNG0wl5aFEjLTl7ay7IQb9EWY6AkrBy7tHL2Alijpdcg==}
@@ -4930,15 +4919,6 @@ packages:
   graphemer@1.4.0:
     resolution: {integrity: sha512-EtKwoO6kxCL9WO5xipiHTZlSzBm7WLT627TqC/uVRd0HKmq8NXyebnNYxDoBi7wt8eTWrUrKXCOVaFq9x1kgag==}
 
-  graphql-request@6.1.0:
-    resolution: {integrity: sha512-p+XPfS4q7aIpKVcgmnZKhMNqhltk20hfXtkaIkTfjjmiKMJ5xrt5c743cL03y/K7y1rg3WrIC49xGiEQ4mxdNw==}
-    peerDependencies:
-      graphql: 14 - 16
-
-  graphql@16.10.0:
-    resolution: {integrity: sha512-AjqGKbDGUFRKIRCP9tCKiIGHyriz2oHEbPIbEtcSLSs4YjReZOIPQQWek4+6hjw62H9QShXHyaGivGiYVLeYFQ==}
-    engines: {node: ^12.22.0 || ^14.16.0 || ^16.0.0 || >=17.0.0}
-
   graphql@16.14.2:
     resolution: {integrity: sha512-Chq1s4CY7jmh8gO2qvLIJyfCDIN+EHLFW/9iShnp1z8FjBQMoodWP1kDC36VAMXXIvAjj4ARa7ntfAV2BrjsbA==}
     engines: {node: ^12.22.0 || ^14.16.0 || ^16.0.0 || >=17.0.0}
@@ -7820,30 +7800,9 @@ snapshots:
       graphql: 16.14.2
       typescript: 5.8.3
 
-  '@graphql-typed-document-node/core@3.2.0(graphql@16.10.0)':
-    dependencies:
-      graphql: 16.10.0
-
   '@graphql-typed-document-node/core@3.2.0(graphql@16.14.2)':
     dependencies:
       graphql: 16.14.2
-
-  '@hatsprotocol/sdk-v1-core@0.12.4(viem@2.29.2(bufferutil@4.0.9)(typescript@5.8.3)(utf-8-validate@5.0.10)(zod@3.24.3))':
-    dependencies:
-      '@hatsprotocol/sdk-v1-subgraph': 1.1.0
-      graphql: 16.10.0
-      graphql-request: 6.1.0(graphql@16.10.0)
-      viem: 2.29.2(bufferutil@4.0.9)(typescript@5.8.3)(utf-8-validate@5.0.10)(zod@3.24.3)
-    transitivePeerDependencies:
-      - encoding
-
-  '@hatsprotocol/sdk-v1-subgraph@1.1.0':
-    dependencies:
-      graphql: 16.10.0
-      graphql-request: 6.1.0(graphql@16.10.0)
-      zod: 3.24.3
-    transitivePeerDependencies:
-      - encoding
 
   '@hookform/resolvers@5.1.1(react-hook-form@7.55.0(react@19.1.9))':
     dependencies:
@@ -13453,16 +13412,6 @@ snapshots:
       - graphql
 
   graphemer@1.4.0: {}
-
-  graphql-request@6.1.0(graphql@16.10.0):
-    dependencies:
-      '@graphql-typed-document-node/core': 3.2.0(graphql@16.10.0)
-      cross-fetch: 3.2.0
-      graphql: 16.10.0
-    transitivePeerDependencies:
-      - encoding
-
-  graphql@16.10.0: {}
 
   graphql@16.14.2: {}
 

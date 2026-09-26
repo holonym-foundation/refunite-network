@@ -19,7 +19,6 @@
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
-    "@hatsprotocol/sdk-v1-core": "^0.12.4",
     "@hookform/resolvers": "^5.1.1",
     "@human.tech/waap-sdk": "^2.4.0",
     "@neondatabase/serverless": "^1.1.0",

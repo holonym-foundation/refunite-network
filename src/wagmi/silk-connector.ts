@@ -20,7 +20,7 @@ export default function silk(options: InitSilkOptions = silkConfig) {
 
   return createConnector<SilkEthereumProviderInterface>((config) => ({
     id: "silk",
-    name: "Silk Security Connector",
+    name: "WaaP",
     type: "Silk",
     chains: config.chains,
     supportsSimulation: false,

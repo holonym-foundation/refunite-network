@@ -9,7 +9,12 @@ import { db } from "@/lib/db";
 import { SignedActionType } from "@/lib/eip712/signed-actions";
 import { isLeader } from "@/lib/relayer";
 import { xlmToStroops } from "@/lib/stellar/amount";
-import { accountExists, getTreasuryBalance, stellarPaymentOps } from "@/lib/stellar/network";
+import {
+  StellarRpcError,
+  accountExists,
+  getTreasuryBalance,
+  stellarPaymentOps,
+} from "@/lib/stellar/network";
 import { defaultChain } from "@/wagmi/chain-config";
 import { Keypair } from "@stellar/stellar-sdk";
 import { sql } from "drizzle-orm";
@@ -163,6 +168,14 @@ describe("disbursements API", () => {
 
   it("answers 503 when the Stellar network cannot be read", async () => {
     vi.mocked(getTreasuryBalance).mockRejectedValue(new Error("rpc down"));
+    expect(await disburse("0.5")).toMatchObject({
+      status: 503,
+      body: { code: "stellar_unavailable" },
+    });
+  });
+
+  it("answers 503, not new_account_minimum, when the account check cannot reach Stellar", async () => {
+    vi.mocked(accountExists).mockRejectedValue(new StellarRpcError("Stellar RPC unavailable"));
     expect(await disburse("0.5")).toMatchObject({
       status: 503,
       body: { code: "stellar_unavailable" },

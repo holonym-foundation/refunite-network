@@ -7,6 +7,7 @@ import {
   Transaction,
   TransactionBuilder,
   rpc,
+  xdr,
 } from "@stellar/stellar-sdk";
 import { stroopsToXlm, xlmToStroops } from "./amount";
 
@@ -28,8 +29,9 @@ export type StellarNetworkConfig = {
 };
 
 export function getStellarNetworkConfig(): StellarNetworkConfig {
-  const rpcUrl = process.env.NEXT_PUBLIC_STELLAR_RPC_URL;
-  if (!rpcUrl) throw new StellarConfigError("NEXT_PUBLIC_STELLAR_RPC_URL is missing");
+  // Server-only: an RPC URL can carry a provider API key, so it must never reach the browser
+  const rpcUrl = process.env.STELLAR_RPC_URL;
+  if (!rpcUrl) throw new StellarConfigError("STELLAR_RPC_URL is missing");
   const networkPassphrase = process.env.NEXT_PUBLIC_STELLAR_NETWORK_PASSPHRASE;
   if (!networkPassphrase) {
     throw new StellarConfigError("NEXT_PUBLIC_STELLAR_NETWORK_PASSPHRASE is missing");
@@ -81,17 +83,53 @@ function describe(error: unknown): string {
   }
 }
 
-const isNotFound = (error: unknown) => /not found/i.test(describe(error));
-
-/** Whether the Stellar account exists (has been created and funded). */
-export async function accountExists(config: StellarNetworkConfig, account: string) {
-  try {
-    await server(config).getAccountEntry(account);
-    return true;
-  } catch (error) {
-    if (isNotFound(error)) return false;
-    throw error;
+/** The Stellar RPC could not be reached or gave no usable answer. */
+export class StellarRpcError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "StellarRpcError";
   }
+}
+
+/**
+ * The account's ledger entry, or null when the network confirms it does not exist.
+ *
+ * Not rpc.Server.getAccountEntry: it reports every failure (an outage, a 503, a closed port)
+ * as "Account not found", which would make an unreachable RPC look like a missing account.
+ * getLedgerEntries throws the real error, and an answer for a missing account still carries
+ * the ledger it was checked against.
+ */
+type AccountEntry = Extract<xdr.LedgerEntryData, { type: "account" }>["account"];
+
+async function readAccountEntry(
+  config: StellarNetworkConfig,
+  account: string
+): Promise<AccountEntry | null> {
+  const key = xdr.LedgerKey.account(
+    new xdr.LedgerKeyAccount({ accountId: Keypair.fromPublicKey(account).xdrPublicKey() })
+  );
+  let response: rpc.Api.GetLedgerEntriesResponse;
+  try {
+    response = await server(config).getLedgerEntries(key);
+  } catch (error) {
+    throw new StellarRpcError(`Stellar RPC unavailable: ${describe(error)}`);
+  }
+  if (!response || !Number.isInteger(response.latestLedger) || !Array.isArray(response.entries)) {
+    throw new StellarRpcError("Stellar RPC gave an unexpected answer");
+  }
+  const entry = response.entries[0];
+  if (!entry) return null;
+  if (entry.val.type !== "account")
+    throw new StellarRpcError("Stellar RPC returned a non-account entry");
+  return entry.val.account;
+}
+
+/**
+ * Whether the Stellar account exists (has been created and funded). Throws StellarRpcError
+ * if the network cannot be checked, rather than guessing.
+ */
+export async function accountExists(config: StellarNetworkConfig, account: string) {
+  return (await readAccountEntry(config, account)) !== null;
 }
 
 /** Signs as the treasury, records the hash, submits and waits for the result. */
@@ -196,16 +234,18 @@ export async function sendXlm(
 
 /** The treasury's XLM balance in stroops. */
 export async function getTreasuryBalance(config: StellarNetworkConfig): Promise<bigint> {
-  const entry: unknown = await server(config).getAccountEntry(config.source.publicKey());
-  // Typed as xdr.AccountEntry (balance()), but the RPC client returns a plain object whose
-  // `balance` is a string of stroops; accept both
-  const balance = (entry as { balance: string | (() => { toString(): string }) }).balance;
-  return BigInt(typeof balance === "function" ? balance().toString() : balance);
+  const entry = await readAccountEntry(config, config.source.publicKey());
+  if (!entry) throw new StellarConfigError("The treasury account does not exist on this network");
+  return BigInt(entry.balance);
 }
 
 export type TransactionOutcome = "success" | "failed" | "not_found";
 
-/** Looks a submitted transaction up (the RPC only keeps recent history). */
+/**
+ * Looks a submitted transaction up (the RPC only keeps recent history). "not_found" only when
+ * the RPC says so: reconciliation may make a not-found payment redeemable again, so any other
+ * answer throws instead.
+ */
 export async function getTransactionOutcome(
   config: StellarNetworkConfig,
   txHash: string
@@ -213,7 +253,8 @@ export async function getTransactionOutcome(
   const { status } = await server(config).getTransaction(txHash);
   if (status === rpc.Api.GetTransactionStatus.SUCCESS) return "success";
   if (status === rpc.Api.GetTransactionStatus.FAILED) return "failed";
-  return "not_found";
+  if (status === rpc.Api.GetTransactionStatus.NOT_FOUND) return "not_found";
+  throw new StellarRpcError(`Stellar RPC gave an unexpected transaction status: ${String(status)}`);
 }
 
 /** The payment operations disbursements need, bound to a network config. */

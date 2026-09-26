@@ -20,9 +20,18 @@ const recipient = "0x1111111111111111111111111111111111111111";
 const mintHash = `0x${"aa".repeat(32)}` as const;
 const claimHash = `0x${"bb".repeat(32)}` as const;
 
-function makeClients({ recipientIsLeader = false, mintStatus = "success" } = {}) {
+const SAFE = "0x5555555555555555555555555555555555555555";
+
+function makeClients({
+  recipientIsLeader = false,
+  isSafeOwner = false,
+  mintStatus = "success",
+} = {}) {
   const publicClient = {
-    readContract: vi.fn().mockResolvedValue(recipientIsLeader),
+    // isWearerOfHat on Hats, safe() on the HSG, isOwner on the Safe
+    readContract: vi.fn(async ({ functionName }: { functionName: string }) =>
+      functionName === "safe" ? SAFE : functionName === "isOwner" ? isSafeOwner : recipientIsLeader
+    ),
     simulateContract: vi.fn(async (args) => ({ request: args })),
     estimateContractGas: vi.fn(async () => BigInt(100_000)),
     waitForTransactionReceipt: vi.fn(async ({ hash }) => ({
@@ -91,13 +100,31 @@ describe("onboardLeader", () => {
     ]);
   });
 
-  it("sends no transactions when the recipient is already a leader", async () => {
-    const { walletClient, clients } = makeClients({ recipientIsLeader: true });
+  it("sends no transactions when the recipient already wears the hat and is a Safe owner", async () => {
+    const { walletClient, clients } = makeClients({ recipientIsLeader: true, isSafeOwner: true });
 
     await expect(onboardLeader(clients, config, recipient)).resolves.toEqual({
       status: "already_onboarded",
     });
     expect(walletClient.writeContract).not.toHaveBeenCalled();
+  });
+
+  it("only adds the signer when an earlier attempt already minted the hat", async () => {
+    const { publicClient, walletClient, clients } = makeClients({ recipientIsLeader: true });
+
+    const result = await onboardLeader(clients, config, recipient);
+
+    expect(result).toEqual({
+      status: "onboarded",
+      mintHatTxHash: null,
+      claimSignerTxHash: claimHash,
+    });
+    expect(walletClient.writeContract.mock.calls.map(([req]) => req.functionName)).toEqual([
+      "claimSignerFor",
+    ]);
+    expect(publicClient.readContract).toHaveBeenCalledWith(
+      expect.objectContaining({ address: SAFE, functionName: "isOwner", args: [recipient] })
+    );
   });
 
   it("stops before claiming when the mint reverts", async () => {

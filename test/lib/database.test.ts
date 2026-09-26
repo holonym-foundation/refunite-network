@@ -93,6 +93,18 @@ describe("reservations and status", () => {
     expect(await DB.isAddressOnboarded(RECIPIENT.toUpperCase().replace("0X", "0x"))).toBe(true);
   });
 
+  it("records a completion without a mint hash (resumed onboarding)", async () => {
+    await invitation();
+    const completion = await DB.createCompletion({
+      invitation_id: 1,
+      reservation_id: "res-1",
+      recipient_address: RECIPIENT,
+      mint_hat_tx_hash: null,
+      claim_signer_tx_hash: "0xclaim",
+    });
+    expect(completion.mint_hat_tx_hash).toBeNull();
+  });
+
   it("reports an expired invitation", async () => {
     await invitation({ expires_at: inFuture(-60) });
     expect((await DB.getInvitationStatus(1))!.status).toBe("expired");

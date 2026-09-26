@@ -1,0 +1,1 @@
+ALTER TABLE "completions" ALTER COLUMN "mint_hat_tx_hash" DROP NOT NULL;

@@ -28,7 +28,11 @@ import { nonceManager, privateKeyToAccount } from "viem/accounts";
  * leader hat so it can mint it, and must hold native gas on the default chain.
  */
 
-const hsgAbi = parseAbi(["function claimSignerFor(uint256 _hatId, address _signer)"]);
+const hsgAbi = parseAbi([
+  "function claimSignerFor(uint256 _hatId, address _signer)",
+  "function safe() view returns (address)",
+]);
+const safeAbi = parseAbi(["function isOwner(address owner) view returns (bool)"]);
 
 // Gas estimates for mintHat have come in too low (a Sepolia mint ran out of gas at exactly
 // the estimate), so send each transaction with 25% headroom. Unused gas is not charged.
@@ -51,7 +55,8 @@ export type RelayerClients = {
 
 export type OnboardLeaderResult =
   | { status: "already_onboarded" }
-  | { status: "onboarded"; mintHatTxHash: Hash; claimSignerTxHash: Hash };
+  // mintHatTxHash is null when the recipient already wore the hat (a resumed onboarding)
+  | { status: "onboarded"; mintHatTxHash: Hash | null; claimSignerTxHash: Hash };
 
 export class RelayerConfigError extends Error {
   constructor(message: string) {
@@ -139,10 +144,33 @@ export async function isLeader(
   });
 }
 
+/** Whether the address is an owner (signer) of the Safe the HSG guards. */
+export async function isSafeOwner(
+  publicClient: PublicClient,
+  config: Pick<RelayerConfig, "hsgAddress">,
+  address: string
+): Promise<boolean> {
+  const safe = await publicClient.readContract({
+    address: config.hsgAddress,
+    abi: hsgAbi,
+    functionName: "safe",
+  });
+  return publicClient.readContract({
+    address: safe,
+    abi: safeAbi,
+    functionName: "isOwner",
+    args: [getAddress(address)],
+  });
+}
+
 /**
  * Mints the leader hat to the recipient and adds them as a signer on the leaders' Safe.
  * Each transaction is simulated first so reverts surface before any gas is spent, and is
  * sent with a buffered gas limit.
+ *
+ * Resumable: if an earlier attempt minted the hat but failed to add the signer, the hat is
+ * not minted again and only the signer is added. Only a hat wearer who is already a Safe
+ * owner counts as already onboarded.
  */
 export async function onboardLeader(
   { publicClient, walletClient }: RelayerClients,
@@ -150,12 +178,25 @@ export async function onboardLeader(
   recipientAddress: string
 ): Promise<OnboardLeaderResult> {
   const recipient = getAddress(recipientAddress);
-  const account = walletClient.account;
 
-  if (await isLeader(publicClient, config, recipient)) {
+  const wearsHat = await isLeader(publicClient, config, recipient);
+  if (wearsHat && (await isSafeOwner(publicClient, config, recipient))) {
     return { status: "already_onboarded" };
   }
 
+  const mintHatTxHash = wearsHat
+    ? null
+    : await mintLeaderHat({ publicClient, walletClient }, config, recipient);
+  const claimSignerTxHash = await claimSigner({ publicClient, walletClient }, config, recipient);
+  return { status: "onboarded", mintHatTxHash, claimSignerTxHash };
+}
+
+async function mintLeaderHat(
+  { publicClient, walletClient }: RelayerClients,
+  config: RelayerConfig,
+  recipient: Address
+): Promise<Hash> {
+  const account = walletClient.account;
   const mintCall = {
     account,
     address: config.hatsAddress,
@@ -173,7 +214,15 @@ export async function onboardLeader(
   if (mintReceipt.status !== "success") {
     throw new RelayerTransactionError("mintHat transaction reverted", mintHatTxHash);
   }
+  return mintHatTxHash;
+}
 
+async function claimSigner(
+  { publicClient, walletClient }: RelayerClients,
+  config: RelayerConfig,
+  recipient: Address
+): Promise<Hash> {
+  const account = walletClient.account;
   const claimCall = {
     account,
     address: config.hsgAddress,
@@ -191,6 +240,5 @@ export async function onboardLeader(
   if (claimReceipt.status !== "success") {
     throw new RelayerTransactionError("claimSignerFor transaction reverted", claimSignerTxHash);
   }
-
-  return { status: "onboarded", mintHatTxHash, claimSignerTxHash };
+  return claimSignerTxHash;
 }

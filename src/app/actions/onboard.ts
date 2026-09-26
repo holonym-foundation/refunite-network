@@ -17,7 +17,7 @@ import {
 import { Hash, TypedDataDefinition } from "viem";
 
 type AddLeaderViaSignedTypedDataResult = {
-  mintHatTxHash?: string;
+  mintHatTxHash?: string | null; // null when the onboarding resumed after an earlier mint
   claimSignerTxHash?: string;
   error?: string;
 };

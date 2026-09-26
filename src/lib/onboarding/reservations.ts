@@ -43,7 +43,10 @@ const inviteReserveSchema = z.object({
 
 const confirmSchema = z.object({
   reservationId: z.string().uuid(),
-  mintHatTxHash: z.string().regex(/^0x[a-fA-F0-9]{64}$/),
+  mintHatTxHash: z
+    .string()
+    .regex(/^0x[a-fA-F0-9]{64}$/)
+    .nullable(), // null when a resumed onboarding only added the signer
   claimSignerTxHash: z.string().regex(/^0x[a-fA-F0-9]{64}$/),
   recipient: addressSchema,
   deviceInfo: z
@@ -293,7 +296,7 @@ export async function reserveInvite(params: {
 
 export async function confirmReservation(params: {
   reservationId: string;
-  mintHatTxHash: string;
+  mintHatTxHash: string | null;
   claimSignerTxHash: string;
   recipient: string;
   deviceInfo?: Partial<DeviceInfo>;

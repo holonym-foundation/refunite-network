@@ -36,6 +36,13 @@
       "when": 1790700876158,
       "tag": "0004_disbursements",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1790705502382,
+      "tag": "0005_resumable_onboarding",
+      "breakpoints": true
     }
   ]
 }

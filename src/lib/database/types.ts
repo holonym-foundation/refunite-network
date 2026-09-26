@@ -58,7 +58,7 @@ export interface Completion {
   reservation_id: string;
   recipient_address: string;
   completed_at: string;
-  mint_hat_tx_hash: string;
+  mint_hat_tx_hash: string | null;
   claim_signer_tx_hash: string;
 }
 
@@ -123,7 +123,7 @@ export interface CreateCompletionData {
   invitation_id: number;
   reservation_id: string;
   recipient_address: string;
-  mint_hat_tx_hash: string;
+  mint_hat_tx_hash: string | null;
   claim_signer_tx_hash: string;
 }
 

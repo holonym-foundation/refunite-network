@@ -78,7 +78,7 @@ export const completions = pgTable("completions", {
   reservation_id: text("reservation_id").notNull(),
   recipient_address: text("recipient_address").notNull(),
   completed_at: timestamptz("completed_at").notNull().defaultNow(),
-  mint_hat_tx_hash: text("mint_hat_tx_hash").notNull(),
+  mint_hat_tx_hash: text("mint_hat_tx_hash"), // null when the hat was already worn (resumed)
   claim_signer_tx_hash: text("claim_signer_tx_hash").notNull(),
 });
 

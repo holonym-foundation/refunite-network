@@ -1,16 +1,18 @@
 /**
- * Creates a self-contained Hats tree + Safe + Hats Signer Gate (v2) for testing onboarding.
+ * Creates a Hats tree + Safe + Hats Signer Gate (v2) for testing, shaped like production
+ * (Celo tree 22) so hat levels, admin rights and HSG settings match:
  *
- *   top hat (you; also owner of the HSG)
- *   └─ relayer admin hat (worn by the relayer, so it can mint leaders)
- *      └─ leader hat (signer hat of the HSG; you are its eligibility module)
+ *   X          "RelayID"                 top hat, worn by you
+ *   └─ X.1        "Network"                 unworn (in production: the old Defender relayer)
+ *      └─ X.1.1      "Community Leader Admin"  worn by the relayer; owner hat of the HSG
+ *         └─ X.1.1.1    "Community Leader"        signer hat of the HSG; you are its eligibility module
  *
  * Usage (Node 22.18+ runs TypeScript directly):
  *   DEPLOYER_PRIVATE_KEY=0x... RELAYER_ADDRESS=0x... FIRST_LEADER=0x... \
  *   RPC_URL=https://... node scripts/setup-test-hats.ts
  *
  * DEPLOYER_PRIVATE_KEY  wallet that receives the top hat and pays gas (never commit it)
- * RELAYER_ADDRESS       address of RELAYER_PRIVATE_KEY; receives the relayer admin hat
+ * RELAYER_ADDRESS       address of RELAYER_PRIVATE_KEY; receives Community Leader Admin
  * FIRST_LEADER          optional; minted the leader hat and made a Safe signer, so it can invite
  * RPC_URL               defaults to a public Sepolia RPC
  * TOP_HAT_ID            optional; reuse a top hat the deployer already wears (e.g. after a timeout)
@@ -133,29 +135,38 @@ if (existingTopHat) {
     address: HATS,
     abi: hatsAbi,
     functionName: "mintTopHat",
-    args: [account.address, "RelayID test network", ""],
+    args: [account.address, "RelayID", ""],
   }));
 }
 
-const { result: relayerAdminHat } = await send<bigint>("create relayer admin hat", {
+// Names, supplies and modules follow production. Production stores details as IPFS JSON
+// ({ name, description }); plain strings are used here, which the Hats app shows as the name.
+const { result: networkHat } = await send<bigint>("create Network hat", {
   address: HATS,
   abi: hatsAbi,
   functionName: "createHat",
-  args: [topHat, "Relayer admin", 1, NO_MODULE, NO_MODULE, true, ""],
+  args: [topHat, "Network", 1, NO_MODULE, NO_MODULE, true, ""],
 });
 
-const { result: leaderHat } = await send<bigint>("create leader hat", {
+const { result: leaderAdminHat } = await send<bigint>("create Community Leader Admin hat", {
   address: HATS,
   abi: hatsAbi,
   functionName: "createHat",
-  args: [relayerAdminHat, "Leader", 150_000, account.address, NO_MODULE, true, ""],
+  args: [networkHat, "Community Leader Admin", 1, NO_MODULE, NO_MODULE, true, ""],
 });
 
-await send("mint relayer admin hat to relayer", {
+const { result: leaderHat } = await send<bigint>("create Community Leader hat", {
+  address: HATS,
+  abi: hatsAbi,
+  functionName: "createHat",
+  args: [leaderAdminHat, "Community Leader", 150_000, account.address, NO_MODULE, true, ""],
+});
+
+await send("mint Community Leader Admin to relayer", {
   address: HATS,
   abi: hatsAbi,
   functionName: "mintHat",
-  args: [relayerAdminHat, relayer],
+  args: [leaderAdminHat, relayer],
 });
 
 // HSG v2 deploys and attaches a new Safe when `safe` is the zero address
@@ -186,7 +197,7 @@ const setupParams = encodeAbiParameters(
   ],
   [
     {
-      ownerHat: topHat,
+      ownerHat: leaderAdminHat, // same as production
       signerHats: [leaderHat],
       safe: "0x0000000000000000000000000000000000000000",
       thresholdConfig: { thresholdType: 0, min: 1n, target: 1n }, // same as production

@@ -265,12 +265,15 @@ The admin dashboard shows the relayer address and balance.
 
 ### Test setup on Sepolia
 
-`scripts/setup-test-hats.ts` creates a Hats tree you control, plus a new Safe and Hats Signer Gate (v2), so you can test onboarding without access to an existing top hat:
+`scripts/setup-test-hats.ts` creates a Hats tree you control, shaped like production, plus a new Safe and Hats Signer Gate (v2), so you can test onboarding without access to an existing top hat:
+
+It mirrors the production tree (Celo tree 22):
 
 ```
-top hat (deployer; also HSG owner)
-└─ relayer admin hat (worn by RELAYER_ADDRESS)
-   └─ leader hat (HSG signer hat; deployer is its eligibility module)
+X  "RelayID"                        top hat (deployer)
+└─ X.1  "Network"                    unworn
+   └─ X.1.1  "Community Leader Admin"  worn by RELAYER_ADDRESS; HSG owner hat
+      └─ X.1.1.1  "Community Leader"     HSG signer hat; deployer is its eligibility module
 ```
 
 ```bash

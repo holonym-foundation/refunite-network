@@ -108,7 +108,7 @@ const en = {
     added: "Beneficiary added",
     listHeading: "My beneficiaries",
     listDescription:
-      "Only you can see the beneficiaries you added. Showing them needs your signature.",
+      "Only you can see the beneficiaries you added. The first time, you sign in once; after that they load automatically.",
     show: "Show my beneficiaries",
     refresh: "Refresh",
     loadingList: "Loading…",

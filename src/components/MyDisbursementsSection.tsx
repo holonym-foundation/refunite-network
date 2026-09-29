@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import en from "@/content/en";
-import { SignedAction, useSignedAction } from "@/hooks/useSignedAction";
-import { SignedRequestError, isFresh, postSigned } from "@/lib/client/signed-request";
+import { useSession } from "@/hooks/useSession";
+import { useSignedAction } from "@/hooks/useSignedAction";
+import { SignedRequestError, getJson, postSigned } from "@/lib/client/signed-request";
 import type { DisbursementResponse } from "@/lib/disbursements";
 
 const t = en.disbursements;
@@ -26,8 +27,9 @@ export function MyDisbursementsSection() {
   const [disbursements, setDisbursements] = useState<DisbursementResponse[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [redeemingId, setRedeemingId] = useState<string | null>(null);
-  // ListMyDisbursements is read-only, so its signature is reused while fresh
-  const [listSignature, setListSignature] = useState<SignedAction | null>(null);
+  // Listing uses a read-only session: one StartSession signature, then no prompts
+  const session = useSession();
+  const { markSignedOut } = session;
 
   const showError = (error: unknown) =>
     toast({
@@ -36,25 +38,34 @@ export function MyDisbursementsSection() {
       variant: "destructive",
     });
 
-  async function load() {
+  const fetchDisbursements = useCallback(async () => {
     setLoading(true);
     try {
-      const signed = isFresh(listSignature) ? listSignature : await sign("ListMyDisbursements", {});
-      setListSignature(signed);
-      const data = await postSigned<{ disbursements: DisbursementResponse[] }>(
-        "/api/disbursements/mine",
-        signed
+      const data = await getJson<{ disbursements: DisbursementResponse[] }>(
+        "/api/disbursements/mine"
       );
       setDisbursements(data.disbursements);
     } catch (error) {
-      // Someone who is not a beneficiary simply has nothing to redeem
-      if (error instanceof SignedRequestError && error.code === "not_beneficiary") {
-        setDisbursements([]);
-      } else {
-        showError(error);
-      }
+      if (error instanceof SignedRequestError && error.code === "no_session") markSignedOut();
+      else showError(error);
     } finally {
       setLoading(false);
+    }
+    // showError only wraps the stable toast function
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [markSignedOut]);
+
+  // Load automatically once signed in (no prompt)
+  useEffect(() => {
+    if (session.status === "signed_in" && !disbursements) fetchDisbursements();
+  }, [session.status, disbursements, fetchDisbursements]);
+
+  async function load() {
+    try {
+      if (session.status !== "signed_in") await session.signIn();
+      await fetchDisbursements();
+    } catch (error) {
+      showError(error);
     }
   }
 
@@ -73,7 +84,7 @@ export function MyDisbursementsSection() {
     } catch (error) {
       showError(error);
       // The status may have changed (e.g. to needs_review); show the current state
-      if (isFresh(listSignature)) load();
+      if (session.status === "signed_in") fetchDisbursements();
     } finally {
       setRedeemingId(null);
     }
@@ -83,7 +94,11 @@ export function MyDisbursementsSection() {
     <section className="space-y-3 mb-8">
       <div className="flex items-center justify-between gap-4">
         <h2 className="text-lg font-medium">{t.myHeading}</h2>
-        <Button variant="outline" onClick={load} disabled={loading}>
+        <Button
+          variant="outline"
+          onClick={load}
+          disabled={loading || session.status === "checking"}
+        >
           {loading ? t.loading : disbursements ? t.refresh : t.show}
         </Button>
       </div>

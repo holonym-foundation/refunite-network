@@ -19,6 +19,7 @@ import { useToast } from "./ui/use-toast";
 import en from "@/content/en";
 import { defaultChain } from "@/wagmi/chain-config";
 import silk from "@/wagmi/silk-connector";
+import { endSession } from "@/hooks/useSession";
 
 interface ConnectButtonProps {
   variant?: "default" | "mobile";
@@ -68,6 +69,8 @@ export function ConnectButton({ variant = "default" }: ConnectButtonProps) {
 
   const handleDisconnect = async () => {
     disconnect();
+    // End the read-only session so the next wallet on this browser signs in afresh
+    void endSession();
 
     //@ts-ignore
     window.silk.logout().then(() => {

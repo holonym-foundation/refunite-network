@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useCallback, useEffect, useState } from "react";
 
 import { getAddress, isAddress } from "viem";
 
@@ -12,9 +12,15 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
 import en from "@/content/en";
 import { useIsWearerOfHat } from "@/hooks/useIsWearerOfHat";
-import { SignedAction, useSignedAction } from "@/hooks/useSignedAction";
+import { useSession } from "@/hooks/useSession";
+import { useSignedAction } from "@/hooks/useSignedAction";
 import type { BeneficiaryResponse } from "@/lib/beneficiaries";
-import { isFresh, postSigned, shortenAddress } from "@/lib/client/signed-request";
+import {
+  SignedRequestError,
+  getJson,
+  postSigned,
+  shortenAddress,
+} from "@/lib/client/signed-request";
 import type { AllowanceResponse, DisbursementResponse } from "@/lib/disbursements";
 
 const t = en.beneficiariesPage;
@@ -108,8 +114,8 @@ export default function BeneficiariesPage() {
 
   const [overview, setOverview] = useState<LeaderOverview | null>(null);
   const [loadingList, setLoadingList] = useState(false);
-  // A ListBeneficiaries signature is read-only and reusable until it expires
-  const [listSignature, setListSignature] = useState<SignedAction | null>(null);
+  // Listing uses a read-only session: one StartSession signature, then no prompts
+  const session = useSession();
 
   const showError = (error: unknown) =>
     toast({
@@ -118,17 +124,32 @@ export default function BeneficiariesPage() {
       variant: "destructive",
     });
 
-  async function loadOverview({ askToSign = true } = {}) {
-    if (!isFresh(listSignature) && !askToSign) return;
+  const { markSignedOut } = session;
+  const fetchOverview = useCallback(async () => {
     setLoadingList(true);
     try {
-      const signed = isFresh(listSignature) ? listSignature : await sign("ListBeneficiaries", {});
-      setListSignature(signed);
-      setOverview(await postSigned<LeaderOverview>("/api/beneficiaries/list", signed));
+      setOverview(await getJson<LeaderOverview>("/api/beneficiaries/list"));
     } catch (error) {
-      showError(error);
+      if (error instanceof SignedRequestError && error.code === "no_session") markSignedOut();
+      else showError(error);
     } finally {
       setLoadingList(false);
+    }
+    // showError only wraps the stable toast function
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [markSignedOut]);
+
+  // Load automatically once signed in (no prompt)
+  useEffect(() => {
+    if (hasHat && session.status === "signed_in" && !overview) fetchOverview();
+  }, [hasHat, session.status, overview, fetchOverview]);
+
+  async function showList() {
+    try {
+      if (session.status !== "signed_in") await session.signIn();
+      await fetchOverview();
+    } catch (error) {
+      showError(error);
     }
   }
 
@@ -149,12 +170,7 @@ export default function BeneficiariesPage() {
       );
       setBeneficiaryInput("");
       toast({ title: t.added, description: data.beneficiary.ethAddress });
-      // Show the new entry without asking for another signature
-      setOverview((current) =>
-        current
-          ? { ...current, beneficiaries: [data.beneficiary, ...current.beneficiaries] }
-          : current
-      );
+      if (session.status === "signed_in") fetchOverview();
     } catch (error) {
       showError(error);
     } finally {
@@ -164,11 +180,8 @@ export default function BeneficiariesPage() {
 
   function handleDisbursed(disbursement: DisbursementResponse) {
     toast({ title: t.disbursed, description: t.disbursedDescription(disbursement.amount) });
-    setOverview((current) =>
-      current ? { ...current, disbursements: [disbursement, ...current.disbursements] } : current
-    );
-    // Refresh the allowance if the list signature is still valid (no new prompt)
-    loadOverview({ askToSign: false });
+    // Refresh the list and allowance (the session makes this prompt-free)
+    if (session.status === "signed_in") fetchOverview();
   }
 
   if (!isConnected) {
@@ -253,7 +266,11 @@ export default function BeneficiariesPage() {
         <section className="space-y-3">
           <div className="flex items-center justify-between gap-4">
             <h2 className="text-lg font-medium">{t.listHeading}</h2>
-            <Button variant="outline" onClick={() => loadOverview()} disabled={loadingList}>
+            <Button
+              variant="outline"
+              onClick={showList}
+              disabled={loadingList || session.status === "checking"}
+            >
               {loadingList ? t.loadingList : overview ? t.refresh : t.show}
             </Button>
           </div>

@@ -1,5 +1,4 @@
 import type { SignedAction } from "@/hooks/useSignedAction";
-import { MAX_SIGNATURE_AGE_SECONDS } from "@/lib/signed-actions/constants";
 
 export class SignedRequestError extends Error {
   constructor(
@@ -30,9 +29,18 @@ export async function postSigned<T>(url: string, signed: SignedAction): Promise<
   return data as T;
 }
 
-/** Whether a read-only signature can be reused (with a margin before the server rejects it). */
-export function isFresh(signed: SignedAction | null): signed is SignedAction {
-  return !!signed && Date.now() / 1000 - signed.issuedAt < MAX_SIGNATURE_AGE_SECONDS - 30;
+/** GETs JSON with the session cookie; throws SignedRequestError (e.g. code "no_session"). */
+export async function getJson<T>(url: string): Promise<T> {
+  const res = await fetch(url, { credentials: "same-origin", cache: "no-store" });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new SignedRequestError(
+      data.error ?? `Request failed (${res.status})`,
+      res.status,
+      data.code
+    );
+  }
+  return data as T;
 }
 
 export const shortenAddress = (value: string) => `${value.slice(0, 6)}…${value.slice(-4)}`;

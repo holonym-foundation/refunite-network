@@ -4,7 +4,6 @@ import { SecurityEvent } from "@/lib/database/types";
 import {
   BeneficiaryActionType,
   LeaderActionType,
-  READ_ONLY_ACTIONS,
   SIGNER_ROLE,
   SignedActionMessage,
   SignedActionType,
@@ -64,10 +63,11 @@ function defaultDeps(): VerifySignedActionDeps {
   return {
     chainId: defaultChain.id,
     now: () => Math.floor(Date.now() / 1000),
-    hasRole: async (role, address) =>
-      role === "leader"
-        ? isLeader(getPublicClient(), getLeaderHatConfig(), address)
-        : (await DB.findBeneficiaryByEthAddress(address)) !== null,
+    hasRole: async (role, address) => {
+      if (role === "account") return true; // proving the address is all StartSession needs
+      if (role === "leader") return isLeader(getPublicClient(), getLeaderHatConfig(), address);
+      return (await DB.findBeneficiaryByEthAddress(address)) !== null;
+    },
     consumeNonce: (signer, nonce, action) => DB.consumeSignedActionNonce(signer, nonce, action),
     logSecurityEvent: (event) => DB.logSecurityEvent(event),
   };
@@ -83,8 +83,8 @@ const SECURITY_EVENT_FOR: Partial<Record<SignedActionErrorCode, SecurityEvent["e
 
 /**
  * Verifies that `signature` is the EIP-712 signature of the action's signer (see SIGNER_ROLE)
- * over `message`, that the signer currently holds that role, and (for actions that change
- * state) consumes the nonce so the signature cannot be replayed.
+ * over `message`, that the signer currently holds that role, and consumes the nonce so the
+ * signature cannot be replayed.
  *
  * The typed data is rebuilt server-side (domain and chain id included), so a signature made
  * for another chain, app or action never verifies. Throws SignedActionError on any failure.
@@ -146,12 +146,8 @@ export async function verifySignedAction<T extends SignedActionType>(
       : fail("not_beneficiary", "Signer is not a registered beneficiary");
   }
 
-  // Last, so a request that fails an earlier check does not burn the nonce. Read-only
-  // actions skip it: reusing their signature within its lifetime changes nothing.
-  if (
-    !READ_ONLY_ACTIONS.has(primaryType) &&
-    !(await deps.consumeNonce(signer, message.nonce, primaryType))
-  ) {
+  // Last, so a request that fails an earlier check does not burn the nonce
+  if (!(await deps.consumeNonce(signer, message.nonce, primaryType))) {
     return fail("replay", "Signature has already been used");
   }
 

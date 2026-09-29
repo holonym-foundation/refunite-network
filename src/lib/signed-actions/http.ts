@@ -1,4 +1,5 @@
 import { DisbursementError } from "@/lib/disbursements";
+import { SessionConfigError } from "@/lib/session";
 import { StellarConfigError } from "@/lib/stellar/address";
 import { NextResponse } from "next/server";
 import { SignedActionError } from ".";
@@ -10,6 +11,10 @@ export function signedActionErrorResponse(error: unknown, context: string) {
   }
   if (error instanceof DisbursementError) {
     return NextResponse.json({ error: error.message, code: error.code }, { status: error.status });
+  }
+  if (error instanceof SessionConfigError) {
+    console.error(`${context}: ${error.message}`);
+    return NextResponse.json({ error: "Sessions are not configured" }, { status: 500 });
   }
   if (error instanceof StellarConfigError) {
     console.error(`${context}: Stellar is not configured`, error);

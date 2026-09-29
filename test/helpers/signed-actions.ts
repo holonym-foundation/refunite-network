@@ -42,3 +42,18 @@ export async function signedBody<T extends SignedActionType>(
   const json = Object.fromEntries(Object.entries(message).map(([k, v]) => [k, String(v)]));
   return { message: json, signature };
 }
+
+/** Starts a session for `signer` via POST /api/session and returns its Cookie header. */
+export async function sessionCookie(signer: PrivateKeyAccount, chainId: number) {
+  const { POST } = await import("@/app/api/session/route");
+  const { NextRequest } = await import("next/server");
+  const res = await POST(
+    new NextRequest("http://localhost/api/session", {
+      method: "POST",
+      body: JSON.stringify(await signedBody(signer, "StartSession", {}, { chainId })),
+    })
+  );
+  if (res.status !== 200) throw new Error(`StartSession failed: ${res.status}`);
+  const cookie = res.headers.get("set-cookie") ?? "";
+  return cookie.split(";")[0]; // "relayid_session=…"
+}

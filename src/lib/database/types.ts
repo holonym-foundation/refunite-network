@@ -64,7 +64,7 @@ export interface Completion {
 
 export interface AuditLogEntry {
   id?: number;
-  entity_type: "invitation" | "reservation" | "completion";
+  entity_type: "invitation" | "reservation" | "completion" | "beneficiary";
   entity_id: number;
   action: "create" | "reserve" | "complete" | "expire" | "rollback";
   actor_address: string | null;
@@ -89,6 +89,14 @@ export interface SecurityEvent {
   user_agent: string | null;
   timestamp?: string;
   metadata: any;
+}
+
+export interface Beneficiary {
+  id: string;
+  eth_address: string;
+  stellar_address: string;
+  added_by: string;
+  created_at: string;
 }
 
 // Input types for creating entities

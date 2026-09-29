@@ -36,7 +36,7 @@ function invitation(overrides: Partial<Parameters<typeof DB.createInvitation>[0]
 
 beforeEach(async () => {
   await db.execute(
-    sql`TRUNCATE invitations, reservations, completions, security_events, audit_log, leader_action_nonces RESTART IDENTITY CASCADE`
+    sql`TRUNCATE invitations, reservations, completions, security_events, audit_log, leader_action_nonces, beneficiaries RESTART IDENTITY CASCADE`
   );
 });
 
@@ -168,6 +168,37 @@ describe("leader action nonces", () => {
     expect(await DB.consumeLeaderActionNonce(INVITER, "nonce-1", "AddBeneficiary")).toBe(false);
     // Nonces are scoped per leader
     expect(await DB.consumeLeaderActionNonce(RECIPIENT, "nonce-1", "AddBeneficiary")).toBe(true);
+  });
+});
+
+describe("beneficiaries", () => {
+  const LEADER = INVITER;
+  const row = (eth_address: string, added_by = LEADER) => ({
+    eth_address,
+    stellar_address: "CSTELLAR",
+    added_by,
+  });
+
+  it("creates, finds and lists beneficiaries per leader, newest first", async () => {
+    const first = await DB.createBeneficiary(row(RECIPIENT));
+    const second = await DB.createBeneficiary(row("0x2222222222222222222222222222222222222222"));
+
+    expect(first).toMatchObject({ eth_address: RECIPIENT, added_by: LEADER });
+    expect(typeof first!.created_at).toBe("string");
+    expect(await DB.findBeneficiaryByEthAddress(RECIPIENT)).toMatchObject({ id: first!.id });
+    expect((await DB.listBeneficiariesByLeader(LEADER)).map((b) => b.id).sort()).toEqual(
+      [first!.id, second!.id].sort()
+    );
+    expect(await DB.listBeneficiariesByLeader(RECIPIENT)).toEqual([]);
+  });
+
+  it("returns null when the address is already a beneficiary", async () => {
+    await DB.createBeneficiary(row(RECIPIENT));
+    expect(await DB.createBeneficiary(row(RECIPIENT, RECIPIENT.replace("1", "4")))).toBeNull();
+  });
+
+  it("rejects a leader as their own beneficiary", async () => {
+    await expect(DB.createBeneficiary(row(LEADER))).rejects.toThrow();
   });
 });
 

@@ -4,6 +4,7 @@ import { SecurityEvent } from "@/lib/database/types";
 import {
   LeaderActionMessage,
   LeaderActionType,
+  READ_ONLY_LEADER_ACTIONS,
   createLeaderActionTypedData,
   leaderActionSchemas,
 } from "@/lib/eip712/leader-actions";
@@ -11,10 +12,9 @@ import { getLeaderHatConfig, isLeader } from "@/lib/relayer";
 import { defaultChain } from "@/wagmi/chain-config";
 import { Address, Hex, isHex, verifyTypedData } from "viem";
 
-/** A signature is accepted for this long after its issuedAt. */
-export const MAX_SIGNATURE_AGE_SECONDS = 5 * 60;
-/** Tolerated client clock drift for an issuedAt in the future. */
-export const MAX_CLOCK_SKEW_SECONDS = 60;
+import { MAX_CLOCK_SKEW_SECONDS, MAX_SIGNATURE_AGE_SECONDS } from "./constants";
+
+export { MAX_CLOCK_SKEW_SECONDS, MAX_SIGNATURE_AGE_SECONDS };
 
 export type LeaderAuthErrorCode =
   | "invalid_request"
@@ -71,7 +71,7 @@ const SECURITY_EVENT_FOR: Partial<Record<LeaderAuthErrorCode, SecurityEvent["eve
 
 /**
  * Verifies that `signature` is a current leader's EIP-712 signature over `message` for the
- * given action, and consumes its nonce so it cannot be replayed.
+ * given action, and (for actions that change state) consumes its nonce so it cannot be replayed.
  *
  * The typed data is rebuilt server-side (domain and chain id included), so a signature made
  * for another chain, app or action never verifies. Throws LeaderAuthError on any failure.
@@ -130,8 +130,12 @@ export async function verifyLeaderAction<T extends LeaderActionType>(
     return fail("not_leader", "Signer is not a current leader");
   }
 
-  // Last, so a request that fails an earlier check does not burn the nonce
-  if (!(await deps.consumeNonce(message.leader, message.nonce, primaryType))) {
+  // Last, so a request that fails an earlier check does not burn the nonce. Read-only
+  // actions skip it: reusing their signature within its lifetime changes nothing.
+  if (
+    !READ_ONLY_LEADER_ACTIONS.has(primaryType) &&
+    !(await deps.consumeNonce(message.leader, message.nonce, primaryType))
+  ) {
     return fail("replay", "Signature has already been used");
   }
 

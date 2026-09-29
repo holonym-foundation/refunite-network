@@ -42,7 +42,12 @@ function DisburseForm({
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    const value = amount.trim();
+    // Many phone keyboards type a comma as the decimal separator
+    const value = amount.trim().replace(",", ".");
+    if (!value) {
+      setAmountError(t.amountRequired);
+      return;
+    }
     if (!XLM_AMOUNT.test(value) || Number(value) <= 0) {
       setAmountError(t.invalidAmount);
       return;
@@ -77,10 +82,11 @@ function DisburseForm({
             setAmountError(null);
           }}
           inputMode="decimal"
-          placeholder="0.5"
+          // The theme's placeholder colour matches body text; keep this one clearly empty
+          placeholder={t.amountPlaceholder}
           aria-label={`${t.amountLabel}, ${beneficiary.ethAddress}`}
           aria-invalid={!!amountError}
-          className="w-28"
+          className="w-28 placeholder:text-gray-400"
         />
         {amountError && <p className="text-xs text-red-600">{amountError}</p>}
       </div>
@@ -230,6 +236,7 @@ export default function BeneficiariesPage() {
                   setInputError(null);
                 }}
                 placeholder={t.addressPlaceholder}
+                className="placeholder:text-gray-400"
                 aria-label={t.ethAddress}
                 aria-invalid={!!inputError}
                 autoComplete="off"

@@ -127,7 +127,9 @@ const en = {
     disbursed: "Disbursement created",
     disbursedDescription: (amount: string) =>
       `${amount} XLM is waiting for the beneficiary to redeem.`,
-    invalidAmount: "Enter an amount such as 0.5",
+    amountRequired: "Enter an amount",
+    invalidAmount: "Enter an amount such as 0.5 (up to 7 decimals)",
+    amountPlaceholder: "XLM",
     recentHeading: "Recent disbursements",
     noDisbursements: "No disbursements yet.",
   },

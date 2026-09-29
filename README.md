@@ -245,6 +245,18 @@ Leaders can register beneficiaries at `/beneficiaries`. A beneficiary belongs to
 - `POST /api/beneficiaries` adds one (`AddBeneficiary`), `POST /api/beneficiaries/list` lists the signer's own (`ListBeneficiaries`).
 - Each beneficiary's Stellar smart-wallet address is derived from their Ethereum address (`src/lib/stellar/address.ts`, ported from Human-Wallet-On-Stellar), so it is known before the wallet is deployed. `WALLET_SALT` and the factory contract must match that app.
 
+## Disbursements
+
+A leader can disburse XLM to their own beneficiaries (from `/beneficiaries`); the beneficiary redeems it from their account page and the XLM is sent to their Stellar smart wallet.
+
+1. **Create** (`POST /api/disbursements`, leader-signed `CreateDisbursement`): inside one transaction holding an advisory lock, the server checks the beneficiary is the leader's, the amount (max 1 XLM), the leader's rolling 24h total (max 10 XLM), their allowance (100 XLM to start + admin credits in `leader_allowance_credits`, minus everything disbursed), and that the treasury covers every unpaid disbursement (keeping a 5 XLM reserve). Limits are env settings (`DISBURSE_*`).
+2. **List** (`POST /api/disbursements/mine`, beneficiary-signed `ListMyDisbursements`, read-only).
+3. **Redeem** (`POST /api/disbursements/redeem`, beneficiary-signed `RedeemDisbursement`): the row is claimed (`pending → redeeming`) so it is paid at most once, the wallet is deployed through the factory if needed, then XLM is sent from the treasury (`WALLET_SOURCE_PRIVATE_KEY`) via the native asset contract.
+
+Statuses: `pending`, `redeeming`, `redeemed` (with `tx_hash`), and `needs_review`: the payment was submitted but not confirmed, so it is never retried automatically. Check `tx_hash` on a Stellar explorer and resolve these by hand. Failures before any funds move return the disbursement to `pending` with `last_error`.
+
+Beneficiary actions are verified like leader actions, but the signer must be a registered beneficiary instead of a hat wearer (`src/lib/signed-actions`).
+
 ## Onboarding Relayer
 
 Onboarding used to run through an OpenZeppelin Defender Action. Defender shut down on 2026-07-01, so the app now sends the transactions itself from a relayer wallet (`src/lib/relayer`).

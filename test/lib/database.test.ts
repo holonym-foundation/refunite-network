@@ -6,15 +6,7 @@ import { sql } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Real Postgres (PGlite, in memory) with the generated migrations applied
-vi.mock("@/lib/db", async () => {
-  const { PGlite } = await import("@electric-sql/pglite");
-  const { drizzle } = await import("drizzle-orm/pglite");
-  const { migrate } = await import("drizzle-orm/pglite/migrator");
-  const schema = await import("@/lib/db/schema");
-  const db = drizzle(new PGlite(), { schema });
-  await migrate(db, { migrationsFolder: "./drizzle" });
-  return { db };
-});
+vi.mock("@/lib/db", () => import("../helpers/db").then((m) => m.createTestDbModule()));
 
 const INVITER = "0x3333333333333333333333333333333333333333";
 const RECIPIENT = "0x1111111111111111111111111111111111111111";
@@ -164,10 +156,10 @@ describe("security events and audit log", () => {
 
 describe("leader action nonces", () => {
   it("accepts a nonce once per leader", async () => {
-    expect(await DB.consumeLeaderActionNonce(INVITER, "nonce-1", "AddBeneficiary")).toBe(true);
-    expect(await DB.consumeLeaderActionNonce(INVITER, "nonce-1", "AddBeneficiary")).toBe(false);
+    expect(await DB.consumeSignedActionNonce(INVITER, "nonce-1", "AddBeneficiary")).toBe(true);
+    expect(await DB.consumeSignedActionNonce(INVITER, "nonce-1", "AddBeneficiary")).toBe(false);
     // Nonces are scoped per leader
-    expect(await DB.consumeLeaderActionNonce(RECIPIENT, "nonce-1", "AddBeneficiary")).toBe(true);
+    expect(await DB.consumeSignedActionNonce(RECIPIENT, "nonce-1", "AddBeneficiary")).toBe(true);
   });
 });
 

@@ -219,21 +219,21 @@ export class DB {
   }
 
   // =====================================================
-  // LEADER ACTION NONCES
+  // SIGNED ACTION NONCES
   // =====================================================
 
   /**
-   * Records a leader action's nonce. Returns false if that leader already used it
+   * Records a signed action's nonce. Returns false if that signer already used it
    * (a replay); the unique constraint makes concurrent attempts safe.
    */
-  static async consumeLeaderActionNonce(
-    leaderAddress: string,
+  static async consumeSignedActionNonce(
+    signerAddress: string,
     nonce: string,
     action: string
   ): Promise<boolean> {
     const inserted = await db
       .insert(leaderActionNonces)
-      .values({ leader_address: leaderAddress, nonce, action })
+      .values({ leader_address: signerAddress, nonce, action })
       .onConflictDoNothing()
       .returning({ id: leaderActionNonces.id });
     return inserted.length > 0;

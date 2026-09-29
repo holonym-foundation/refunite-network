@@ -1,0 +1,239 @@
+// @vitest-environment node
+import {
+  LeaderActionMessage,
+  LeaderActionType,
+  createLeaderActionTypedData,
+} from "@/lib/eip712/leader-actions";
+import {
+  LeaderAuthError,
+  MAX_SIGNATURE_AGE_SECONDS,
+  VerifyLeaderActionDeps,
+  verifyLeaderAction,
+} from "@/lib/leader-auth";
+import { privateKeyToAccount } from "viem/accounts";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const CHAIN_ID = 11155111;
+const NOW = 1_800_000_000;
+// Well-known Anvil test keys
+const leader = privateKeyToAccount(
+  "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
+);
+const other = privateKeyToAccount(
+  "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d"
+);
+const BENEFICIARY = "0x90F79bf6EB2c4f870365E785982E1f101E93b906";
+
+let usedNonces: Set<string>;
+let deps: VerifyLeaderActionDeps & {
+  isLeader: ReturnType<typeof vi.fn>;
+  logSecurityEvent: ReturnType<typeof vi.fn>;
+};
+
+beforeEach(() => {
+  usedNonces = new Set();
+  deps = {
+    chainId: CHAIN_ID,
+    now: () => NOW,
+    isLeader: vi.fn(async (address: string) => address === leader.address),
+    consumeNonce: async (address, nonce) => {
+      const key = `${address}:${nonce}`;
+      if (usedNonces.has(key)) return false;
+      usedNonces.add(key);
+      return true;
+    },
+    logSecurityEvent: vi.fn(async () => {}),
+  };
+});
+
+function addBeneficiary(
+  overrides: Partial<LeaderActionMessage<"AddBeneficiary">> = {}
+): LeaderActionMessage<"AddBeneficiary"> {
+  return {
+    leader: leader.address,
+    beneficiary: BENEFICIARY,
+    nonce: "nonce-0001",
+    issuedAt: BigInt(NOW),
+    ...overrides,
+  };
+}
+
+async function sign<T extends LeaderActionType>(
+  primaryType: T,
+  message: LeaderActionMessage<T>,
+  { signer = leader, chainId = CHAIN_ID } = {}
+) {
+  return signer.signTypedData(createLeaderActionTypedData(primaryType, message, chainId) as never);
+}
+
+// JSON transport turns bigint into a string, as a real request would
+const asJson = (message: object) =>
+  JSON.parse(JSON.stringify(message, (_, v) => (typeof v === "bigint" ? v.toString() : v)));
+
+async function expectCode(promise: Promise<unknown>, code: LeaderAuthError["code"]) {
+  await expect(promise).rejects.toMatchObject({ name: "LeaderAuthError", code });
+}
+
+describe("verifyLeaderAction", () => {
+  it("accepts a current leader's signed AddBeneficiary and consumes its nonce", async () => {
+    const message = addBeneficiary();
+    const signature = await sign("AddBeneficiary", message);
+
+    const result = await verifyLeaderAction(
+      { primaryType: "AddBeneficiary", message: asJson(message), signature },
+      deps
+    );
+
+    expect(result).toEqual({ leader: leader.address, message });
+    expect(usedNonces.has(`${leader.address}:nonce-0001`)).toBe(true);
+    expect(deps.logSecurityEvent).not.toHaveBeenCalled();
+  });
+
+  it("accepts a signed CreateDisbursement", async () => {
+    const message: LeaderActionMessage<"CreateDisbursement"> = {
+      ...addBeneficiary(),
+      amount: "0.5",
+    };
+    const signature = await sign("CreateDisbursement", message);
+
+    const result = await verifyLeaderAction(
+      { primaryType: "CreateDisbursement", message: asJson(message), signature },
+      deps
+    );
+    expect(result.message.amount).toBe("0.5");
+  });
+
+  it("rejects a replayed signature and logs it", async () => {
+    const message = addBeneficiary();
+    const signature = await sign("AddBeneficiary", message);
+    const input = { primaryType: "AddBeneficiary" as const, message: asJson(message), signature };
+
+    await verifyLeaderAction(input, deps);
+    await expectCode(verifyLeaderAction(input, deps), "replay");
+    expect(deps.logSecurityEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ event_type: "replay_attempt", inviter_address: leader.address })
+    );
+  });
+
+  it("rejects a message changed after signing", async () => {
+    const signature = await sign("AddBeneficiary", addBeneficiary());
+    const tampered = addBeneficiary({ beneficiary: other.address });
+
+    await expectCode(
+      verifyLeaderAction(
+        { primaryType: "AddBeneficiary", message: asJson(tampered), signature },
+        deps
+      ),
+      "invalid_signature"
+    );
+  });
+
+  it("rejects a signature from someone other than the named leader", async () => {
+    const message = addBeneficiary();
+    const signature = await sign("AddBeneficiary", message, { signer: other });
+
+    await expectCode(
+      verifyLeaderAction(
+        { primaryType: "AddBeneficiary", message: asJson(message), signature },
+        deps
+      ),
+      "invalid_signature"
+    );
+  });
+
+  it("rejects a signature made for another chain", async () => {
+    const message = addBeneficiary();
+    const signature = await sign("AddBeneficiary", message, { chainId: 42220 });
+
+    await expectCode(
+      verifyLeaderAction(
+        { primaryType: "AddBeneficiary", message: asJson(message), signature },
+        deps
+      ),
+      "invalid_signature"
+    );
+  });
+
+  it("rejects a signature presented as a different action", async () => {
+    const message = addBeneficiary();
+    const signature = await sign("AddBeneficiary", message);
+
+    await expectCode(
+      verifyLeaderAction(
+        {
+          primaryType: "CreateDisbursement",
+          message: asJson({ ...message, amount: "1" }),
+          signature,
+        },
+        deps
+      ),
+      "invalid_signature"
+    );
+  });
+
+  it.each([
+    ["too old", NOW - MAX_SIGNATURE_AGE_SECONDS - 1],
+    ["from the future", NOW + 120],
+  ])("rejects a signature issued %s", async (_, issuedAt) => {
+    const message = addBeneficiary({ issuedAt: BigInt(issuedAt) });
+    const signature = await sign("AddBeneficiary", message);
+
+    await expectCode(
+      verifyLeaderAction(
+        { primaryType: "AddBeneficiary", message: asJson(message), signature },
+        deps
+      ),
+      "expired_signature"
+    );
+  });
+
+  it("rejects a signer who is not a leader, without burning the nonce", async () => {
+    const message = addBeneficiary();
+    const signature = await sign("AddBeneficiary", message);
+    const input = { primaryType: "AddBeneficiary" as const, message: asJson(message), signature };
+    deps.isLeader.mockResolvedValueOnce(false);
+
+    await expectCode(verifyLeaderAction(input, deps), "not_leader");
+    expect(deps.logSecurityEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ event_type: "not_leader" })
+    );
+
+    // Once they are a leader, the same (still fresh) signature works
+    await expect(verifyLeaderAction(input, deps)).resolves.toMatchObject({
+      leader: leader.address,
+    });
+  });
+
+  it.each([
+    ["an unknown field", { ...asJson(addBeneficiary()), extra: "x" }],
+    ["an invalid address", { ...asJson(addBeneficiary()), beneficiary: "0x123" }],
+    ["a missing nonce", { ...asJson(addBeneficiary()), nonce: undefined }],
+  ])("rejects a message with %s as an invalid request", async (_, message) => {
+    await expectCode(
+      verifyLeaderAction({ primaryType: "AddBeneficiary", message, signature: "0x00" }, deps),
+      "invalid_request"
+    );
+    expect(deps.logSecurityEvent).not.toHaveBeenCalled();
+  });
+
+  it.each(["0", "-1", "1.12345678", "abc"])("rejects disbursement amount %s", async (amount) => {
+    await expectCode(
+      verifyLeaderAction(
+        {
+          primaryType: "CreateDisbursement",
+          message: { ...asJson(addBeneficiary()), amount },
+          signature: "0x00",
+        },
+        deps
+      ),
+      "invalid_request"
+    );
+  });
+
+  it("maps error codes to HTTP statuses", () => {
+    expect(new LeaderAuthError("invalid_request", "").status).toBe(400);
+    expect(new LeaderAuthError("invalid_signature", "").status).toBe(401);
+    expect(new LeaderAuthError("not_leader", "").status).toBe(403);
+    expect(new LeaderAuthError("replay", "").status).toBe(409);
+  });
+});

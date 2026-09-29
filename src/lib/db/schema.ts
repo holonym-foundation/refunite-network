@@ -87,6 +87,7 @@ export const SECURITY_EVENT_TYPES = [
   "expired_signature",
   "expired_reservation",
   "recipient_mismatch",
+  "not_leader",
 ] as const;
 
 export const securityEvents = pgTable(
@@ -138,4 +139,18 @@ export const auditLog = pgTable(
       sql.raw(`action IN (${AUDIT_ACTIONS.map((a) => `'${a}'`).join(", ")})`)
     ),
   ]
+);
+
+// Every leader-signed action (see src/lib/leader-auth) consumes its nonce here, so a
+// signature can be used only once.
+export const leaderActionNonces = pgTable(
+  "leader_action_nonces",
+  {
+    id: serial("id").primaryKey(),
+    leader_address: text("leader_address").notNull(),
+    nonce: text("nonce").notNull(),
+    action: text("action").notNull(),
+    used_at: timestamptz("used_at").notNull().defaultNow(),
+  },
+  (t) => [unique("leader_action_nonces_leader_nonce_unique").on(t.leader_address, t.nonce)]
 );

@@ -1,5 +1,12 @@
 import { db } from "@/lib/db";
-import { auditLog, completions, invitations, reservations, securityEvents } from "@/lib/db/schema";
+import {
+  auditLog,
+  completions,
+  invitations,
+  leaderActionNonces,
+  reservations,
+  securityEvents,
+} from "@/lib/db/schema";
 import { marshalTypedData } from "@/lib/utils/serialize";
 import { and, count, eq, isNotNull, isNull, lte, sql } from "drizzle-orm";
 import {
@@ -207,6 +214,27 @@ export class DB {
     };
 
     await this.logSecurityEvent({ ...event, metadata: enhancedMetadata });
+  }
+
+  // =====================================================
+  // LEADER ACTION NONCES
+  // =====================================================
+
+  /**
+   * Records a leader action's nonce. Returns false if that leader already used it
+   * (a replay); the unique constraint makes concurrent attempts safe.
+   */
+  static async consumeLeaderActionNonce(
+    leaderAddress: string,
+    nonce: string,
+    action: string
+  ): Promise<boolean> {
+    const inserted = await db
+      .insert(leaderActionNonces)
+      .values({ leader_address: leaderAddress, nonce, action })
+      .onConflictDoNothing()
+      .returning({ id: leaderActionNonces.id });
+    return inserted.length > 0;
   }
 
   // =====================================================

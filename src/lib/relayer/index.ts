@@ -70,6 +70,16 @@ export class RelayerTransactionError extends Error {
   }
 }
 
+export type LeaderHatConfig = Pick<RelayerConfig, "hatsAddress" | "leaderHatId">;
+
+/** Hats contract and leader hat only; unlike getRelayerConfig, needs no HSG address. */
+export function getLeaderHatConfig(): LeaderHatConfig {
+  if (!LEADER_HAT_ID) {
+    throw new RelayerConfigError("NEXT_PUBLIC_HATS_LEADER_ID is missing");
+  }
+  return { hatsAddress: getAddress(HATS_CONTRACT_ADDRESS), leaderHatId: BigInt(LEADER_HAT_ID) };
+}
+
 export function getRelayerConfig(): RelayerConfig {
   if (!HSG_CONTRACT_ADDRESS || !isAddress(HSG_CONTRACT_ADDRESS)) {
     throw new RelayerConfigError("NEXT_PUBLIC_HSG_CONTRACT_ADDRESS is missing or invalid");
@@ -118,7 +128,7 @@ export function getRelayerClients(): RelayerClients {
  */
 export async function isLeader(
   publicClient: PublicClient,
-  config: RelayerConfig,
+  config: LeaderHatConfig,
   address: string
 ): Promise<boolean> {
   return publicClient.readContract({

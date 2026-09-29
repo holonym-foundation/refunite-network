@@ -2,9 +2,7 @@ import { HATS_CONTRACT_ADDRESS, LEADER_HAT_ID } from "@/lib/constants";
 import { DB } from "@/lib/database/service";
 import { abi as hatsAbi } from "@/lib/hatsAbi";
 import { getRelayerAddress, getRelayerClients } from "@/lib/relayer";
-import { defaultChain } from "@/wagmi/chain-config";
-import { getAlchemyRpcUrl } from "@/wagmi/rpc";
-import { createPublicClient, http } from "viem";
+import { getPublicClient } from "@/lib/chain";
 
 /**
  * Fetch count of successful onboardings (completions)
@@ -40,10 +38,7 @@ export async function getRelayerBalance() {
  * Fetch the number of wearers of the leader hat on the default chain
  */
 export async function getHatsWearersCount() {
-  const client = createPublicClient({
-    chain: defaultChain,
-    transport: http(getAlchemyRpcUrl(defaultChain.id)),
-  });
+  const client = getPublicClient();
   const hatId = LEADER_HAT_ID;
   // The function to call is likely 'hatSupply' (returns current supply for a hatId)
   const supply = await client.readContract({

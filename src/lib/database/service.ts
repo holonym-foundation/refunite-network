@@ -1,5 +1,7 @@
-import client from "@/client/turso";
+import { db } from "@/lib/db";
+import { auditLog, completions, invitations, reservations, securityEvents } from "@/lib/db/schema";
 import { marshalTypedData } from "@/lib/utils/serialize";
+import { and, count, eq, isNotNull, isNull, lte, sql } from "drizzle-orm";
 import {
   AuditLogEntry,
   AuditLogMetadata,
@@ -15,64 +17,101 @@ import {
   SecurityEvent,
 } from "./types";
 
+/**
+ * Rows keep the shape of the original SQLite API: dates as ISO strings.
+ * Callers only ever parse them with `new Date(...)`.
+ */
+type WithIsoDates<T> = {
+  [K in keyof T]: T[K] extends Date ? string : T[K] extends Date | null ? string | null : T[K];
+};
+
+function withIsoDates<T extends Record<string, unknown>>(row: T): WithIsoDates<T> {
+  return Object.fromEntries(
+    Object.entries(row).map(([key, value]) => [
+      key,
+      value instanceof Date ? value.toISOString() : value,
+    ])
+  ) as WithIsoDates<T>;
+}
+
 export class DB {
   // =====================================================
   // INVITATIONS
   // =====================================================
 
   static async createInvitation(data: CreateInvitationData): Promise<Invitation> {
-    const result = await client.execute({
-      sql: `INSERT INTO invitations (
-        invite_code, flow_type, inviter_address, recipient_address,
-        signature, typed_data, nonce, expires_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-      RETURNING *`,
-      args: [
-        data.invite_code,
-        data.flow_type,
-        data.inviter_address,
-        data.recipient_address,
-        data.signature,
-        JSON.stringify(marshalTypedData(data.typed_data)),
-        data.nonce,
-        data.expires_at,
-      ],
-    });
+    const [row] = await db
+      .insert(invitations)
+      .values({
+        invite_code: data.invite_code,
+        flow_type: data.flow_type,
+        inviter_address: data.inviter_address,
+        recipient_address: data.recipient_address,
+        signature: data.signature,
+        typed_data: marshalTypedData(data.typed_data),
+        nonce: data.nonce,
+        expires_at: new Date(data.expires_at),
+      })
+      .returning();
 
-    return result.rows[0] as unknown as Invitation;
+    return withIsoDates(row) as Invitation;
   }
 
   static async findInvitation(where: FindInvitationWhere): Promise<Invitation | null> {
-    let sql = "SELECT * FROM invitations WHERE ";
-    let args: any[] = [];
-
+    let condition;
     if (where.id) {
-      sql += "id = ?";
-      args.push(where.id);
+      condition = eq(invitations.id, where.id);
     } else if (where.invite_code) {
-      sql += "invite_code = ?";
-      args.push(where.invite_code);
+      condition = eq(invitations.invite_code, where.invite_code);
     } else if (where.inviter_address_and_nonce) {
-      sql += "inviter_address = ? AND nonce = ?";
-      args.push(
-        where.inviter_address_and_nonce.inviter_address,
-        where.inviter_address_and_nonce.nonce
+      condition = and(
+        eq(invitations.inviter_address, where.inviter_address_and_nonce.inviter_address),
+        eq(invitations.nonce, where.inviter_address_and_nonce.nonce)
       );
     } else {
       throw new Error("Invalid where clause for findInvitation");
     }
 
-    const result = await client.execute({ sql, args });
-    return result.rows.length > 0 ? (result.rows[0] as unknown as Invitation) : null;
+    const [row] = await db.select().from(invitations).where(condition).limit(1);
+    return row ? (withIsoDates(row) as Invitation) : null;
   }
 
   static async getInvitationStatus(invitationId: number): Promise<InvitationStatus | null> {
-    const result = await client.execute({
-      sql: "SELECT * FROM invitation_status WHERE id = ?",
-      args: [invitationId],
-    });
+    // Replaces the SQLite `invitation_status` view
+    const [row] = await db
+      .select({
+        id: invitations.id,
+        invite_code: invitations.invite_code,
+        flow_type: invitations.flow_type,
+        inviter_address: invitations.inviter_address,
+        recipient_address: invitations.recipient_address,
+        created_at: invitations.created_at,
+        expires_at: invitations.expires_at,
+        status: sql<InvitationStatus["status"]>`CASE
+          WHEN ${completions.id} IS NOT NULL THEN 'completed'
+          WHEN ${reservations.id} IS NOT NULL AND ${reservations.expires_at} > now() THEN 'reserved'
+          WHEN ${reservations.id} IS NOT NULL THEN 'released'
+          WHEN ${invitations.expires_at} <= now() THEN 'expired'
+          ELSE 'pending'
+        END`,
+        reservation_id: reservations.reservation_id,
+        reserved_at: reservations.reserved_at,
+        reservation_expires_at: reservations.expires_at,
+        release_reason: reservations.release_reason,
+        completed_at: completions.completed_at,
+        mint_hat_tx_hash: completions.mint_hat_tx_hash,
+        claim_signer_tx_hash: completions.claim_signer_tx_hash,
+      })
+      .from(invitations)
+      .leftJoin(
+        reservations,
+        and(eq(reservations.invitation_id, invitations.id), isNull(reservations.released_at))
+      )
+      .leftJoin(completions, eq(completions.invitation_id, invitations.id))
+      .where(eq(invitations.id, invitationId))
+      .limit(1);
 
-    return result.rows.length > 0 ? (result.rows[0] as unknown as InvitationStatus) : null;
+    return row ? (withIsoDates(row) as InvitationStatus) : null;
   }
 
   // =====================================================
@@ -80,31 +119,37 @@ export class DB {
   // =====================================================
 
   static async createReservation(data: CreateReservationData): Promise<Reservation> {
-    const result = await client.execute({
-      sql: `INSERT INTO reservations (
-        invitation_id, reservation_id, recipient_address, expires_at
-      ) VALUES (?, ?, ?, ?)
-      RETURNING *`,
-      args: [data.invitation_id, data.reservation_id, data.recipient_address, data.expires_at],
-    });
+    const [row] = await db
+      .insert(reservations)
+      .values({
+        invitation_id: data.invitation_id,
+        reservation_id: data.reservation_id,
+        recipient_address: data.recipient_address,
+        expires_at: new Date(data.expires_at),
+      })
+      .returning();
 
-    return result.rows[0] as unknown as Reservation;
+    return withIsoDates(row) as Reservation;
   }
 
   static async findActiveReservation(reservationId: string): Promise<Reservation | null> {
-    const result = await client.execute({
-      sql: "SELECT * FROM reservations WHERE reservation_id = ? AND released_at IS NULL",
-      args: [reservationId],
-    });
+    const [row] = await db
+      .select()
+      .from(reservations)
+      .where(and(eq(reservations.reservation_id, reservationId), isNull(reservations.released_at)))
+      .limit(1);
 
-    return result.rows.length > 0 ? (result.rows[0] as unknown as Reservation) : null;
+    return row ? (withIsoDates(row) as Reservation) : null;
   }
 
   static async releaseReservation(reservationId: string, reason: string): Promise<void> {
-    await client.execute({
-      sql: "UPDATE reservations SET released_at = CURRENT_TIMESTAMP, release_reason = ? WHERE reservation_id = ?",
-      args: [reason, reservationId],
-    });
+    await db
+      .update(reservations)
+      .set({
+        released_at: sql`now()`,
+        release_reason: reason as "expired" | "rollback" | "completed",
+      })
+      .where(eq(reservations.reservation_id, reservationId));
   }
 
   // =====================================================
@@ -112,30 +157,27 @@ export class DB {
   // =====================================================
 
   static async createCompletion(data: CreateCompletionData): Promise<Completion> {
-    const result = await client.execute({
-      sql: `INSERT INTO completions (
-        invitation_id, reservation_id, recipient_address,
-        mint_hat_tx_hash, claim_signer_tx_hash
-      ) VALUES (?, ?, ?, ?, ?)
-      RETURNING *`,
-      args: [
-        data.invitation_id,
-        data.reservation_id,
-        data.recipient_address,
-        data.mint_hat_tx_hash,
-        data.claim_signer_tx_hash,
-      ],
-    });
+    const [row] = await db
+      .insert(completions)
+      .values({
+        invitation_id: data.invitation_id,
+        reservation_id: data.reservation_id,
+        recipient_address: data.recipient_address,
+        mint_hat_tx_hash: data.mint_hat_tx_hash,
+        claim_signer_tx_hash: data.claim_signer_tx_hash,
+      })
+      .returning();
 
-    return result.rows[0] as unknown as Completion;
+    return withIsoDates(row) as Completion;
   }
 
   static async isAddressOnboarded(address: string): Promise<boolean> {
-    const result = await client.execute({
-      sql: `SELECT 1 FROM completions WHERE LOWER(recipient_address) = LOWER(?) LIMIT 1`,
-      args: [address],
-    });
-    return result.rows.length > 0;
+    const rows = await db
+      .select({ id: completions.id })
+      .from(completions)
+      .where(sql`lower(${completions.recipient_address}) = lower(${address})`)
+      .limit(1);
+    return rows.length > 0;
   }
 
   // =====================================================
@@ -143,21 +185,15 @@ export class DB {
   // =====================================================
 
   static async logSecurityEvent(event: SecurityEvent): Promise<void> {
-    await client.execute({
-      sql: `INSERT INTO security_events (
-        event_type, inviter_address, recipient_address, signature, nonce,
-        ip_address, user_agent, metadata
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      args: [
-        event.event_type,
-        event.inviter_address,
-        event.recipient_address,
-        event.signature,
-        event.nonce,
-        event.ip_address,
-        event.user_agent,
-        JSON.stringify(event.metadata),
-      ],
+    await db.insert(securityEvents).values({
+      event_type: event.event_type,
+      inviter_address: event.inviter_address,
+      recipient_address: event.recipient_address,
+      signature: event.signature,
+      nonce: event.nonce,
+      ip_address: event.ip_address,
+      user_agent: event.user_agent,
+      metadata: event.metadata,
     });
   }
 
@@ -178,25 +214,17 @@ export class DB {
   // =====================================================
 
   static async logAudit(entry: AuditLogEntry): Promise<void> {
-    await client.execute({
-      sql: `INSERT INTO audit_log (
-        entity_type, entity_id, action, actor_address, metadata
-      ) VALUES (?, ?, ?, ?, ?)`,
-      args: [
-        entry.entity_type,
-        entry.entity_id,
-        entry.action,
-        entry.actor_address,
-        JSON.stringify(entry.metadata),
-      ],
+    await db.insert(auditLog).values({
+      entity_type: entry.entity_type,
+      entity_id: entry.entity_id,
+      action: entry.action,
+      actor_address: entry.actor_address,
+      metadata: entry.metadata,
     });
   }
 
   /**
    * Log audit entry with device information automatically included
-   * @param entry Basic audit log entry
-   * @param userAgent Optional user agent string for server-side device detection
-   * @param ipAddress Optional IP address to include in metadata
    */
   static async logAuditWithDeviceInfo(
     entry: AuditLogEntry,
@@ -207,12 +235,7 @@ export class DB {
       deviceInfo,
     };
 
-    const enhancedEntry: AuditLogEntry = {
-      ...entry,
-      metadata: enhancedMetadata,
-    };
-
-    await this.logAudit(enhancedEntry);
+    await this.logAudit({ ...entry, metadata: enhancedMetadata });
   }
 
   // =====================================================
@@ -220,23 +243,42 @@ export class DB {
   // =====================================================
 
   static async cleanupExpiredReservations(): Promise<number> {
-    const result = await client.execute({
-      sql: `UPDATE reservations
-            SET released_at = CURRENT_TIMESTAMP, release_reason = 'expired'
-            WHERE released_at IS NULL AND expires_at <= CURRENT_TIMESTAMP`,
-      args: [],
-    });
+    const released = await db
+      .update(reservations)
+      .set({ released_at: sql`now()`, release_reason: "expired" })
+      .where(and(isNull(reservations.released_at), lte(reservations.expires_at, sql`now()`)))
+      .returning({ id: reservations.id });
 
-    return result.rowsAffected;
+    return released.length;
   }
 
-  static async getExpiredItems(): Promise<any[]> {
-    const result = await client.execute({
-      sql: "SELECT * FROM expired_items",
-      args: [],
-    });
+  static async getExpiredItems(): Promise<Record<string, unknown>[]> {
+    // Replaces the SQLite `expired_items` view
+    const expiredReservations = await db
+      .select({
+        item_type: sql<string>`'reservation'`,
+        item_id: reservations.id,
+        invitation_id: reservations.invitation_id,
+        inviter_address: invitations.inviter_address,
+        expires_at: reservations.expires_at,
+      })
+      .from(reservations)
+      .innerJoin(invitations, eq(reservations.invitation_id, invitations.id))
+      .where(and(isNull(reservations.released_at), lte(reservations.expires_at, sql`now()`)));
 
-    return result.rows;
+    const expiredInvitations = await db
+      .select({
+        item_type: sql<string>`'invitation'`,
+        item_id: invitations.id,
+        invitation_id: invitations.id,
+        inviter_address: invitations.inviter_address,
+        expires_at: invitations.expires_at,
+      })
+      .from(invitations)
+      .leftJoin(completions, eq(completions.invitation_id, invitations.id))
+      .where(and(isNull(completions.id), lte(invitations.expires_at, sql`now()`)));
+
+    return [...expiredReservations, ...expiredInvitations].map(withIsoDates);
   }
 
   // =====================================================
@@ -247,33 +289,30 @@ export class DB {
    * Count of successful onboardings (completions)
    */
   static async countCompletions(): Promise<number> {
-    const result = await client.execute({
-      sql: "SELECT COUNT(*) as count FROM invitations WHERE recipient_address IS NOT NULL",
-      args: [],
-    });
-    return Number(result.rows[0]?.count ?? 0);
+    const [row] = await db
+      .select({ count: count() })
+      .from(invitations)
+      .where(isNotNull(invitations.recipient_address));
+    return Number(row?.count ?? 0);
   }
 
   /**
    * Count of reserved invites (active reservations)
    */
   static async countReservedInvites(): Promise<number> {
-    const result = await client.execute({
-      sql: "SELECT COUNT(*) as count FROM reservations WHERE released_at IS NULL",
-      args: [],
-    });
-    return Number(result.rows[0]?.count ?? 0);
+    const [row] = await db
+      .select({ count: count() })
+      .from(reservations)
+      .where(isNull(reservations.released_at));
+    return Number(row?.count ?? 0);
   }
 
   /**
    * Count of total invites
    */
   static async countInvitations(): Promise<number> {
-    const result = await client.execute({
-      sql: "SELECT COUNT(*) as count FROM invitations",
-      args: [],
-    });
-    return Number(result.rows[0]?.count ?? 0);
+    const [row] = await db.select({ count: count() }).from(invitations);
+    return Number(row?.count ?? 0);
   }
 
   // =====================================================
@@ -281,8 +320,7 @@ export class DB {
   // =====================================================
 
   static async transaction<T>(callback: (trx: typeof DB) => Promise<T>): Promise<T> {
-    // For now, use the same DB class - Turso handles transactions internally
-    // In the future, could implement proper transaction context
+    // Neon's HTTP driver has no interactive transactions; callers run sequentially
     return callback(DB);
   }
 }
